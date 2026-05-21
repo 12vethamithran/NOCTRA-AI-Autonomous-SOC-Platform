@@ -1,0 +1,15 @@
+{
+  "rule_id": "R006",
+  "rule_name": "Suspicious Login Time",
+  "title": "Off-Hours Login Response Playbook",
+  "mitre": "T1078 — Defense Evasion",
+  "steps": [
+    { "step": 1, "phase": "Confirm",     "action": "Contact the user (out-of-band, e.g. phone) to verify if they initiated the login. Treat as compromised until confirmed otherwise." },
+    { "step": 2, "phase": "Contain",     "action": "If unconfirmed: lock the account and invalidate all active sessions immediately." },
+    { "step": 3, "phase": "Investigate", "action": "Review what the account did after login — file access, email, VPN, admin actions." },
+    { "step": 4, "phase": "Investigate", "action": "Check the login's source IP against threat intel. Geo-location check for unexpected country." },
+    { "step": 5, "phase": "Remediate",   "action": "Force password reset + MFA re-enrollment. Audit recent activity for any persistence mechanisms." },
+    { "step": 6, "phase": "Harden",      "action": "Implement conditional access policies — block logins outside business hours or from unusual geographies by default." },
+    { "step": 7, "phase": "Report",      "action": "Document the login event, verification outcome, and any downstream activity observed." }
+  ]
+}

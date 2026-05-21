@@ -1,0 +1,14 @@
+{
+  "rule_id": "R008",
+  "rule_name": "Web Recon / Fuzzing",
+  "title": "Web Application Reconnaissance Response Playbook",
+  "mitre": "T1595 — Reconnaissance",
+  "steps": [
+    { "step": 1, "phase": "Confirm",     "action": "Verify this is not a known monitoring tool or pen-test. Check asset register and change management calendar." },
+    { "step": 2, "phase": "Contain",     "action": "Block the scanning IP at the WAF / load balancer. Apply rate-limiting to the application endpoint." },
+    { "step": 3, "phase": "Investigate", "action": "Review 404 paths probed — were any valid paths discovered (200s or 302s mixed in)? This indicates partial success." },
+    { "step": 4, "phase": "Investigate", "action": "Check server error logs for any subsequent exploitation attempts (SQLi, XSS, SSRF) from the same IP." },
+    { "step": 5, "phase": "Harden",      "action": "Ensure no sensitive paths are reachable unauthenticated. Enable bot-detection on the web application firewall." },
+    { "step": 6, "phase": "Report",      "action": "Log probed paths and the scanning IP as IOCs. Update WAF block list." }
+  ]
+}

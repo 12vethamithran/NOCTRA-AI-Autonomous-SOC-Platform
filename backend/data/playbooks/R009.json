@@ -1,0 +1,15 @@
+{
+  "rule_id": "R009",
+  "rule_name": "Known Malicious IP",
+  "title": "Known Malicious IP Response Playbook",
+  "mitre": "T1071 — Command and Control",
+  "steps": [
+    { "step": 1, "phase": "Immediate",   "action": "Block the malicious IP at all perimeter controls — firewall, proxy, and endpoint EDR." },
+    { "step": 2, "phase": "Investigate", "action": "Review all traffic (inbound + outbound) to/from this IP across the entire log window — not just the triggering event." },
+    { "step": 3, "phase": "Investigate", "action": "Check if any internal host initiated the connection (outbound) — this may indicate C2 beaconing from a compromised endpoint." },
+    { "step": 4, "phase": "Contain",     "action": "If outbound C2 traffic is confirmed: isolate the source host immediately." },
+    { "step": 5, "phase": "Remediate",   "action": "Re-image the affected host. Rotate all credentials that were accessible from it." },
+    { "step": 6, "phase": "Harden",      "action": "Subscribe firewall to an automated threat-intel feed (e.g. Spamhaus, AlienVault OTX) for continuous IP blocklist updates." },
+    { "step": 7, "phase": "Report",      "action": "Document the malicious IP, threat intel sources, affected hosts, and all containment actions." }
+  ]
+}

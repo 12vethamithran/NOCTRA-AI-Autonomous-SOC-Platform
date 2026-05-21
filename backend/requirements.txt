@@ -1,0 +1,30 @@
+# =============================================================================
+# Noctra AI — Backend Dependencies
+# Pinned to known-good versions for Python 3.11+
+# =============================================================================
+
+# --- Web framework ---
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+python-multipart==0.0.12      # multipart/form-data (file uploads)
+
+# --- Data handling ---
+pandas==2.2.2                 # in-memory log DataFrame (the heart of the app)
+pydantic==2.9.2               # request/response validation
+
+# --- HTTP client for the 3 external APIs (Gemini / AbuseIPDB / VirusTotal) ---
+httpx==0.27.2
+
+# --- Reporting ---
+reportlab==4.2.2              # PDF incident report generation
+
+# --- Config ---
+python-dotenv==1.0.1          # loads API keys from .env
+
+# --- Phase-2+ additions live in their own block so they're easy to spot ---
+# google-generativeai==0.8.3  # uncomment when wiring Gemini AI scoring
+
+# --- Research gap features (all 9 integrations) ---
+scikit-learn==1.5.2           # IsolationForest (UEBA), RandomForest (SHAP)
+shap==0.46.0                  # TreeExplainer for feature attribution
+networkx==3.3                 # Entity relationship graphs

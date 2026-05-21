@@ -1,0 +1,14 @@
+{
+  "rule_id": "R002",
+  "rule_name": "Port Scan",
+  "title": "Port Scan / Network Reconnaissance Response Playbook",
+  "mitre": "T1046 — Discovery",
+  "steps": [
+    { "step": 1, "phase": "Confirm",     "action": "Verify the source IP is external (not a known scanner / vulnerability management tool). Check the asset register." },
+    { "step": 2, "phase": "Contain",     "action": "If confirmed hostile, block the scanning IP at the perimeter firewall." },
+    { "step": 3, "phase": "Investigate", "action": "Identify which ports were probed — were any services exposed that should not be? Check firewall rule set." },
+    { "step": 4, "phase": "Investigate", "action": "Correlate the scan timestamp with subsequent connection attempts — did the scanner attempt exploitation after the scan?" },
+    { "step": 5, "phase": "Harden",      "action": "Close unnecessary open ports. Ensure default-deny egress and ingress rules are in place." },
+    { "step": 6, "phase": "Report",      "action": "Log the scanning IP and port list as IOCs. Update perimeter blocklist." }
+  ]
+}

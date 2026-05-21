@@ -1,0 +1,15 @@
+{
+  "rule_id": "R010",
+  "rule_name": "Multi-Service Attack",
+  "title": "Multi-Service / Spray Attack Response Playbook",
+  "mitre": "T1110.003 — Credential Stuffing",
+  "steps": [
+    { "step": 1, "phase": "Immediate",   "action": "Block the attacking IP at the perimeter — it is actively probing multiple services simultaneously." },
+    { "step": 2, "phase": "Investigate", "action": "List every service attacked (SSH, HTTP, FTP, SMB, etc.) and check if any returned success responses." },
+    { "step": 3, "phase": "Contain",     "action": "For every service that returned a success: treat associated accounts as compromised and lock them." },
+    { "step": 4, "phase": "Investigate", "action": "Correlate with threat intel — coordinated multi-service attacks often come from botnet infrastructure." },
+    { "step": 5, "phase": "Harden",      "action": "Enforce MFA across all internet-facing services. Reduce exposed attack surface — disable protocols not in active use." },
+    { "step": 6, "phase": "Harden",      "action": "Implement unified rate-limiting and cross-service anomaly detection (e.g. same IP failing on SSH then HTTP within seconds)." },
+    { "step": 7, "phase": "Report",      "action": "Document all targeted services, time window, and outcome per service. Add IP to long-term blocklist." }
+  ]
+}

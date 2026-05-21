@@ -1,0 +1,15 @@
+{
+  "rule_id": "R003",
+  "rule_name": "Privilege Escalation",
+  "title": "Privilege Escalation Response Playbook",
+  "mitre": "T1078 — Privilege Escalation",
+  "steps": [
+    { "step": 1, "phase": "Immediate",   "action": "Revoke the elevated session immediately. Disable the admin account used if it is not a known service account." },
+    { "step": 2, "phase": "Contain",     "action": "Isolate the source host — the escalation may indicate a compromised endpoint running local exploits." },
+    { "step": 3, "phase": "Investigate", "action": "Determine how escalation occurred: sudo misconfig, SUID binary, token impersonation, or stolen credentials." },
+    { "step": 4, "phase": "Investigate", "action": "Audit what the admin account did after escalation — check command history, file access, and outbound connections." },
+    { "step": 5, "phase": "Remediate",   "action": "Patch or reconfigure the escalation vector. Rotate all credentials on the affected host." },
+    { "step": 6, "phase": "Harden",      "action": "Implement least-privilege. Enable privileged-access workstation (PAW) and session recording for admin accounts." },
+    { "step": 7, "phase": "Report",      "action": "Document escalation path, affected accounts, and remediation steps taken." }
+  ]
+}

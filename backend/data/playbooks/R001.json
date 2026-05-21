@@ -1,0 +1,15 @@
+{
+  "rule_id": "R001",
+  "rule_name": "Brute Force Attack",
+  "title": "Brute Force / Credential Stuffing Response Playbook",
+  "mitre": "T1110 — Credential Access",
+  "steps": [
+    { "step": 1, "phase": "Immediate",   "action": "Confirm lockout policy is active. If the attacker IP is still live, block it at the firewall immediately." },
+    { "step": 2, "phase": "Contain",     "action": "If any login SUCCEEDED after the brute force, treat the account as compromised — lock it now." },
+    { "step": 3, "phase": "Investigate", "action": "Review all login attempts: identify targeted usernames, time window, and whether any new sessions were established." },
+    { "step": 4, "phase": "Investigate", "action": "Query AbuseIPDB / VirusTotal for the attacking IP — check known campaigns or ASN abuse history." },
+    { "step": 5, "phase": "Remediate",   "action": "Force password reset for all accounts targeted. Enforce MFA if not already active." },
+    { "step": 6, "phase": "Harden",      "action": "Set account lockout after 5 attempts. Enable geo-blocking or rate-limiting on the authentication endpoint." },
+    { "step": 7, "phase": "Report",      "action": "Document IOCs (IP, usernames, time range). File incident report noting credential-compromise status." }
+  ]
+}

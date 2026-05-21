@@ -1,0 +1,15 @@
+{
+  "rule_id": "R004",
+  "rule_name": "Lateral Movement",
+  "title": "Lateral Movement Response Playbook",
+  "mitre": "T1021 — Lateral Movement",
+  "steps": [
+    { "step": 1, "phase": "Immediate",   "action": "Map all hosts the user authenticated to within the detection window. These are your blast-radius candidates." },
+    { "step": 2, "phase": "Contain",     "action": "Disable the user account and revoke all active sessions across every host." },
+    { "step": 3, "phase": "Investigate", "action": "On each affected host: check for new processes, scheduled tasks, services, or files created by the account." },
+    { "step": 4, "phase": "Investigate", "action": "Review outbound connections from each host — look for beaconing, data staging, or C2 activity." },
+    { "step": 5, "phase": "Remediate",   "action": "Restore affected hosts from clean snapshots if tampering is confirmed. Force credential rotation." },
+    { "step": 6, "phase": "Harden",      "action": "Segment the network to restrict east-west authentication. Enforce MFA for all lateral-movement-prone protocols (RDP, SMB, WinRM)." },
+    { "step": 7, "phase": "Report",      "action": "List all compromised hosts and the authentication chain. Attach timeline." }
+  ]
+}

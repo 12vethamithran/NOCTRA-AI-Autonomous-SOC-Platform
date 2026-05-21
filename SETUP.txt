@@ -1,0 +1,213 @@
+================================================================================
+  NOCTRA AI — SETUP & RUN
+================================================================================
+
+Everything you need to get the platform running locally.
+Two services: a FastAPI backend (Python) and a React frontend (Node).
+Run both, open the browser, drop a log file.
+
+For the project explanation, see README.md.
+
+--------------------------------------------------------------------------------
+  PREREQUISITES
+--------------------------------------------------------------------------------
+
+  Python   3.11 or newer        check:  python --version
+  Node.js  18 or newer          check:  node --version
+  npm      9 or newer           check:  npm --version
+  Git      any recent version   check:  git --version
+
+Optional API keys (the platform works without them — features degrade gracefully):
+
+  GEMINI_API_KEY     AI scoring, verdict assist, autonomous agent
+                     https://ai.google.dev/
+
+  ABUSEIPDB_KEY      IP reputation lookups
+                     https://www.abuseipdb.com/api
+
+  VIRUSTOTAL_KEY     Hash + IP threat intel
+                     https://www.virustotal.com/gui/my-apikey
+
+
+--------------------------------------------------------------------------------
+  1. CLONE THE REPO
+--------------------------------------------------------------------------------
+
+    git clone <your-repo-url>
+    cd "SOC Project"
+
+You should see:
+
+    SOC Project/
+      backend/
+      frontend/
+      README.md
+      SETUP.txt   <-- you are here
+
+
+--------------------------------------------------------------------------------
+  2. BACKEND (FastAPI)
+--------------------------------------------------------------------------------
+
+  2.1  Create a virtual environment
+  ----------------------------------
+
+    Windows (PowerShell):
+
+        cd backend
+        python -m venv venv
+        venv\Scripts\activate
+
+    macOS / Linux:
+
+        cd backend
+        python -m venv venv
+        source venv/bin/activate
+
+    You'll see "(venv)" in your shell prompt once activated.
+
+
+  2.2  Install Python dependencies
+  --------------------------------
+
+    pip install -r requirements.txt
+
+
+  2.3  (Optional) Add API keys
+  -----------------------------
+
+    Create a file at  backend/.env  with:
+
+        GEMINI_API_KEY=your_key_here
+        ABUSEIPDB_KEY=your_key_here
+        VIRUSTOTAL_KEY=your_key_here
+
+    Skip this entirely if you just want to demo — the platform falls back
+    to a deterministic scorer and disables external lookups gracefully.
+
+
+  2.4  Run the backend
+  --------------------
+
+    uvicorn main:app --reload --port 8000
+
+  Expected output:
+
+    INFO:     Uvicorn running on http://127.0.0.1:8000
+    INFO:     Application startup complete.
+
+  Sanity check: open  http://localhost:8000/health
+  You should see a JSON response with  "status": "ok"
+
+  Leave this terminal running.
+
+
+--------------------------------------------------------------------------------
+  3. FRONTEND (React + Vite)
+--------------------------------------------------------------------------------
+
+  3.1  Install Node dependencies
+  ------------------------------
+
+  Open a SECOND terminal in the project root:
+
+    cd frontend
+    npm install
+
+
+  3.2  Run the dev server
+  -----------------------
+
+    npm run dev
+
+  Expected output:
+
+    VITE v5.x  ready in xxx ms
+    Local:   http://localhost:5173/
+
+  Leave this terminal running too.
+
+
+--------------------------------------------------------------------------------
+  4. OPEN THE PLATFORM
+--------------------------------------------------------------------------------
+
+  Visit  http://localhost:5173  in your browser.
+
+  You'll see the Landing page. From here:
+
+    1. Click "Open Ingestion Module"  (or "Upload" in the nav).
+    2. Drop a log file (CSV / JSON / syslog / EVTX / web access)
+       OR click "Run demo scenario" to load a synthetic attack dataset.
+    3. The platform parses, detects, scores, and lands you on the
+       Triage queue with ranked alerts.
+
+
+--------------------------------------------------------------------------------
+  5. STOPPING THE SERVERS
+--------------------------------------------------------------------------------
+
+  In each terminal, press Ctrl+C.
+  Session data is in-memory only — nothing needs cleanup.
+
+
+--------------------------------------------------------------------------------
+  6. TROUBLESHOOTING
+--------------------------------------------------------------------------------
+
+  Frontend says "Engine Offline" in the top bar
+      Backend isn't running on :8000.
+      Re-run:  uvicorn main:app --reload --port 8000
+
+  npm install fails on Node 16
+      Upgrade to Node 18 LTS or later.
+
+  Port 5173 already in use
+      Vite will auto-pick 5174 / 5175. Check the terminal output for
+      the actual URL.
+
+  Port 8000 already in use
+      Run on a different port:
+          uvicorn main:app --reload --port 8001
+      Then update  frontend/vite.config.js  proxy target.
+
+  ModuleNotFoundError after pip install
+      Make sure the venv is activated ("(venv)" prefix visible).
+
+  AI features return "AI unavailable"
+      No GEMINI_API_KEY set. Add it to backend/.env and restart the backend.
+
+  Threat-intel lookups fail
+      Same — set ABUSEIPDB_KEY / VIRUSTOTAL_KEY in backend/.env.
+
+  Triage queue is empty after upload
+      Your file may not match a supported format. Try the demo scenario
+      to confirm the platform works, then check the parser output in the
+      backend terminal.
+
+
+--------------------------------------------------------------------------------
+  7. PRODUCTION BUILD (OPTIONAL)
+--------------------------------------------------------------------------------
+
+  To build the frontend as a static bundle:
+
+    cd frontend
+    npm run build       (output -> dist/)
+    npm run preview     (serve the bundle locally to verify)
+
+  The backend can serve this dist/ folder behind a single port if you want
+  a one-process deployment — see backend/main.py for the static-mount hook.
+
+
+--------------------------------------------------------------------------------
+  NEXT STEPS
+--------------------------------------------------------------------------------
+
+  Once it's running, read  README.md  for the project explanation —
+  what it does, how AI is wired in, how scoring works, and what makes it
+  different from a traditional SOC tool.
+
+================================================================================
+  NOCTRA AI · Autonomous SOC · v3.0 · Storageless by design
+================================================================================

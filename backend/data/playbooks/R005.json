@@ -1,0 +1,16 @@
+{
+  "rule_id": "R005",
+  "rule_name": "Data Exfiltration",
+  "title": "Data Exfiltration Response Playbook",
+  "mitre": "T1041 — Exfiltration Over C2 Channel",
+  "steps": [
+    { "step": 1, "phase": "Immediate",   "action": "Block the destination IP at the firewall NOW to stop ongoing transfer." },
+    { "step": 2, "phase": "Contain",     "action": "Isolate the source host from the network to prevent further exfiltration." },
+    { "step": 3, "phase": "Investigate", "action": "Identify exactly what was transferred: file names, volumes, protocol used. Pull PCAP or proxy logs if available." },
+    { "step": 4, "phase": "Investigate", "action": "Determine how the threat actor got access to the source host — look for initial access vector (phishing, RCE, insider)." },
+    { "step": 5, "phase": "Legal/Compliance", "action": "Notify legal and compliance teams. Determine if data is PII / regulated — breach notification obligations may apply." },
+    { "step": 6, "phase": "Remediate",   "action": "Revoke credentials on the source host. Re-image if malware is suspected." },
+    { "step": 7, "phase": "Harden",      "action": "Deploy DLP controls on egress. Restrict large outbound transfers to approved cloud storage only." },
+    { "step": 8, "phase": "Report",      "action": "Document data classification, volume, destination, and timeline. Preserve evidence for forensics." }
+  ]
+}

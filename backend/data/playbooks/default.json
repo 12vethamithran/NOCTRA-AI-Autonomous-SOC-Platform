@@ -1,0 +1,14 @@
+{
+  "rule_id": "DEFAULT",
+  "rule_name": "Generic Security Alert",
+  "title": "General Incident Response Playbook",
+  "steps": [
+    { "step": 1, "phase": "Contain",     "action": "Identify and isolate the affected host(s) from the network if active compromise is suspected." },
+    { "step": 2, "phase": "Investigate", "action": "Pull full logs for the involved source IP and user account for the surrounding ±30 minute window." },
+    { "step": 3, "phase": "Investigate", "action": "Check threat intel (AbuseIPDB / VirusTotal) for the source IP." },
+    { "step": 4, "phase": "Assess",      "action": "Determine blast radius: which hosts, accounts, and data stores were touched?" },
+    { "step": 5, "phase": "Remediate",   "action": "Reset credentials for any accounts involved. Revoke active sessions." },
+    { "step": 6, "phase": "Harden",      "action": "Block the offending IP at the perimeter firewall and document the IOCs." },
+    { "step": 7, "phase": "Report",      "action": "Mark verdict (TP/FP), add analyst notes, and download the PDF incident report." }
+  ]
+}

@@ -1,0 +1,4 @@
+{"timestamp": "2024-01-15T14:02:01Z", "source_ip": "203.0.113.42", "dest_ip": "10.0.0.1", "event_type": "login", "user": "admin", "status": "FAILED", "bytes": 0, "port": 22}
+{"timestamp": "2024-01-15T14:02:02Z", "source_ip": "203.0.113.42", "dest_ip": "10.0.0.1", "event_type": "login", "user": "admin", "status": "FAILED", "bytes": 0, "port": 22}
+{"timestamp": "2024-01-15T14:02:07Z", "source_ip": "203.0.113.42", "dest_ip": "10.0.0.1", "event_type": "login", "user": "admin", "status": "SUCCESS", "bytes": 0, "port": 22}
+{"timestamp": "2024-01-15T09:00:00Z", "source_ip": "172.16.0.50", "dest_ip": "10.0.0.1", "event_type": "http", "user": "scanner", "status": "404", "bytes": 0, "port": 80}

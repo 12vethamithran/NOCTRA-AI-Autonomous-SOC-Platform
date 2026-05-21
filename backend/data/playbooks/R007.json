@@ -1,0 +1,15 @@
+{
+  "rule_id": "R007",
+  "rule_name": "New Admin Account Created",
+  "title": "Rogue Admin Account Response Playbook",
+  "mitre": "T1136 — Persistence: Create Account",
+  "steps": [
+    { "step": 1, "phase": "Immediate",   "action": "Disable the newly created admin account immediately — do not delete until forensics is complete." },
+    { "step": 2, "phase": "Investigate", "action": "Identify who or what created the account: check the event log for the creating process, PID, and parent session." },
+    { "step": 3, "phase": "Investigate", "action": "Determine if the creating account was itself compromised or if this was an authorised provisioning workflow gone wrong." },
+    { "step": 4, "phase": "Investigate", "action": "Audit any actions the rogue admin account performed before detection." },
+    { "step": 5, "phase": "Remediate",   "action": "Remove the account and any backdoors (SSH keys, scheduled tasks, startup scripts) it may have planted." },
+    { "step": 6, "phase": "Harden",      "action": "Enforce privileged identity management (PIM) — all admin account creation must go through an approval workflow with MFA." },
+    { "step": 7, "phase": "Report",      "action": "Document creating entity, account details, and all actions taken during the account's lifetime." }
+  ]
+}
