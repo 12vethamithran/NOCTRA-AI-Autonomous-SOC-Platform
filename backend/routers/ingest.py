@@ -17,10 +17,13 @@ The session keeps the DataFrame around so /investigate can pull the timeline.
 
 from __future__ import annotations
 
+import base64
+import binascii
 import logging
 from typing import Annotated
 
 from fastapi import APIRouter, File, HTTPException, UploadFile, status
+from pydantic import BaseModel, Field
 
 from config import settings
 from engine.demo_data import build_demo_csv
@@ -62,6 +65,51 @@ async def ingest(file: Annotated[UploadFile, File(...)]) -> IngestResponse:
         raise HTTPException(400, "Uploaded file is empty")
 
     return await _run_pipeline(file.filename, content)
+
+
+class EncodedUpload(BaseModel):
+    """Base64-encoded upload payload for the WAF-safe ingest path."""
+
+    filename: str = Field(..., description="Original file name (extension is a parse hint)")
+    content_b64: str = Field(..., description="Base64-encoded raw file bytes")
+
+
+@router.post(
+    "/raw",
+    response_model=IngestResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Upload a base64-encoded log file (WAF-safe path)",
+)
+async def ingest_raw(payload: EncodedUpload) -> IngestResponse:
+    """
+    Same pipeline as POST /ingest, but the file arrives base64-encoded inside a
+    JSON body. Security logs legitimately contain attack payloads (Log4Shell,
+    SQLi, XSS, …); a multipart upload of that raw content is flagged and dropped
+    by upstream WAFs. Base64 makes the body opaque to signature matching while
+    staying lossless. The browser client uses this path for all file uploads.
+    """
+    if not payload.filename:
+        raise HTTPException(400, "No filename provided")
+
+    b64 = payload.content_b64.strip()
+    # Tolerate data-URL prefixes ("data:...;base64,XXXX") just in case.
+    if "," in b64 and b64.lower().startswith("data:"):
+        b64 = b64.split(",", 1)[1]
+    try:
+        content = base64.b64decode(b64, validate=False)
+    except (binascii.Error, ValueError) as exc:
+        raise HTTPException(400, f"Invalid base64 content: {exc}") from exc
+
+    size_mb = len(content) / (1024 * 1024)
+    if size_mb > settings.max_upload_mb:
+        raise HTTPException(
+            413,
+            f"File too large ({size_mb:.1f} MB). Max is {settings.max_upload_mb} MB.",
+        )
+    if not content:
+        raise HTTPException(400, "Uploaded file is empty")
+
+    return await _run_pipeline(payload.filename, content)
 
 
 @router.post(

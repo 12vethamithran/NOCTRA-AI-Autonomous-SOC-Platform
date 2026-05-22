@@ -9,18 +9,41 @@ import axios from 'axios'
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL ?? '/api',
-  timeout: 30_000,
+  // Generous timeout: the backend runs on Render's free tier and the first
+  // request after idle can cold-start for 30–50s.
+  timeout: 120_000,
 })
 
 // ─── Ingest ──────────────────────────────────────────────────────────────────
-/** Upload a log file. Returns { session_id, alerts, event_count, ... } */
-export const ingestFile = (file, onProgress) => {
-  const form = new FormData()
-  form.append('file', file)
-  return api.post('/ingest', form, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-    onUploadProgress: onProgress,
+/** Read a File/Blob and return just its base64 payload (no data-URL prefix). */
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      const result = String(reader.result || '')
+      resolve(result.includes(',') ? result.slice(result.indexOf(',') + 1) : result)
+    }
+    reader.onerror = () => reject(reader.error || new Error('Could not read file'))
+    reader.readAsDataURL(file)
   })
+}
+
+/**
+ * Upload a log file. Returns { session_id, alerts, event_count, ... }.
+ *
+ * The file is base64-encoded and sent as JSON to /ingest/raw. Security logs
+ * legitimately contain attack payloads (Log4Shell, SQLi, XSS, …); sending them
+ * as a raw multipart body gets the request blocked by the upstream WAF, which
+ * surfaces in the browser as a misleading "Network Error". Base64 keeps the
+ * body opaque to signature matching.
+ */
+export const ingestFile = async (file, onProgress) => {
+  const content_b64 = await fileToBase64(file)
+  return api.post(
+    '/ingest/raw',
+    { filename: file.name, content_b64 },
+    { headers: { 'Content-Type': 'application/json' }, onUploadProgress: onProgress },
+  )
 }
 
 /** Create a real backend session from a synthetic multi-stage attack. */
