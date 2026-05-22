@@ -241,16 +241,28 @@ flowchart TB
 
 ## 10. Local Development
 
-See [SETUP.txt](SETUP.txt) for full local setup instructions.
+### Option A — Docker (recommended)
 
-**Quick start:**
+```bash
+# Copy and fill in your API keys
+cp backend/.env.example backend/.env
+
+# Start both services
+docker compose up --build
+```
+
+Frontend: [http://localhost:3000](http://localhost:3000) · Backend: [http://localhost:8000](http://localhost:8000)
+
+### Option B — Manual
+
+See [SETUP.txt](SETUP.txt) for full manual setup instructions.
 
 ```bash
 # Backend
 cd backend
 python -m venv venv && source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
-cp .env.example .env   # fill in your API keys
+cp .env.example .env
 uvicorn main:app --reload --port 8000
 
 # Frontend (new terminal)
@@ -260,6 +272,14 @@ npm run dev
 ```
 
 Open [http://localhost:5173](http://localhost:5173).
+
+### Option C — Self-hosted Production (Docker)
+
+```bash
+cp .env.example .env.prod
+# Fill in .env.prod with real API keys and URLs
+docker compose --env-file .env.prod -f docker-compose.prod.yml up -d
+```
 
 ---
 

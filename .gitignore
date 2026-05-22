@@ -34,5 +34,8 @@ Thumbs.db
 *.suo
 *.sw?
 
+# Docker
+.env.prod
+
 # Claude tooling
 .claude/
