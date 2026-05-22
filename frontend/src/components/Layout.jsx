@@ -23,8 +23,9 @@ function useClock() {
 function useApiHealth() {
   const [status, setStatus] = useState('checking')
   useEffect(() => {
+    const base = import.meta.env.VITE_API_URL ?? '/api'
     const check = () =>
-      fetch('/api/health', { signal: AbortSignal.timeout(3000) })
+      fetch(`${base}/health`, { signal: AbortSignal.timeout(3000) })
         .then(r => setStatus(r.ok ? 'online' : 'degraded'))
         .catch(() => setStatus('offline'))
     check()
