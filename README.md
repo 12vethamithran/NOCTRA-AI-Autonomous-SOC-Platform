@@ -96,7 +96,7 @@ flowchart LR
 
 | # | Stage | What happens |
 |---|-------|-------------|
-| 01 | **Ingest** | Auto-detect format (CSV/JSON/syslog/EVTX/web access). Parse into rows. |
+| 01 | **Ingest** | Auto-detect format (CSV/TSV, JSON/JSONL, Apache, syslog, Windows Event, logfmt) — any other text log falls back to a generic line parser, so ingestion never fails. |
 | 02 | **Normalize** | Standardise columns: `ts, ip, user, action, status, port`. |
 | 03 | **Detect** | Run 25+ rules + UEBA anomaly model + cross-event correlation. |
 | 04 | **Score** | AI assigns each alert a 0–1 TP probability with rationale + SHAP feature attribution. |

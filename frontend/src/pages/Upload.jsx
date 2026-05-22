@@ -12,7 +12,9 @@ import {
 import { ingestFile, ingestDemo } from '../api/client'
 import { useSession } from '../App'
 
-const ACCEPTED = '.csv,.json,.jsonl,.log,.txt,.ndjson'
+// Hint only — the backend accepts ANY text-based log, so we don't hard-block
+// unknown extensions. Unrecognised formats fall back to a generic line parser.
+const ACCEPTED = '.csv,.tsv,.json,.jsonl,.ndjson,.log,.txt,.out,.syslog,.evt'
 
 const SEV_CLASS = {
   CRITICAL: 'sev-chip sev-chip-critical',
@@ -22,12 +24,14 @@ const SEV_CLASS = {
 }
 
 const FORMATS = [
-  { label: 'CSV / TSV',      icon: FileText,   tag: 'Structured' },
+  { label: 'CSV / TSV',      icon: FileText,   tag: 'Auto-delimiter' },
   { label: 'JSON / JSONL',   icon: FileJson,   tag: 'API logs' },
   { label: 'Apache / Nginx', icon: Globe,      tag: 'Web access' },
   { label: 'Syslog',         icon: Server,     tag: 'Unix daemons' },
   { label: 'Windows Event',  icon: HardDrive,  tag: 'EVTX text' },
+  { label: 'logfmt / KV',    icon: FileCode2,  tag: 'key=value' },
   { label: 'NDJSON',         icon: FileCode2,  tag: 'Streaming' },
+  { label: 'Anything else',  icon: Layers,     tag: 'Generic fallback' },
 ]
 
 const PIPELINE_STEPS = [
@@ -336,7 +340,7 @@ export default function Upload() {
                 or <span style={{ color: 'var(--accent)' }}>click to browse</span>
               </p>
             </div>
-            <p className="text-xs" style={{ color: 'var(--text-4)' }}>CSV · JSON/JSONL · Apache · Nginx · Syslog · Windows Event · up to 25 MB</p>
+            <p className="text-xs" style={{ color: 'var(--text-4)' }}>CSV · JSON/JSONL · Apache · Syslog · Windows Event · logfmt · or any text log · up to 25 MB</p>
             <div className="pt-4 flex justify-center gap-2 flex-wrap">
               <button
                 onClick={(e) => { e.stopPropagation(); loadDemoLog() }}

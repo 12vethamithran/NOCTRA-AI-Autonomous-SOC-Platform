@@ -93,9 +93,9 @@ async def _run_pipeline(filename: str, content: bytes) -> IngestResponse:
     if parsed.event_count == 0:
         raise HTTPException(
             422,
-            "Parsed file successfully but found 0 valid events. "
-            "Check the format matches one of: CSV, JSON/JSONL, Apache, Syslog, "
-            "Windows Event CSV.",
+            "The uploaded file contains no readable lines. "
+            "Provide a text-based log (CSV, JSON/JSONL, Apache, Syslog, "
+            "Windows Event, logfmt, or any line-oriented log).",
         )
 
     # --- 3. Create session and stash the DataFrame ---------------------------
