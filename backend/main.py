@@ -93,7 +93,8 @@ app = FastAPI(
 # CORS — single origin in dev. Loosen later if you deploy a different frontend URL.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.cors_origin],
+    allow_origins=settings.cors_origins,
+    allow_origin_regex=r"https://noctra-ai-autonomous-soc-platform.*\.vercel\.app",
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],

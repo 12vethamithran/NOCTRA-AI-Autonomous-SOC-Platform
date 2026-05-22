@@ -45,6 +45,15 @@ class Settings:
     # --- CORS ---
     cors_origin: str = os.getenv("CORS_ORIGIN", "http://localhost:5173")
 
+    @property
+    def cors_origins(self) -> list[str]:
+        origins = [self.cors_origin]
+        extra = os.getenv("CORS_ORIGINS_EXTRA", "")
+        if extra:
+            origins += [o.strip() for o in extra.split(",") if o.strip()]
+        origins += ["https://noctra-ai-autonomous-soc-platform.vercel.app"]
+        return list(dict.fromkeys(origins))
+
     # --- Convenience flags ---
     @property
     def gemini_ready(self) -> bool:
