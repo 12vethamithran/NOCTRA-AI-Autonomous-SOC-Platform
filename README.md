@@ -2,12 +2,14 @@
 
 > **Drop a log file. Get ranked incidents, AI-explained verdicts, MITRE-mapped attack chains, and a forensic PDF report — in minutes.**
 
-An AI-augmented Security Operations Center in a browser tab.  
-**Storageless · MITRE ATT&CK-mapped · Explainable AI · L1/L2 dual-mode**
+**NOCTRA AI** is an open-source, browser-based Security Operations Center powered by Google Gemini AI. It ingests raw log files (CSV, JSON, syslog, EVTX), runs 25+ detection rules + a behavioral anomaly engine, scores every alert with an explainable AI probability, maps threats to MITRE ATT&CK, and generates forensic PDF reports — all without storing a single byte to disk. Built for SOC analysts, blue teams, and cybersecurity learners who need enterprise-grade threat detection without enterprise-grade setup time.
+
+**Storageless · MITRE ATT&CK-mapped · Explainable AI · L1/L2 dual-mode · Dockerized**
 
 [![Live](https://img.shields.io/badge/Live-Production-brightgreen)](https://noctra-ai-autonomous-soc-platform.vercel.app)
-[![Frontend](https://img.shields.io/badge/Frontend-Vercel-black)](https://vercel.com)
-[![Backend](https://img.shields.io/badge/Backend-Render-blue)](https://render.com)
+[![Frontend](https://img.shields.io/badge/Frontend-Vercel-black)](https://noctra-ai-autonomous-soc-platform.vercel.app)
+[![Backend](https://img.shields.io/badge/Backend-Render-blue)](https://noctra-ai-autonomous-soc-platform.onrender.com/health)
+[![Docker](https://img.shields.io/badge/Docker-Containerized-2496ED?logo=docker&logoColor=white)](https://www.docker.com)
 [![License](https://img.shields.io/badge/License-MIT-red)](LICENSE)
 
 ---
@@ -17,6 +19,8 @@ An AI-augmented Security Operations Center in a browser tab.
 **[noctra-ai-autonomous-soc-platform.vercel.app](https://noctra-ai-autonomous-soc-platform.vercel.app)**
 
 No signup required. Drop a log file or click **"Run demo scenario"** to see a synthetic multi-stage attack.
+
+> **Note:** The backend runs on Render's free tier — the first request after inactivity may take 30–50 seconds to wake up.
 
 ---
 
