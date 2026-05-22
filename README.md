@@ -5,8 +5,27 @@
 An AI-augmented Security Operations Center in a browser tab.
 **Storageless · MITRE ATT&CK-mapped · Explainable AI · L1/L2 dual-mode**
 
-> **Want to run it?** See `SETUP.txt`.
+> **Live demo:** [noctra-ai-autonomous-soc-platform.vercel.app](https://noctra-ai-autonomous-soc-platform.vercel.app)
+> **Want to run it locally?** See `SETUP.txt`.
 > **This file** explains what it is, how it works, and why it matters.
+
+---
+
+## Deployment
+
+| Layer | Platform | Notes |
+|-------|----------|-------|
+| **Frontend** | [Vercel](https://vercel.com) | Auto-deploys from `main` branch · Root dir: `frontend` · Build: `npm run build` · Output: `dist` |
+| **Backend** | Self-hosted / separate service | FastAPI — deploy to Railway, Render, or any Python host. Set `VITE_API_URL` in Vercel env vars to point to it. |
+
+### Environment variables (Vercel → Project Settings → Environment Variables)
+
+| Key | Value |
+|-----|-------|
+| `VITE_API_URL` | Your deployed FastAPI backend URL (e.g. `https://noctra-api.onrender.com`) |
+| `VITE_APP_NAME` | `NOCTRA-SOC` |
+
+> The frontend falls back to `/api` (local dev proxy) if `VITE_API_URL` is not set.
 
 ---
 
