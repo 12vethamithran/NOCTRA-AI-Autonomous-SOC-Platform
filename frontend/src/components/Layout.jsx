@@ -24,13 +24,31 @@ function useApiHealth() {
   const [status, setStatus] = useState('checking')
   useEffect(() => {
     const base = import.meta.env.VITE_API_URL ?? '/api'
-    const check = () =>
-      fetch(`${base}/health`, { signal: AbortSignal.timeout(3000) })
-        .then(r => setStatus(r.ok ? 'online' : 'degraded'))
-        .catch(() => setStatus('offline'))
+    let cancelled = false
+
+    const check = async () => {
+      if (cancelled) return
+      setStatus(s => s === 'online' ? 'checking' : s) // only flicker if was online
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          const r = await fetch(`${base}/health`, { signal: AbortSignal.timeout(60_000) })
+          if (cancelled) return
+          setStatus(r.ok ? 'online' : 'degraded')
+          return
+        } catch {
+          if (cancelled) return
+          if (attempt < 2) {
+            // wait 5s before retrying — backend may be waking up
+            await new Promise(res => setTimeout(res, 5_000))
+          }
+        }
+      }
+      if (!cancelled) setStatus('offline')
+    }
+
     check()
     const id = setInterval(check, 30_000)
-    return () => clearInterval(id)
+    return () => { cancelled = true; clearInterval(id) }
   }, [])
   return status
 }
@@ -146,10 +164,10 @@ export default function Layout() {
   }
 
   const HEALTH = {
-    checking: { icon: Activity, dot: 'bg-amber-400',  fg: 'text-amber-300',   text: 'Connecting…' },
-    online:   { icon: Wifi,     dot: 'bg-emerald-400', fg: 'text-emerald-300', text: 'Engine Online' },
-    degraded: { icon: AlertTriangle, dot: 'bg-amber-500',  fg: 'text-amber-300', text: 'Degraded' },
-    offline:  { icon: WifiOff,  dot: 'bg-red-500',    fg: 'text-red-300',    text: 'Engine Offline' },
+    checking: { icon: Activity,       dot: 'bg-amber-400',   fg: 'text-amber-300',   text: 'Waking engine…' },
+    online:   { icon: Wifi,           dot: 'bg-emerald-400', fg: 'text-emerald-300', text: 'Engine Online' },
+    degraded: { icon: AlertTriangle,  dot: 'bg-amber-500',   fg: 'text-amber-300',   text: 'Degraded' },
+    offline:  { icon: WifiOff,        dot: 'bg-red-500',     fg: 'text-red-300',     text: 'Engine Offline' },
   }
   const h = HEALTH[health]
   const HIcon = h.icon

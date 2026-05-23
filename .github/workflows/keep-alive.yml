@@ -4,7 +4,7 @@ name: Keep Backend Alive
 # (Render free tier spins a service down after 15 minutes of inactivity).
 on:
   schedule:
-    - cron: "*/10 * * * *"
+    - cron: "*/5 * * * *"
   workflow_dispatch: {}
 
 jobs:
