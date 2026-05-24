@@ -312,7 +312,12 @@ def rule_r004_lateral(df: pd.DataFrame) -> List[Alert]:
 # ---------------------------------------------------------------------------
 def rule_r005_exfil(df: pd.DataFrame) -> List[Alert]:
     """
-    A single outbound transfer > 100 MB to an external destination IP.
+    Outbound exfiltration to an external destination. Strengthened:
+      - aggregates per (source_ip, dest_ip) so one campaign = one alert
+        (previously this fired 19x for the same Mega.nz exfil)
+      - fires either on a single > 100 MB session OR cumulative > 250 MB
+        across many smaller bursts (the more common evasive pattern)
+      - severity escalates to CRITICAL once total > 1 GB
     """
     alerts: List[Alert] = []
     if "bytes" not in df.columns or "dest_ip" not in df.columns:
@@ -320,30 +325,47 @@ def rule_r005_exfil(df: pd.DataFrame) -> List[Alert]:
     work = df[df["bytes"].notna() & df["dest_ip"].notna()].copy()
     if work.empty:
         return alerts
-    threshold = 100 * 1024 * 1024  # 100 MB
-    big = work[work["bytes"].astype("Int64").fillna(0).astype(int) > threshold]
-    big = big[big["dest_ip"].apply(_is_external_ip)]
-    for idx, row in big.iterrows():
-        alerts.append(
-            Alert(
-                alert_id=_new_alert_id(),
-                rule_id="R005",
-                rule_name="Data Exfiltration",
-                severity=AlertSeverity.HIGH,
-                description=(
-                    f"{int(row['bytes'])/1024/1024:.1f} MB transferred to external "
-                    f"IP {row['dest_ip']}"
-                ),
-                timestamp=row["timestamp"].to_pydatetime() if pd.notna(row.get("timestamp")) else None,
-                source_ip=row.get("source_ip"),
-                dest_ip=row.get("dest_ip"),
-                user=row.get("user"),
-                event_count=1,
-                mitre_technique="T1041",
-                mitre_tactic="Exfiltration",
-                related_log_indices=[int(idx)],
-            )
-        )
+    work["_b"] = pd.to_numeric(work["bytes"], errors="coerce").fillna(0).astype(int)
+    work = work[work["dest_ip"].apply(_is_external_ip)]
+    if work.empty:
+        return alerts
+    single_threshold = 100 * 1024 * 1024   # 100 MB
+    cumulative_threshold = 250 * 1024 * 1024  # 250 MB
+    for (src, dst), grp in work.groupby(["source_ip", "dest_ip"]):
+        total = int(grp["_b"].sum())
+        peak = int(grp["_b"].max())
+        if total < cumulative_threshold and peak < single_threshold:
+            continue
+        ts = _safe_min_ts(grp)
+        if ts is None:
+            continue
+        mb_total = total / 1024 / 1024
+        mb_peak = peak / 1024 / 1024
+        sev = AlertSeverity.CRITICAL if total > 1024 * 1024 * 1024 else AlertSeverity.HIGH
+        alerts.append(Alert(
+            alert_id=_new_alert_id(),
+            rule_id="R005",
+            rule_name="Data Exfiltration",
+            severity=sev,
+            description=(
+                f"{mb_total:.1f} MB across {len(grp)} session(s) "
+                f"(peak {mb_peak:.1f} MB) from {src or 'unknown'} → {dst} (external)"
+            ),
+            timestamp=ts,
+            source_ip=src,
+            dest_ip=dst,
+            user=str(grp["user"].dropna().iloc[0]) if "user" in grp.columns and grp["user"].dropna().size else None,
+            event_count=len(grp),
+            mitre_technique="T1041",
+            mitre_tactic="Exfiltration",
+            tp_probability=0.92 if total > 1024 * 1024 * 1024 else 0.83,
+            related_log_indices=list(grp.index),
+            extra={
+                "total_bytes": total,
+                "peak_bytes": peak,
+                "session_count": len(grp),
+            },
+        ))
     return alerts
 
 
@@ -1491,11 +1513,12 @@ def rule_r031_masquerade(df: pd.DataFrame) -> List[Alert]:
         # *looks* like the legit name but isn't an exact match.
         name_mask = name_mask | fname.str.contains(rf"{n}\d+\.exe|{n}[_\-].+\.exe", na=False, regex=True)
     in_temp = folder.str.contains(r"\\temp\\|\\appdata\\local\\temp|/tmp/", na=False, regex=True)
-    # Also detect via raw text for non-MDE sources.
-    raw_match = raw_l.str.contains(
-        r"(?:sysmon|svchost|lsass|services|csrss)\d+\.exe", na=False, regex=True,
-    )
-    hits = df[(name_mask & in_temp) | raw_match]
+    # Strengthened: require the filename column to actually be set (so we are
+    # looking at a real file event, not a tangential mention in another log
+    # line). This kills the false-positive deluge where the masquerading name
+    # appears inside an unrelated process command-line or alert blob.
+    has_fname = fname.str.strip().ne("") & fname.ne("nan") & fname.ne("none")
+    hits = df[name_mask & in_temp & has_fname]
     if hits.empty:
         return alerts
     for idx, row in hits.iterrows():
@@ -2079,8 +2102,263 @@ ALL_RULES: list[Callable[[pd.DataFrame], List[Alert]]] = [
 ]
 
 
+# ===========================================================================
+# Per-rule reasoning catalog
+# Each entry: why this pattern is malicious, what signals validate it, what to
+# do next, and the most common false-positive cause. Surfaced in the Triage
+# modal so analysts can justify every alert with one click.
+# ===========================================================================
+_RULE_REASONING: Dict[str, Dict[str, str]] = {
+    "R001": {
+        "why": "A burst of failed logins from one source IP within a 60-second window is the textbook brute-force / credential-spray signature.",
+        "validates": "Same IP, ≥6 FAILED auths in 60s, optional SUCCESS in the same window proves credential compromise.",
+        "action": "Block the source IP at the perimeter, force password reset for any target user, and review session activity for the compromised account.",
+        "fp_note": "Misconfigured automation hammering an auth endpoint with stale creds; check the user-agent / process before final escalation.",
+    },
+    "R002": {"why": "≥11 distinct destination ports hit from one source in 30 s is a classic TCP/UDP port-scan fingerprint (T1046).",
+             "validates": "Distinct-port count, identical source, sub-minute density.",
+             "action": "Drop the scanner IP at the edge firewall; review what listeners exposed those ports.",
+             "fp_note": "Vulnerability scanners (Nessus/Qualys) on an authorised window."},
+    "R003": {"why": "A normal user authenticates SUCCESS and within 10 minutes an admin-tier user authenticates from the same host — classic privilege-escalation chain.",
+             "validates": "Same source IP, normal → admin SUCCESS sequence, sub-10-minute gap.",
+             "action": "Pull the host's process tree for sudo / runas / token-impersonation events around the second login.",
+             "fp_note": "Sysadmin actually elevating manually — confirm against change-management ticket."},
+    "R004": {"why": "Same user successfully authenticates on ≥3 hosts in 5 min — typical post-compromise lateral spread (T1021).",
+             "validates": "Single user, ≥3 distinct dest_ip, ≤5 min span.",
+             "action": "Reset the user's password + tokens; isolate the hosts visited and pull SMB/WinRM/PSExec logs.",
+             "fp_note": "Sysadmins running an Ansible / SCCM job."},
+    "R005": {"why": "A single outbound flow exceeded 100 MB to an external IP — large enough to be exfil rather than normal browsing.",
+             "validates": "bytes_sent threshold, destination is public IP space.",
+             "action": "Block egress to the destination, pull DLP records, and capture the user's recent file-access history.",
+             "fp_note": "Approved cloud backup to a known provider."},
+    "R006": {"why": "A non-service user account performed SUCCESS auth in the 00:00–05:00 UTC window when offices are closed.",
+             "validates": "Successful logon, off-hours timestamp, non-service-account name.",
+             "action": "Validate against on-call rota; if unscheduled, treat as compromised credential.",
+             "fp_note": "Engineers handling a P1 / weekend on-call."},
+    "R007": {"why": "An admin-tier account was newly created, or an existing identity was added to a privileged role (Global Admin / Administrators).",
+             "validates": "Account-creation event_type + admin name / group / role-templateId.",
+             "action": "Verify the change request, audit the creator's recent activity, and require MFA on the new account.",
+             "fp_note": "Legitimate onboarding of new IT admin within approved CAB."},
+    "R008": {"why": "Over 20 HTTP 404 responses to the same source IP — webserver-fuzzing / directory-brute fingerprint (T1595).",
+             "validates": "Same source IP, count >20, status=404.",
+             "action": "Rate-limit the source, deploy a WAF rule for the dir-brute paths, and check for resulting 200s.",
+             "fp_note": "Broken link-checker bot."},
+    "R009": {"why": "Activity to/from a flagged-malicious IP. Enriched lazily via /threatintel.",
+             "validates": "External IP appears in a reputable threat-intel feed.",
+             "action": "Block the IP, pull session / DNS context, and review previous matches.",
+             "fp_note": "Recently re-claimed cloud IP whose history hasn't aged out of feeds."},
+    "R010": {"why": "FAILED auth events for the same source across ≥3 distinct services (SSH + HTTP + FTP …) — wide-spectrum credential spray.",
+             "validates": "Same source IP, distinct event_type families, all FAILED.",
+             "action": "Block the IP everywhere and investigate any successful auths from it.",
+             "fp_note": "Misconfigured fleet of agents using rotated creds."},
+    "R011": {"why": "PowerShell launched with encoded payload, download cradle, AMSI-bypass marker or hidden window — the most common malware loader.",
+             "validates": "Command-line regex includes `-enc`, `DownloadString`, AMSI bypass tokens or hidden execution flags.",
+             "action": "Decode the base64 to inspect the payload; isolate the host; hunt for persistence.",
+             "fp_note": "Operations script wrapped in `-EncodedCommand` for quoting reasons."},
+    "R012": {"why": "Process-injection APIs observed (CreateRemoteThread, WriteProcessMemory, NtMapViewOfSection, QueueUserAPC).",
+             "validates": "Specific API names in the command-line / Sysmon image-load.",
+             "action": "Memory-acquire the host; compare the injected SHA256 against threat-intel.",
+             "fp_note": "Some legitimate AV/EDR products use the same APIs for inspection."},
+    "R013": {"why": "Direct LSASS access, MiniDumpWriteDump call, or mimikatz/Sekurlsa string — the gold-standard credential-dump indicator (T1003.001).",
+             "validates": "lsass.exe / lsass.dmp / minidump / mimikatz strings.",
+             "action": "Treat as confirmed credential compromise: rotate Kerberos krbtgt, expire affected user tokens.",
+             "fp_note": "Process-Explorer / VMM agents touching LSASS are rare but possible — verify caller hash."},
+    "R014": {"why": "≥50 DNS queries from one host with average payload length >60 characters — DNS-tunnel cadence (T1071.004).",
+             "validates": "High query count + long labels + low entropy.",
+             "action": "Block the suspected resolver path; capture full PCAP for the host.",
+             "fp_note": "Some EDR agents and CDN edge logic create long subdomain queries by design."},
+    "R015": {"why": "Plain-text credential material observed in the log (password=, api_key=, Basic auth header).",
+             "validates": "Regex match on credential indicator within HTTP payload / URL.",
+             "action": "Rotate the exposed secret immediately; review the originating service for safe-storage controls.",
+             "fp_note": "Synthetic / test traffic carrying placeholder credentials."},
+    "R016": {"why": "≥5 distinct accounts locked out from the same source within the window — password-spray pattern (T1110.004).",
+             "validates": "Single source, multiple unique target users, lockout event_type.",
+             "action": "Block the source IP, unlock affected users only after MFA challenge.",
+             "fp_note": "Stale service principal hammering several mailboxes."},
+    "R017": {"why": "Service-create / scheduled-task-create / cron-write / Run-key write — typical persistence implant.",
+             "validates": "sc.exe create, schtasks /create, crontab edit, registry Run path.",
+             "action": "Capture the new task's binary path + SHA256; remove the persistence if unauthorised.",
+             "fp_note": "Software-deploy agents creating tasks for postinstall."},
+    "R018": {"why": "Security / audit event log was cleared (EventID 1102 / wevtutil cl) — almost certainly cover-up.",
+             "validates": "1102 in the Security channel, or wevtutil clear, or Clear-EventLog.",
+             "action": "Treat the host as compromised; forensically image and reconstruct timeline from EDR.",
+             "fp_note": "Legitimate scripted log archival — very rare in production."},
+    "R019": {"why": "Defender / SentinelOne / CrowdStrike disable / exclusion / uninstall — attacker neutralising endpoint defenses.",
+             "validates": "Set-MpPreference -Disable*, Stop-Service WinDefend, Add-MpPreference -Exclusion*.",
+             "action": "Restore defenses, isolate the host, hunt for what happened in the protection-off window.",
+             "fp_note": "IT troubleshooting an AV conflict during change-window."},
+    "R020": {"why": "≥8 failed RDP logons from one source — RDP brute (T1021.001).",
+             "validates": "Port 3389 OR event_type contains 'rdp'/'terminal services', status FAILED.",
+             "action": "Block the source, require NLA + MFA, and review for any subsequent SUCCESS.",
+             "fp_note": "Misconfigured RDP client looping with stale creds."},
+    "R021": {"why": "Periodic outbound contact from one source to one destination — coefficient-of-variation under 0.30 indicates programmatic beacon.",
+             "validates": "≥6 hits, 30 s ≤ mean interval ≤ 1 h, CV ≤ 0.30 (CV=0 is perfect-period implant).",
+             "action": "Capture the binary issuing the beacon; pivot on the destination across all sources.",
+             "fp_note": "Polling agents (monitoring, OS-update) talking to corporate endpoints."},
+    "R022": {"why": "Same user authenticates from two distinct /16 networks within 1 h — geographically impossible (T1078).",
+             "validates": "Single user, multiple unique /16, sub-1-hour delta.",
+             "action": "Revoke active sessions for the user, require MFA on next login, and review token issuance.",
+             "fp_note": "Corporate VPN egress flipping between two PoPs."},
+    "R023": {"why": "Mass ransom-extension writes or volume-shadow / backup-deletion commands — ransomware impact stage (T1486 / T1490).",
+             "validates": "≥30 file writes with ransom extensions OR vssadmin delete shadows.",
+             "action": "Isolate immediately, block egress, snapshot disks, alert leadership.",
+             "fp_note": "QA harness creating large numbers of files with unusual extensions."},
+    "R024": {"why": "SQL-injection payload pattern observed (UNION, ' OR 1=1, xp_cmdshell, sleep, information_schema).",
+             "validates": "Regex match against the request body / URL.",
+             "action": "Block at WAF, review database audit log for the same time window.",
+             "fp_note": "Internal security scan / DAST."},
+    "R025": {"why": "Web-shell paths requested (cmd.aspx, c99.php, shell.jsp) or recon-tool user-agents (sqlmap, nikto).",
+             "validates": "URL path or User-Agent match.",
+             "action": "Take the application offline if a shell is confirmed; recover from a known-good baseline.",
+             "fp_note": "Pen-test engagement on a documented schedule."},
+    "R026": {"why": "An IDS / Suricata signature fired. The signature itself encodes domain expertise we trust.",
+             "validates": "alert.signature non-empty; signature_id; severity from the IDS engine.",
+             "action": "Validate the rule isn't false-prone for this signature; pivot on src/dest IP across other sources.",
+             "fp_note": "Generic / over-broad signatures occasionally tag legitimate traffic."},
+    "R027": {"why": "Outbound traffic to consumer file-sharing (mega.nz, transfer.sh, pastebin, …) with significant volume.",
+             "validates": "Destination matches file-share pattern OR Palo Alto category=file-sharing AND ≥10 MB total.",
+             "action": "Block the user's egress to the destination, audit the SharePoint/SMB access leading up to it.",
+             "fp_note": "Sanctioned use of Dropbox/OneDrive for corporate purposes."},
+    "R028": {"why": "Connection to a newly-registered domain / abused-TLD (.xyz, .top, .tk, .ml).",
+             "validates": "Palo Alto category=newly-registered-domain OR dest_host suffix in known-abused TLDs.",
+             "action": "DNS-sink-hole the domain; pull every host that resolved it.",
+             "fp_note": "Marketing campaign domains briefly hosted on cheap TLDs."},
+    "R029": {"why": "Email with risky attachment extension (.docm, .iso, .lnk, …) and/or DKIM/DMARC/SPF failure.",
+             "validates": "Risky extension count + auth-result failure + suspicious subject pattern.",
+             "action": "Quarantine the message, recall delivered copies, and detonate the attachment in a sandbox.",
+             "fp_note": "Legitimate vendor sending macro-enabled templates."},
+    "R030": {"why": "Privileged cloud role (Global Admin / AdministratorAccess) granted to an identity.",
+             "validates": "event_type matches 'Add member to role' / AttachUserPolicy AND target role is privileged.",
+             "action": "Confirm change-ticket; if unauthorised, revoke the role and rotate the grantor's credentials.",
+             "fp_note": "Authorised IT admin onboarding."},
+    "R031": {"why": "Binary named to mimic a system process (sysmon32.exe, svchost_helper.exe) under a Temp path — masquerading (T1036.005).",
+             "validates": "Filename regex against known LOL-names + path under Temp / AppData\\Local\\Temp.",
+             "action": "Quarantine the binary, capture SHA256, hunt for the dropper.",
+             "fp_note": "Internal IT tool deliberately named to look like a system process — rare."},
+    "R032": {"why": "PowerShell / cmd / wscript / mshta dropped an .exe / .dll / .ps1 under a Temp path — classic loader chain.",
+             "validates": "Parent is a scripting engine AND child extension AND Temp path.",
+             "action": "Block the parent script, capture both binaries, replay the chain in EDR.",
+             "fp_note": "Approved deployment scripts staging payloads in Temp."},
+    "R033": {"why": "≥5 Kerberos TGS-REQ events with weak (RC4-HMAC 0x17 / DES) encryption for one principal — Kerberoasting offline-crack prep.",
+             "validates": "EventID 4769 + TicketEncryptionType in {0x17, 0x18, 0x01, 0x03}.",
+             "action": "Reset the targeted service principal password; enforce AES-only.",
+             "fp_note": "Legacy app forcing RC4 — should still be rotated."},
+    "R034": {"why": "Office app (Word, Excel, Outlook…) spawned a shell / scripting engine — macro-borne initial access (T1566.001).",
+             "validates": "InitiatingProcessFileName ∈ Office set AND child ∈ shell set.",
+             "action": "Disable macros for the user, recall the email if traceable, hunt for the dropped payload.",
+             "fp_note": "Approved internal automation embedded in Excel — rare in production."},
+    "R035": {"why": "LOLBin (certutil / bitsadmin / mshta / regsvr32 / rundll32) invoked with URL or loader argument — T1218 / T1105.",
+             "validates": "Command-line regex matches the specific abuse pattern (e.g. certutil -urlcache -f -split).",
+             "action": "Capture the URL contacted; isolate the host; pull EDR for the next-stage payload.",
+             "fp_note": "Some IT-admin scripts genuinely use certutil for cert work — verify args carefully."},
+    "R036": {"why": "Service account performed interactive (Type 2) or RDP (Type 10) logon — service accounts should only do network/batch logons.",
+             "validates": "EventID 4624, LogonType ∈ {2, 10}, target user matches svc_*/service.",
+             "action": "Rotate the service account password, audit where it has interactive rights, and remove them.",
+             "fp_note": "On-call human using a shared service credential — itself a policy violation."},
+    "R037": {"why": "Sensitive AWS API (IAM Create, KMS, S3 policy, CloudTrail, ConsoleLogin) was invoked without MFA.",
+             "validates": "eventName in sensitive set AND mfaAuthenticated=false.",
+             "action": "Enforce MFA on the identity; review every action it performed in the unauthenticated window.",
+             "fp_note": "Service / CI-runner role legitimately not using MFA — should still be MFA-fronted via STS."},
+    "R038": {"why": "CloudTrail or VPC Flow Logs were stopped / deleted — attacker covering tracks.",
+             "validates": "eventName in {StopLogging, DeleteTrail, UpdateTrail, DeleteFlowLogs}.",
+             "action": "Re-enable logging immediately; restore from S3 / SIEM backup; treat the actor as compromised.",
+             "fp_note": "Approved trail rotation during environment migration."},
+    "R039": {"why": "Single principal made >100 S3 API calls — anomalous data-collection volume (T1530).",
+             "validates": "eventSource=s3.amazonaws.com AND per-principal count threshold.",
+             "action": "Audit which objects were read, throttle the role, and pivot to the egress side (PA / VPC Flow).",
+             "fp_note": "Approved data-pipeline / backup job with a normal volume baseline."},
+    "R040": {"why": "Single user downloaded ≥25 files from SharePoint / OneDrive — potential insider exfil staging.",
+             "validates": "Operation=FileDownloaded, single UserId.",
+             "action": "Lock OneDrive sync for the user, review downloaded filenames against the DLP policy.",
+             "fp_note": "Legitimate offline-prep for a known engagement."},
+    "R041": {"why": "Successful Entra sign-in from a country that is not part of the corporate baseline (NorthBay = IN).",
+             "validates": "location.countryOrRegion not in allowed-set.",
+             "action": "Revoke the session, force MFA-resync, and confirm the user's whereabouts.",
+             "fp_note": "Roaming employee on legitimate travel — verify against HR/travel system."},
+    "R042": {"why": "Single principal issued ≥15 Describe/List API calls with ≥5 distinct verbs — cloud enumeration / pre-attack discovery.",
+             "validates": "eventName starts with Describe/List, AWS source, distinct-verb threshold.",
+             "action": "Capture the principal's recent actions, validate the role's least-privilege, and watch for follow-on creates.",
+             "fp_note": "AWS Config / Cloud Custodian inventory scan."},
+}
+
+
+def _evidence_for(rule_id: str, df: pd.DataFrame, indices: List[int]) -> List[Dict[str, Any]]:
+    """Pull the most evidentially-relevant fields from up to 3 sample rows."""
+    if not indices or df is None or df.empty:
+        return []
+    sample = df.loc[[i for i in indices[:3] if i in df.index]] if indices else df.iloc[0:0]
+    if sample.empty:
+        return []
+    interesting = [
+        "timestamp", "source_ip", "dest_ip", "dest_host", "user",
+        "event_type", "status", "processcommandline", "filename", "folderpath",
+        "sha256", "useridentity_arn", "eventname", "ticketencryptiontype",
+        "logontype", "targetusername", "location_countryorregion", "category",
+        "app", "bytes", "signature", "alert_signature", "initiatingprocessfilename",
+        "operation", "url",
+    ]
+    out: List[Dict[str, Any]] = []
+    for idx, row in sample.iterrows():
+        facts: Dict[str, Any] = {"_log_index": int(idx)}
+        for f in interesting:
+            if f in row.index:
+                v = row.get(f)
+                if v is None:
+                    continue
+                try:
+                    if pd.isna(v):
+                        continue
+                except (TypeError, ValueError):
+                    pass
+                s = str(v)
+                if s and s.lower() not in {"nan", "none", "<na>", "nat"}:
+                    facts[f] = s[:240]
+        if len(facts) > 1:
+            out.append(facts)
+    return out
+
+
+def _enrich_with_reasoning(alerts: List[Alert], df: pd.DataFrame) -> None:
+    """
+    For every alert, attach:
+      - extra.evidence       — concrete log facts that triggered the match
+      - extra.reasoning      — plain-English "why this is malicious"
+      - extra.validates      — what the rule actually verified
+      - extra.recommended_action
+      - extra.false_positive_notes
+    so the analyst can justify the alert without bouncing back to the raw log.
+    """
+    for a in alerts:
+        catalog = _RULE_REASONING.get(a.rule_id, {})
+        # Don't clobber rule-specific extras — merge instead.
+        existing = dict(a.extra or {})
+        existing.setdefault("evidence", _evidence_for(a.rule_id, df, a.related_log_indices or []))
+        existing.setdefault("reasoning", catalog.get("why", ""))
+        existing.setdefault("validates", catalog.get("validates", ""))
+        existing.setdefault("recommended_action", catalog.get("action", ""))
+        existing.setdefault("false_positive_notes", catalog.get("fp_note", ""))
+        # Confidence signals — every rule lists what corroborated the match.
+        if "confidence_signals" not in existing:
+            signals: List[str] = []
+            if a.event_count >= 50:
+                signals.append(f"high volume ({a.event_count} events)")
+            elif a.event_count >= 10:
+                signals.append(f"sustained activity ({a.event_count} events)")
+            if a.source_ip and _is_external_ip(a.source_ip):
+                signals.append(f"external source IP {a.source_ip}")
+            if a.timestamp and (0 <= a.timestamp.hour < 5):
+                signals.append("off-hours (00:00–05:00 UTC)")
+            if a.tp_probability and a.tp_probability >= 0.9:
+                signals.append("rule self-rates ≥90% TP probability")
+            if a.severity == AlertSeverity.CRITICAL:
+                signals.append("rule severity = CRITICAL")
+            existing["confidence_signals"] = signals
+        a.extra = existing
+
+
 def run_all_rules(df: pd.DataFrame) -> List[Alert]:
-    """Run every rule and return the merged alert list."""
+    """Run every rule, then enrich each alert with structured reasoning so the
+    analyst can justify *why* the log fired — no more orphan alerts."""
     alerts: List[Alert] = []
     if df is None or df.empty:
         return alerts
@@ -2092,4 +2370,9 @@ def run_all_rules(df: pd.DataFrame) -> List[Alert]:
             logging.getLogger("noctra.rules").exception(
                 "Rule %s crashed: %s", rule.__name__, exc
             )
+    try:
+        _enrich_with_reasoning(alerts, df)
+    except Exception as exc:  # noqa: BLE001 — enrichment must not break ingest
+        import logging
+        logging.getLogger("noctra.rules").exception("Reasoning enrichment crashed: %s", exc)
     return alerts

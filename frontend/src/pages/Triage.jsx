@@ -397,6 +397,67 @@ function DetailDrawer({ alert, onClose, verdict, submitVerdict, sessionId }) {
             </div>
           )}
 
+          {/* Rule reasoning + evidence — surfaced from backend rule catalog so
+              every alert answers "why is this flagged?" without an LLM call. */}
+          {(alert.extra?.reasoning || alert.extra?.validates || alert.extra?.evidence?.length > 0) && (
+            <div className="space-y-2">
+              <SectionLabel icon={ShieldAlert}>Rule Reasoning &amp; Evidence</SectionLabel>
+              <div className="rounded-xl p-4 space-y-3 text-sm" style={{ background: 'var(--surface-2)', border: '1px solid var(--border-2)', color: 'var(--text-2)' }}>
+                {alert.extra?.reasoning && (
+                  <div>
+                    <div className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>Why this is malicious</div>
+                    <p>{alert.extra.reasoning}</p>
+                  </div>
+                )}
+                {alert.extra?.validates && (
+                  <div>
+                    <div className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>What the rule validated</div>
+                    <p style={{ color: 'var(--text-1)' }}>{alert.extra.validates}</p>
+                  </div>
+                )}
+                {Array.isArray(alert.extra?.confidence_signals) && alert.extra.confidence_signals.length > 0 && (
+                  <div>
+                    <div className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>Corroborating signals</div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {alert.extra.confidence_signals.map((s, i) => (
+                        <span key={i} className="text-[11px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(225,29,72,0.12)', color: '#fca5a5', border: '1px solid rgba(225,29,72,0.25)' }}>{s}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {Array.isArray(alert.extra?.evidence) && alert.extra.evidence.length > 0 && (
+                  <div>
+                    <div className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>Sampled log facts ({alert.extra.evidence.length})</div>
+                    <div className="space-y-2">
+                      {alert.extra.evidence.map((ev, i) => (
+                        <div key={i} className="rounded-lg p-2 text-[11px] font-mono" style={{ background: 'var(--bg)', border: '1px solid var(--border-2)' }}>
+                          {Object.entries(ev).filter(([k]) => k !== '_log_index').map(([k, v]) => (
+                            <div key={k} className="flex gap-2 leading-relaxed">
+                              <span style={{ color: 'var(--text-4)' }}>{k}:</span>
+                              <span style={{ color: 'var(--text-1)' }} className="break-all">{String(v)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {alert.extra?.recommended_action && (
+                  <div>
+                    <div className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>Recommended action</div>
+                    <p style={{ color: '#86efac' }}>{alert.extra.recommended_action}</p>
+                  </div>
+                )}
+                {alert.extra?.false_positive_notes && (
+                  <div>
+                    <div className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>When this would be benign</div>
+                    <p style={{ color: 'var(--text-3)' }}>{alert.extra.false_positive_notes}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* AI case notes */}
           {assist?.ai_notes && (
             <div className="space-y-2">

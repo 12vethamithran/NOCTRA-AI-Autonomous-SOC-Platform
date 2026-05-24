@@ -87,24 +87,24 @@ const CAPABILITY_TABS = [
 ]
 
 const MITRE_TACTICS = [
-  { code: 'TA0001', name: 'Initial Access',          rules: ['R022','R024'],            color: '#e11d48' },
-  { code: 'TA0002', name: 'Execution',               rules: ['R011'],                   color: '#f43f5e' },
-  { code: 'TA0003', name: 'Persistence',             rules: ['R007','R017','R025'],     color: '#9f1239' },
-  { code: 'TA0004', name: 'Privilege Escalation',    rules: ['R003'],                   color: '#ff4d4d' },
-  { code: 'TA0005', name: 'Defense Evasion',         rules: ['R012','R018','R019'],     color: '#be123c' },
-  { code: 'TA0006', name: 'Credential Access',       rules: ['R001','R010','R013','R015','R016'], color: '#e11d48' },
-  { code: 'TA0007', name: 'Discovery',               rules: ['R002'],                   color: '#881337' },
-  { code: 'TA0008', name: 'Lateral Movement',        rules: ['R004','R020'],            color: '#f43f5e' },
-  { code: 'TA0009', name: 'Collection',              rules: [],                         color: '#9f1239' },
-  { code: 'TA0011', name: 'Command & Control',       rules: ['R014','R021'],            color: '#e11d48' },
-  { code: 'TA0010', name: 'Exfiltration',            rules: ['R005'],                   color: '#be123c' },
-  { code: 'TA0040', name: 'Impact',                  rules: ['R023'],                   color: '#ff4d4d' },
+  { code: 'TA0001', name: 'Initial Access',          rules: ['R022','R024','R029','R034','R041'],         color: '#e11d48' },
+  { code: 'TA0002', name: 'Execution',               rules: ['R011','R032'],                              color: '#f43f5e' },
+  { code: 'TA0003', name: 'Persistence',             rules: ['R007','R017','R025','R030'],                color: '#9f1239' },
+  { code: 'TA0004', name: 'Privilege Escalation',    rules: ['R003'],                                     color: '#ff4d4d' },
+  { code: 'TA0005', name: 'Defense Evasion',         rules: ['R012','R018','R019','R031','R035','R036','R037','R038'], color: '#be123c' },
+  { code: 'TA0006', name: 'Credential Access',       rules: ['R001','R010','R013','R015','R016','R033'],  color: '#e11d48' },
+  { code: 'TA0007', name: 'Discovery',               rules: ['R002','R042'],                              color: '#881337' },
+  { code: 'TA0008', name: 'Lateral Movement',        rules: ['R004','R020'],                              color: '#f43f5e' },
+  { code: 'TA0009', name: 'Collection',              rules: ['R039','R040'],                              color: '#9f1239' },
+  { code: 'TA0011', name: 'Command & Control',       rules: ['R014','R021','R026','R028'],                color: '#e11d48' },
+  { code: 'TA0010', name: 'Exfiltration',            rules: ['R005','R027'],                              color: '#be123c' },
+  { code: 'TA0040', name: 'Impact',                  rules: ['R023'],                                     color: '#ff4d4d' },
 ]
 
 const PIPELINE = [
   { step: '01', icon: Database,     label: 'Ingest',    desc: 'Auto-detect format (CSV, JSON, syslog, EVTX, web access).' },
   { step: '02', icon: Cpu,          label: 'Normalize', desc: 'Standardize columns: ts, ip, user, action, status, port.' },
-  { step: '03', icon: ShieldAlert,  label: 'Detect',    desc: '25+ rules + behavioral anomaly + cross-event correlation.' },
+  { step: '03', icon: ShieldAlert,  label: 'Detect',    desc: '42 rules + behavioral anomaly + cross-event correlation.' },
   { step: '04', icon: Sparkles,     label: 'Score',     desc: 'AI per-alert TP probability with rationale & SHAP features.' },
   { step: '05', icon: Globe,        label: 'Enrich',    desc: 'IP reputation, geo, ASN, hash lookup, MITRE mapping.' },
   { step: '06', icon: GitBranch,    label: 'Chain',     desc: 'Correlate alerts into incident chains by shared entities.' },
@@ -709,24 +709,30 @@ export default function Landing() {
         <div className="flex items-end justify-between mb-5 flex-wrap gap-2">
           <div>
             <p className="eyebrow">Detection engine</p>
-            <h2 className="text-2xl font-extrabold text-white mt-1">25+ rules across 12 tactics</h2>
+            <h2 className="text-2xl font-extrabold text-white mt-1">42 rules across 12 MITRE ATT&CK tactics</h2>
             <p className="text-sm mt-1" style={{ color: 'var(--text-2)' }}>A representative slice — the full set is visible in the Rules module once you start a session.</p>
           </div>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
           {[
             { id: 'R001', n: 'Brute Force',           t: 'Credential Access' },
-            { id: 'R002', n: 'Port Scan',             t: 'Discovery' },
-            { id: 'R004', n: 'Lateral Movement',      t: 'Lateral Movement' },
             { id: 'R005', n: 'Data Exfiltration',     t: 'Exfiltration' },
-            { id: 'R010', n: 'Multi-Service Attack',  t: 'Credential Access' },
             { id: 'R011', n: 'PowerShell Suspicious', t: 'Execution' },
             { id: 'R013', n: 'LSASS Access',          t: 'Credential Access' },
-            { id: 'R014', n: 'DNS Tunneling',         t: 'Command & Control' },
-            { id: 'R017', n: 'Service Persistence',   t: 'Persistence' },
             { id: 'R018', n: 'Event Log Cleared',     t: 'Defense Evasion' },
             { id: 'R021', n: 'C2 Beaconing',          t: 'Command & Control' },
             { id: 'R023', n: 'Mass Encryption',       t: 'Impact' },
+            { id: 'R026', n: 'IDS Signature',         t: 'Command & Control' },
+            { id: 'R027', n: 'Cloud Exfil',           t: 'Exfiltration' },
+            { id: 'R028', n: 'NRD Contact',           t: 'Command & Control' },
+            { id: 'R029', n: 'Phishing Email',        t: 'Initial Access' },
+            { id: 'R030', n: 'Cloud Admin Grant',     t: 'Persistence' },
+            { id: 'R031', n: 'Masquerade Binary',     t: 'Defense Evasion' },
+            { id: 'R033', n: 'Kerberoasting',         t: 'Credential Access' },
+            { id: 'R034', n: 'Office → Shell',        t: 'Initial Access' },
+            { id: 'R038', n: 'CloudTrail Tamper',     t: 'Defense Evasion' },
+            { id: 'R040', n: 'SharePoint Mass DL',    t: 'Collection' },
+            { id: 'R041', n: 'Geo Anomaly',           t: 'Initial Access' },
           ].map(r => (
             <div key={r.id} className="rounded-xl px-3 py-2.5 tile-lift" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
               <div className="flex items-center justify-between mb-1">
