@@ -6,7 +6,7 @@
 # --- Web framework ---
 fastapi==0.115.0
 uvicorn[standard]==0.30.6
-python-multipart==0.0.12      # multipart/form-data (file uploads)
+python-multipart==0.0.27      # multipart/form-data (file uploads)
 
 # --- Data handling ---
 pandas==2.2.2                 # in-memory log DataFrame (the heart of the app)
