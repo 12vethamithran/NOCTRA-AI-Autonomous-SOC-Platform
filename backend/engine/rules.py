@@ -398,22 +398,36 @@ def rule_r006_off_hours(df: pd.DataFrame) -> List[Alert]:
 # ---------------------------------------------------------------------------
 def rule_r007_new_admin(df: pd.DataFrame) -> List[Alert]:
     """
-    Event types that look like 'user_created' / 'account_added' targeting a user
-    in _ADMIN_USERS or with an 'admin' substring.
+    Account creation / role-grant events that target a privileged identity.
+    Covers Linux (useradd), Windows (Event 4720/4732), and cloud
+    (Entra "Add user" + "Add member to role", AWS IAM CreateUser/AttachUserPolicy).
     """
     alerts: List[Alert] = []
     if df.empty:
         return alerts
-    creations = df[
-        df["event_type"].astype(str).str.lower().str.contains(
-            "create_user|user_created|account_added|new_user|useradd", na=False
-        )
-    ]
+    et = df["event_type"].astype(str).str.lower()
+    raw = df["raw"].astype(str).str.lower() if "raw" in df.columns else pd.Series("", index=df.index)
+    et_mask = et.str.contains(
+        "create_user|user_created|account_added|new_user|useradd|add user|add member to role|"
+        "createuser|attachuserpolicy|addusertogroup|4720|4728|4732",
+        na=False, regex=True,
+    )
+    raw_mask = raw.str.contains(
+        "global administrator|privileged role|role\\.displayname|attachuserpolicy|administrators",
+        na=False, regex=True,
+    )
+    creations = df[et_mask | (et_mask & raw_mask)]
+    if creations.empty:
+        # Fall back: any account-creation event whose raw mentions admin/global-admin role
+        creations = df[et_mask & raw_mask] if not et_mask.empty else df.iloc[0:0]
     if creations.empty:
         return alerts
+    user_l = creations["user"].astype(str).str.lower() if "user" in creations.columns else pd.Series("", index=creations.index)
+    creations_raw_l = creations["raw"].astype(str).str.lower() if "raw" in creations.columns else pd.Series("", index=creations.index)
     creations = creations[
-        creations["user"].astype(str).str.lower().isin(_ADMIN_USERS)
-        | creations["user"].astype(str).str.lower().str.contains("admin", na=False)
+        user_l.isin(_ADMIN_USERS)
+        | user_l.str.contains("admin", na=False)
+        | creations_raw_l.str.contains("global administrator|administrators|administrator role|privileged role", na=False, regex=True)
     ]
     for idx, row in creations.iterrows():
         alerts.append(
@@ -948,7 +962,10 @@ def rule_r021_beaconing(df: pd.DataFrame) -> List[Alert]:
         std = float(deltas.std()) if not deltas.empty else 0.0
         if mean < 30 or mean > 3600:
             continue
-        if std == 0 or (std / mean) > 0.25:
+        # Perfectly periodic (std==0) is the MOST suspicious pattern, not a
+        # reason to skip — that was a bug. Only reject if cadence is irregular.
+        cv = (std / mean) if mean > 0 else 0.0
+        if cv > 0.30:
             continue
         ts = _safe_min_ts(grp)
         if ts is None:
@@ -958,7 +975,7 @@ def rule_r021_beaconing(df: pd.DataFrame) -> List[Alert]:
             rule_id="R021",
             rule_name="C2 Beaconing Suspected",
             severity=AlertSeverity.CRITICAL,
-            description=f"{src} contacted {dst} {len(grp)} times at ~{int(mean)}s intervals (CV={std/mean:.2f})",
+            description=f"{src} contacted {dst} {len(grp)} times at ~{int(mean)}s intervals (CV={cv:.2f})",
             timestamp=ts,
             source_ip=str(src),
             dest_ip=str(dst),
@@ -967,7 +984,7 @@ def rule_r021_beaconing(df: pd.DataFrame) -> List[Alert]:
             mitre_tactic="Command and Control",
             tp_probability=0.95,
             related_log_indices=list(grp.index),
-            extra={"interval_seconds": int(mean), "cv": round(std / mean, 3)},
+            extra={"interval_seconds": int(mean), "cv": round(cv, 3)},
         ))
     return alerts
 
@@ -1161,6 +1178,378 @@ def rule_r025_web_shell(df: pd.DataFrame) -> List[Alert]:
     return alerts
 
 
+# ===========================================================================
+# R026-R032 — Hollow-Vault / cloud-era coverage pack
+# Targets IDS signatures, NRD beacons, cloud-storage exfil, phishing,
+# privileged-cloud-role grants, masquerading binaries, and PowerShell drops.
+# ===========================================================================
+
+# ---------------------------------------------------------------------------
+# R026 — IDS / Suricata Signature Alert (T1071 / catch-all C2 + malware)
+# Fires on any row carrying an IDS alert signature — high fidelity by design.
+# ---------------------------------------------------------------------------
+def rule_r026_ids_signature(df: pd.DataFrame) -> List[Alert]:
+    alerts: List[Alert] = []
+    if df.empty:
+        return alerts
+    # Prefer the flattened nested field; fall back to scanning raw.
+    sig_col = None
+    for c in ("alert_signature", "signature", "rule_name"):
+        if c in df.columns and df[c].notna().any():
+            sig_col = c
+            break
+    if sig_col is None:
+        # Raw scan for common ET MALWARE / suricata alert markers
+        hits = _raw_contains(df, [
+            "et malware", "et trojan", "et exploit", "et policy",
+            "et scan", "signature_id", "\"event_type\": \"alert\"",
+        ])
+    else:
+        hits = df[df[sig_col].notna() & (df[sig_col].astype(str).str.strip() != "")].copy()
+    if hits.empty:
+        return alerts
+    # Group by (source, signature) so the same beacon doesn't generate 10 alerts.
+    sig_series = hits[sig_col].astype(str) if sig_col else hits["raw"].astype(str).str.slice(0, 80)
+    hits = hits.assign(_sig=sig_series.fillna("ids_alert"))
+    by = hits.groupby(["_sig", hits["source_ip"].fillna("unknown")])
+    for (sig, src), grp in by:
+        ts = _safe_min_ts(grp)
+        if ts is None:
+            continue
+        dest = str(grp["dest_ip"].dropna().iloc[0]) if "dest_ip" in grp.columns and grp["dest_ip"].dropna().size else None
+        # Severity: critical if signature mentions malware/c2/ransomware/exploit.
+        sig_l = str(sig).lower()
+        crit = any(k in sig_l for k in ("malware", "trojan", "c2", "ransom", "exploit", "rat"))
+        alerts.append(Alert(
+            alert_id=_new_alert_id(),
+            rule_id="R026",
+            rule_name="IDS Signature Alert",
+            severity=AlertSeverity.CRITICAL if crit else AlertSeverity.HIGH,
+            description=f"IDS fired {len(grp)}x on '{sig}'" + (f" from {src}" if src != "unknown" else ""),
+            timestamp=ts,
+            source_ip=None if src == "unknown" else str(src),
+            dest_ip=dest,
+            event_count=len(grp),
+            mitre_technique="T1071",
+            mitre_tactic="Command and Control",
+            tp_probability=0.95 if crit else 0.88,
+            related_log_indices=list(grp.index),
+            extra={"signature": str(sig)},
+        ))
+    return alerts
+
+
+# ---------------------------------------------------------------------------
+# R027 — Cloud-storage / file-sharing exfiltration (T1567 / Exfiltration)
+# Large outbound traffic to consumer file-sharing services bypasses corporate
+# DLP. Threshold deliberately lower than R005 because dest is high-risk.
+# ---------------------------------------------------------------------------
+_FILESHARE_PATTERNS = (
+    "mega.nz", "mega.co.nz", "transfer.sh", "anonfiles", "filebin",
+    "wetransfer", "send.bitwarden", "pastebin.com", "ghostbin",
+    "dropbox.com/s/", "drive.google.com/uc", "filemail", "gofile.io",
+    "tmpfiles.org", "mediafire.com",
+)
+
+
+def rule_r027_cloud_exfil(df: pd.DataFrame) -> List[Alert]:
+    alerts: List[Alert] = []
+    if df.empty:
+        return alerts
+    raw_l = df["raw"].astype(str).str.lower() if "raw" in df.columns else pd.Series("", index=df.index)
+    mask = pd.Series(False, index=df.index)
+    for p in _FILESHARE_PATTERNS:
+        mask = mask | raw_l.str.contains(p, na=False, regex=False)
+    # Palo Alto category 'file-sharing' is a strong signal even without a domain match.
+    if "category" in df.columns:
+        mask = mask | df["category"].astype(str).str.lower().eq("file-sharing")
+    if "app" in df.columns:
+        mask = mask | df["app"].astype(str).str.lower().isin({"mega", "dropbox", "wetransfer", "pastebin"})
+    hits = df[mask].copy()
+    if hits.empty:
+        return alerts
+    # Aggregate volume per (user|source_ip, dest)
+    if "bytes" not in hits.columns:
+        return alerts
+    hits["_bytes"] = pd.to_numeric(hits["bytes"], errors="coerce").fillna(0)
+    key_src = hits["user"].fillna(hits["source_ip"].astype(str)).fillna("unknown")
+    key_dst = hits.get("dest_host", pd.Series("", index=hits.index))
+    if "dest_host" not in hits.columns:
+        # Pull dest host from raw if present
+        key_dst = hits["raw"].astype(str).str.extract(r'(?:dst_hostname|host|destination)["\s:=]+["\']?([\w.\-]+)', expand=False).fillna("")
+    hits = hits.assign(_src=key_src, _dst=key_dst.fillna(""))
+    grouped = hits.groupby(["_src", "_dst"])
+    for (src, dst), grp in grouped:
+        total = int(grp["_bytes"].sum())
+        if total < 10 * 1024 * 1024 and len(grp) < 3:
+            continue  # ignore trivial chatter
+        ts = _safe_min_ts(grp)
+        if ts is None:
+            continue
+        mb = total / 1024 / 1024
+        alerts.append(Alert(
+            alert_id=_new_alert_id(),
+            rule_id="R027",
+            rule_name="Cloud Storage Exfiltration",
+            severity=AlertSeverity.CRITICAL if mb > 100 else AlertSeverity.HIGH,
+            description=f"{src} sent {mb:.1f} MB across {len(grp)} session(s) to file-sharing dest '{dst or 'unknown'}'",
+            timestamp=ts,
+            source_ip=str(grp["source_ip"].dropna().iloc[0]) if "source_ip" in grp.columns and grp["source_ip"].dropna().size else None,
+            user=str(src) if src != "unknown" else None,
+            event_count=len(grp),
+            mitre_technique="T1567.002",
+            mitre_tactic="Exfiltration",
+            tp_probability=0.95 if mb > 100 else 0.85,
+            related_log_indices=list(grp.index),
+            extra={"total_bytes": total, "destination": str(dst)},
+        ))
+    return alerts
+
+
+# ---------------------------------------------------------------------------
+# R028 — Newly Registered / Suspicious Domain Contact (T1568 / C2)
+# ---------------------------------------------------------------------------
+def rule_r028_nrd_contact(df: pd.DataFrame) -> List[Alert]:
+    alerts: List[Alert] = []
+    if df.empty:
+        return alerts
+    mask = pd.Series(False, index=df.index)
+    if "category" in df.columns:
+        cat = df["category"].astype(str).str.lower()
+        mask = mask | cat.isin({"newly-registered-domain", "dynamic-dns", "parked", "malware"})
+    # TLDs commonly abused by malware infrastructure
+    raw_l = df["raw"].astype(str).str.lower() if "raw" in df.columns else pd.Series("", index=df.index)
+    mask = mask | raw_l.str.contains(r"\.(?:xyz|top|tk|ml|ga|cf|gq|click|country|men|loan|kim)\b", na=False, regex=True)
+    hits = df[mask]
+    if hits.empty:
+        return alerts
+    # Pick a stable per-domain pivot.
+    dom = hits.get("dest_host")
+    if dom is None or dom.isna().all():
+        dom = hits["raw"].astype(str).str.extract(r'([a-z0-9\-]+\.(?:xyz|top|tk|ml|ga|cf|gq|click|country|men|loan|kim))', expand=False)
+    hits = hits.assign(_dom=dom.fillna("unknown"))
+    for d, grp in hits.groupby("_dom"):
+        if d == "unknown":
+            continue
+        ts = _safe_min_ts(grp)
+        if ts is None:
+            continue
+        alerts.append(Alert(
+            alert_id=_new_alert_id(),
+            rule_id="R028",
+            rule_name="Newly Registered / Suspicious Domain Contact",
+            severity=AlertSeverity.HIGH,
+            description=f"{len(grp)} connection(s) to suspicious domain '{d}'",
+            timestamp=ts,
+            source_ip=str(grp["source_ip"].dropna().iloc[0]) if "source_ip" in grp.columns and grp["source_ip"].dropna().size else None,
+            user=str(grp["user"].dropna().iloc[0]) if "user" in grp.columns and grp["user"].dropna().size else None,
+            event_count=len(grp),
+            mitre_technique="T1568",
+            mitre_tactic="Command and Control",
+            tp_probability=0.90,
+            related_log_indices=list(grp.index),
+            extra={"domain": str(d)},
+        ))
+    return alerts
+
+
+# ---------------------------------------------------------------------------
+# R029 — Phishing email with risky attachment / auth failure
+# (T1566.001 / Initial Access)
+# ---------------------------------------------------------------------------
+_RISKY_ATTACHMENT_EXT = (".docm", ".xlsm", ".pptm", ".iso", ".img", ".lnk",
+                        ".js", ".vbs", ".hta", ".chm", ".scr", ".jar", ".one")
+
+
+def rule_r029_phishing(df: pd.DataFrame) -> List[Alert]:
+    alerts: List[Alert] = []
+    if df.empty or "raw" not in df.columns:
+        return alerts
+    raw_l = df["raw"].astype(str).str.lower()
+    # Defender for O365 EmailEvents shape — look for SPF/DKIM/DMARC failure
+    # plus a risky attachment extension.
+    auth_fail = raw_l.str.contains(r"dkim=fail|dmarc=fail|spf=fail|compauth=fail", na=False, regex=True)
+    risky_attach = raw_l.apply(lambda s: any(ext in s for ext in _RISKY_ATTACHMENT_EXT))
+    suspicious_subj = raw_l.str.contains(
+        r"(?:invoice|payroll|wire transfer|urgent|password reset|docusign|review.*eod|please confirm)",
+        na=False, regex=True,
+    )
+    is_email = raw_l.str.contains("networkmessageid|internetmessageid|senderfromaddress|emaildirection", na=False, regex=True)
+    mask = is_email & (auth_fail | risky_attach | suspicious_subj)
+    # If we picked up email rows, require at least one strong indicator.
+    strong = is_email & (auth_fail | risky_attach)
+    hits = df[strong] if strong.any() else df[mask]
+    if hits.empty:
+        return alerts
+    for idx, row in hits.iterrows():
+        ts = row["timestamp"].to_pydatetime() if pd.notna(row.get("timestamp")) else None
+        if ts is None:
+            continue
+        sender = row.get("senderfromaddress") or row.get("user") or "unknown"
+        recipient = row.get("recipientemailaddress") or "unknown"
+        alerts.append(Alert(
+            alert_id=_new_alert_id(),
+            rule_id="R029",
+            rule_name="Phishing Email (Risky Attachment / Auth Fail)",
+            severity=AlertSeverity.HIGH,
+            description=f"Email from {sender} → {recipient} with risky attachment and/or DKIM/DMARC failure",
+            timestamp=ts,
+            user=str(recipient) if recipient != "unknown" else None,
+            source_ip=str(row.get("source_ip")) if pd.notna(row.get("source_ip")) else None,
+            event_count=1,
+            mitre_technique="T1566.001",
+            mitre_tactic="Initial Access",
+            tp_probability=0.90,
+            related_log_indices=[int(idx)],
+            extra={"sender": str(sender), "recipient": str(recipient)},
+        ))
+    return alerts
+
+
+# ---------------------------------------------------------------------------
+# R030 — Cloud privileged-role assignment (T1098 / Persistence)
+# Specifically catches Entra "Add member to role" → Global Administrator and
+# AWS IAM AttachUserPolicy → AdministratorAccess.
+# ---------------------------------------------------------------------------
+def rule_r030_cloud_admin_grant(df: pd.DataFrame) -> List[Alert]:
+    alerts: List[Alert] = []
+    if df.empty or "raw" not in df.columns:
+        return alerts
+    raw_l = df["raw"].astype(str).str.lower()
+    et_l = df["event_type"].astype(str).str.lower() if "event_type" in df.columns else pd.Series("", index=df.index)
+    is_role_grant = et_l.str.contains("add member to role|attachuserpolicy|addusertogroup|4732", na=False, regex=True)
+    is_priv = raw_l.str.contains(
+        "global administrator|administratoraccess|domain admins|enterprise admins|"
+        "privileged role administrator|62e90394-69f5-4237-9190-012177145e10",
+        na=False, regex=True,
+    )
+    hits = df[is_role_grant & is_priv]
+    if hits.empty:
+        return alerts
+    for idx, row in hits.iterrows():
+        ts = row["timestamp"].to_pydatetime() if pd.notna(row.get("timestamp")) else None
+        if ts is None:
+            continue
+        actor = row.get("user") or "unknown"
+        target = row.get("targetresources_userprincipalname") or row.get("targetresources_displayname") or "unknown"
+        src_ip = row.get("source_ip") or row.get("initiatedby_user_ipaddress")
+        # Off-hours / external IP boost confidence.
+        sev = AlertSeverity.CRITICAL
+        alerts.append(Alert(
+            alert_id=_new_alert_id(),
+            rule_id="R030",
+            rule_name="Cloud Privileged Role Assignment",
+            severity=sev,
+            description=f"{actor} granted privileged role to {target}",
+            timestamp=ts,
+            source_ip=str(src_ip) if src_ip else None,
+            user=str(actor),
+            event_count=1,
+            mitre_technique="T1098.003",
+            mitre_tactic="Persistence",
+            tp_probability=0.97,
+            related_log_indices=[int(idx)],
+            extra={"actor": str(actor), "target": str(target)},
+        ))
+    return alerts
+
+
+# ---------------------------------------------------------------------------
+# R031 — Masquerading binary in user/temp path (T1036.005 / Defense Evasion)
+# Drops named after legit Windows binaries (sysmon, svchost, lsass, services,
+# csrss, winlogon, explorer) but located in C:\Users\*\Temp\ or C:\Windows\Temp\.
+# ---------------------------------------------------------------------------
+_MASQ_NAMES = (
+    "sysmon", "svchost", "lsass", "services", "csrss", "winlogon", "explorer",
+    "spoolsv", "wininit", "smss", "taskhostw", "rundll32", "dllhost",
+)
+
+
+def rule_r031_masquerade(df: pd.DataFrame) -> List[Alert]:
+    alerts: List[Alert] = []
+    if df.empty or "raw" not in df.columns:
+        return alerts
+    raw_l = df["raw"].astype(str).str.lower()
+    # Filename column (MDE FileEvents) or raw substring.
+    fname = df["filename"].astype(str).str.lower() if "filename" in df.columns else pd.Series("", index=df.index)
+    folder = df["folderpath"].astype(str).str.lower() if "folderpath" in df.columns else pd.Series("", index=df.index)
+    name_mask = pd.Series(False, index=df.index)
+    for n in _MASQ_NAMES:
+        # match sysmon32.exe, svchost32.exe, lsass_x.exe etc — anything that
+        # *looks* like the legit name but isn't an exact match.
+        name_mask = name_mask | fname.str.contains(rf"{n}\d+\.exe|{n}[_\-].+\.exe", na=False, regex=True)
+    in_temp = folder.str.contains(r"\\temp\\|\\appdata\\local\\temp|/tmp/", na=False, regex=True)
+    # Also detect via raw text for non-MDE sources.
+    raw_match = raw_l.str.contains(
+        r"(?:sysmon|svchost|lsass|services|csrss)\d+\.exe", na=False, regex=True,
+    )
+    hits = df[(name_mask & in_temp) | raw_match]
+    if hits.empty:
+        return alerts
+    for idx, row in hits.iterrows():
+        ts = row["timestamp"].to_pydatetime() if pd.notna(row.get("timestamp")) else None
+        if ts is None:
+            continue
+        alerts.append(Alert(
+            alert_id=_new_alert_id(),
+            rule_id="R031",
+            rule_name="Masquerading Binary in Temp Path",
+            severity=AlertSeverity.CRITICAL,
+            description=f"Suspicious binary '{row.get('filename') or 'unknown'}' written to '{row.get('folderpath') or 'temp'}'",
+            timestamp=ts,
+            source_ip=str(row.get("source_ip")) if pd.notna(row.get("source_ip")) else None,
+            user=str(row.get("user") or row.get("initiatingprocessaccountname") or "") or None,
+            event_count=1,
+            mitre_technique="T1036.005",
+            mitre_tactic="Defense Evasion",
+            tp_probability=0.96,
+            related_log_indices=[int(idx)],
+            extra={"sha256": str(row.get("sha256") or ""), "device": str(row.get("devicename") or "")},
+        ))
+    return alerts
+
+
+# ---------------------------------------------------------------------------
+# R032 — PowerShell drops executable to Temp (T1059.001 + T1105)
+# MDE FileEvents where InitiatingProcessFileName == powershell.exe and
+# resulting FileName ends in .exe under a Temp path.
+# ---------------------------------------------------------------------------
+def rule_r032_ps_drop_exe(df: pd.DataFrame) -> List[Alert]:
+    alerts: List[Alert] = []
+    if df.empty:
+        return alerts
+    init = df["initiatingprocessfilename"].astype(str).str.lower() if "initiatingprocessfilename" in df.columns else pd.Series("", index=df.index)
+    fname = df["filename"].astype(str).str.lower() if "filename" in df.columns else pd.Series("", index=df.index)
+    folder = df["folderpath"].astype(str).str.lower() if "folderpath" in df.columns else pd.Series("", index=df.index)
+    is_ps = init.str.contains("powershell|pwsh|cmd\\.exe|wscript|cscript|mshta", na=False, regex=True)
+    is_exe = fname.str.endswith(".exe") | fname.str.endswith(".dll") | fname.str.endswith(".ps1")
+    in_temp = folder.str.contains(r"\\temp|appdata\\local\\temp|/tmp/", na=False, regex=True)
+    hits = df[is_ps & is_exe & in_temp]
+    if hits.empty:
+        return alerts
+    for idx, row in hits.iterrows():
+        ts = row["timestamp"].to_pydatetime() if pd.notna(row.get("timestamp")) else None
+        if ts is None:
+            continue
+        alerts.append(Alert(
+            alert_id=_new_alert_id(),
+            rule_id="R032",
+            rule_name="Scripting Engine Drops Executable to Temp",
+            severity=AlertSeverity.CRITICAL,
+            description=f"{row.get('initiatingprocessfilename')} wrote {row.get('filename')} to {row.get('folderpath')}",
+            timestamp=ts,
+            source_ip=str(row.get("source_ip")) if pd.notna(row.get("source_ip")) else None,
+            user=str(row.get("initiatingprocessaccountname") or row.get("user") or "") or None,
+            event_count=1,
+            mitre_technique="T1059.001",
+            mitre_tactic="Execution",
+            tp_probability=0.94,
+            related_log_indices=[int(idx)],
+            extra={"sha256": str(row.get("sha256") or ""), "device": str(row.get("devicename") or "")},
+        ))
+    return alerts
+
+
 # ---------------------------------------------------------------------------
 # Dispatcher
 # ---------------------------------------------------------------------------
@@ -1190,6 +1579,13 @@ ALL_RULES: list[Callable[[pd.DataFrame], List[Alert]]] = [
     rule_r023_ransomware,
     rule_r024_sql_injection,
     rule_r025_web_shell,
+    rule_r026_ids_signature,
+    rule_r027_cloud_exfil,
+    rule_r028_nrd_contact,
+    rule_r029_phishing,
+    rule_r030_cloud_admin_grant,
+    rule_r031_masquerade,
+    rule_r032_ps_drop_exe,
 ]
 
 

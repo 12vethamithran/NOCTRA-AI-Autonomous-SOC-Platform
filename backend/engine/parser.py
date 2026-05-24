@@ -216,63 +216,56 @@ def _looks_like_logfmt(sample: str) -> bool:
 # CSV / TSV / delimited
 # -----------------------------------------------------------------------------
 # Map common alternate column names → our normalised names.
-_CSV_COLUMN_ALIASES: Dict[str, str] = {
-    "time": "timestamp",
-    "datetime": "timestamp",
-    "date": "timestamp",
-    "ts": "timestamp",
-    "@timestamp": "timestamp",
-    "event_time": "timestamp",
-    "src_ip": "source_ip",
-    "src": "source_ip",
-    "srcip": "source_ip",
-    "client_ip": "source_ip",
-    "source": "source_ip",
-    "ip": "source_ip",
-    "remote_addr": "source_ip",
-    "dst_ip": "dest_ip",
-    "dst": "dest_ip",
-    "dstip": "dest_ip",
-    "destination_ip": "dest_ip",
-    "dst_host": "dest_ip",
-    "dest_host": "dest_ip",
-    "target": "dest_ip",
-    "event": "event_type",
-    "action": "event_type",
-    "alert_type": "event_type",
-    "eventtype": "event_type",
-    "type": "event_type",
-    "category": "event_type",
-    "username": "user",
-    "account": "user",
-    "src_user": "user",
-    "user_name": "user",
-    "account_name": "user",
-    "result": "status",
-    "outcome": "status",
-    "response": "status",
-    "status_code": "status",
-    "size": "bytes",
-    "length": "bytes",
-    "bytes_out": "bytes",
-    "bytes_sent": "bytes",
-    "content_length": "bytes",
-    "dest_port": "port",
-    "dst_port": "port",
-    "destination_port": "port",
-}
+_CSV_COLUMN_ALIASES: Dict[str, str] = {}  # kept for backward compat; actual alias logic uses _PRIMARY_FOR
 
 # Fields that mean the same as `source_ip` etc. but should not clobber a real
 # value — only the first alias to land wins (handled in _apply_aliases).
+# Greatly expanded to cover Microsoft Defender, Entra, AWS CloudTrail, Palo Alto,
+# Suricata, M365 Unified Audit, Defender for O365 EmailEvents, Windows DNS debug
+# and other cloud / enterprise log schemas.
 _PRIMARY_FOR = {
-    "timestamp": ("timestamp", "@timestamp", "ts", "datetime", "date", "time", "event_time"),
-    "source_ip": ("src_ip", "source_ip", "srcip", "src", "client_ip", "remote_addr", "ip", "source"),
-    "dest_ip": ("dst_ip", "dest_ip", "dstip", "dst", "destination_ip", "dst_host", "dest_host", "target"),
-    "event_type": ("event_type", "eventtype", "alert_type", "event", "action", "type", "category"),
-    "user": ("user", "username", "user_name", "src_user", "account", "account_name"),
-    "status": ("status", "result", "outcome", "response", "status_code"),
-    "bytes": ("bytes", "size", "length", "bytes_out", "bytes_sent", "content_length"),
-    "port": ("port", "dest_port", "dst_port", "destination_port"),
+    "timestamp": (
+        "timestamp", "@timestamp", "timegenerated", "ts", "datetime", "date", "time",
+        "event_time", "eventtime", "activitydatetime", "receive_time", "createddatetime",
+        "creationtime",
+    ),
+    "source_ip": (
+        "source_ip", "src_ip", "srcip", "src", "client_ip", "clientip", "remote_addr",
+        "remoteaddress", "ipaddress", "senderipv4", "callerip", "sourceipaddress",
+        "ip", "source",
+    ),
+    "dest_ip": (
+        "dest_ip", "dst_ip", "dstip", "dst", "destination_ip", "destinationaddress",
+        "remoteip", "target",
+    ),
+    "dest_host": (
+        "dest_host", "dst_host", "dst_hostname", "destination_host", "query_name",
+        "queryname", "url_domain", "urldomain", "url", "host",
+    ),
+    "event_type": (
+        "event_type", "eventtype", "alert_type", "event", "action", "actiontype",
+        "operation", "operationname", "activitydisplayname", "eventname", "type",
+        "category", "rule_name", "signature",
+    ),
+    "user": (
+        "user", "username", "user_name", "src_user", "account", "account_name",
+        "userprincipalname", "useridentity_username", "useridentity_principalid",
+        "initiatedby_user_userprincipalname", "initiatedby_user_displayname",
+        "initiatingprocessaccountname", "recipientemailaddress", "senderfromaddress",
+        "targetuserprincipalname",
+    ),
+    "status": (
+        "status", "result", "outcome", "response", "status_code", "errorcode",
+        "deliveryaction", "action_result",
+    ),
+    "bytes": (
+        "bytes", "bytes_sent", "bytes_out", "bytestoserver", "size", "length",
+        "content_length", "filesize",
+    ),
+    "port": (
+        "port", "dport", "dest_port", "dst_port", "destination_port",
+        "destinationport",
+    ),
 }
 
 
@@ -349,6 +342,28 @@ def _parse_csv(text: str) -> Tuple[pd.DataFrame, int]:
 # -----------------------------------------------------------------------------
 # JSON / JSONL / NDJSON
 # -----------------------------------------------------------------------------
+def _flatten_dict(d: Dict[str, Any], parent: str = "", sep: str = "_") -> Dict[str, Any]:
+    """Recursively flatten a nested dict/list-of-dicts so cloud-log payloads
+    (Suricata alert.signature, Entra initiatedBy.user.*, AWS userIdentity.*) end
+    up as flat columns the rules can read."""
+    out: Dict[str, Any] = {}
+    for k, v in d.items():
+        key = f"{parent}{sep}{k}".strip(sep) if parent else str(k)
+        if isinstance(v, dict):
+            out.update(_flatten_dict(v, key, sep))
+        elif isinstance(v, list):
+            # Lists of primitives → join; lists of dicts → flatten first element
+            # AND keep the JSON form so rule pattern-matching can still see it.
+            if v and all(isinstance(x, dict) for x in v):
+                out.update(_flatten_dict(v[0], key, sep))
+                out[key] = json.dumps(v, default=str)
+            else:
+                out[key] = ", ".join(str(x) for x in v) if v else None
+        else:
+            out[key] = v
+    return out
+
+
 def _parse_json(text: str) -> Tuple[pd.DataFrame, int]:
     """Accept a JSON array, a single object, a wrapper object, or NDJSON."""
     text = text.strip()
@@ -389,13 +404,21 @@ def _parse_json(text: str) -> Tuple[pd.DataFrame, int]:
             else:
                 dropped += 1
 
-    df = pd.DataFrame(rows)
+    # Flatten nested dicts so e.g. {"alert":{"signature":"X"}} → alert_signature=X
+    # The original nested object is retained as a JSON string in `raw` so rule
+    # pattern-matchers (which scan `raw`) still see the full payload.
+    flat_rows: List[Dict[str, Any]] = []
+    raws: List[str] = []
+    for r in rows:
+        raws.append(json.dumps(r, default=str))
+        flat_rows.append(_flatten_dict(r))
+    df = pd.DataFrame(flat_rows)
     if df.empty:
         return pd.DataFrame(), dropped
 
     df.columns = [str(c).strip().lower() for c in df.columns]
     df = _apply_aliases(df)
-    df["raw"] = df.apply(lambda r: json.dumps(r.dropna().to_dict(), default=str), axis=1)
+    df["raw"] = raws
     df = _derive_status(df)
     return df, dropped
 

@@ -213,6 +213,13 @@ _HIGH_FIDELITY_RULES = {
     "R020": 0.88,  # RDP brute
     "R024": 0.87,  # SQL injection
     "R025": 0.85,  # Web shell
+    "R026": 0.92,  # IDS / Suricata signature
+    "R027": 0.90,  # Cloud-storage exfil
+    "R028": 0.86,  # NRD contact
+    "R029": 0.88,  # Phishing
+    "R030": 0.96,  # Cloud privileged role assignment
+    "R031": 0.94,  # Masquerading binary
+    "R032": 0.92,  # PowerShell drops exe to temp
 }
 
 
