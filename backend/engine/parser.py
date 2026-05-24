@@ -225,9 +225,9 @@ _CSV_COLUMN_ALIASES: Dict[str, str] = {}  # kept for backward compat; actual ali
 # and other cloud / enterprise log schemas.
 _PRIMARY_FOR = {
     "timestamp": (
-        "timestamp", "@timestamp", "timegenerated", "ts", "datetime", "date", "time",
-        "event_time", "eventtime", "activitydatetime", "receive_time", "createddatetime",
-        "creationtime",
+        "timestamp", "@timestamp", "timegenerated", "timecreated", "ts", "datetime",
+        "date", "time", "event_time", "eventtime", "activitydatetime", "receive_time",
+        "createddatetime", "creationtime", "eventtimestamp", "logtime",
     ),
     "source_ip": (
         "source_ip", "src_ip", "srcip", "src", "client_ip", "clientip", "remote_addr",

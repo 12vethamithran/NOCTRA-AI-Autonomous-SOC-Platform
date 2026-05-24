@@ -584,15 +584,27 @@ def _safe_min_ts(group: pd.DataFrame):
 def rule_r011_powershell(df: pd.DataFrame) -> List[Alert]:
     """
     Process / command-line events that include PowerShell with encoded payloads,
-    download cradles, or AMSI bypass markers.
+    download cradles, or AMSI bypass markers. Uses regex so short-form flags
+    (`-nop -w hidden -enc <b64>`) are caught even when other flags sit between
+    powershell and -enc.
     """
     alerts: List[Alert] = []
-    hits = _raw_contains(df, [
-        "powershell -enc", "powershell.exe -encoded", "-encodedcommand",
-        "iex (new-object net.webclient).downloadstring",
-        "amsiscanbuffer", "amsi.dll", "frombase64string",
-        "downloadstring(", "invoke-expression",
-    ])
+    if df.empty or "raw" not in df.columns:
+        return alerts
+    raw_l = df["raw"].astype(str).str.lower()
+    pat = (
+        r"powershell(?:\.exe)?[^\n]{0,80}\s-e(?:nc|ncoded|ncodedcommand)?\b|"
+        r"-encodedcommand\b|"
+        r"iex\s*\(?\s*new-object\s+net\.webclient|"
+        r"\.downloadstring\(|\.downloadfile\(|\.downloaddata\(|"
+        r"amsiscanbuffer|amsi\.dll|frombase64string|"
+        r"invoke-expression|invoke-webrequest\s+[^|]*\s*-uri|"
+        r"-nop\s+-w(?:in(?:dowstyle)?)?\s+hidden|"
+        r"start-bitstransfer|reflective\s+dll|invoke-shellcode|"
+        r"set-mppreference.*disablerealtimemonitoring|"
+        r"system\.management\.automation\.runspaces"
+    )
+    hits = df[raw_l.str.contains(pat, na=False, regex=True)].copy()
     if hits.empty:
         return alerts
     by_src = hits.groupby(hits["source_ip"].fillna("local"))
@@ -1550,6 +1562,474 @@ def rule_r032_ps_drop_exe(df: pd.DataFrame) -> List[Alert]:
     return alerts
 
 
+# ===========================================================================
+# R033-R042 — Splunk/Sentinel-grade detections for AD, AWS, M365 and EDR
+# ===========================================================================
+
+# ---------------------------------------------------------------------------
+# R033 — Kerberoasting (T1558.003 / Credential Access)
+# Windows Event 4769 with weak encryption (RC4-HMAC 0x17 / DES 0x01/0x03).
+# Volume threshold = 5 to avoid single-shot noise.
+# ---------------------------------------------------------------------------
+_WEAK_KERB_ENC = {"0x17", "0x18", "0x1", "0x01", "0x3", "0x03", "rc4-hmac", "rc4_hmac"}
+
+
+def rule_r033_kerberoast(df: pd.DataFrame) -> List[Alert]:
+    alerts: List[Alert] = []
+    if df.empty:
+        return alerts
+    # Match by EventID (flattened to lowercase column) or raw contains.
+    eid = df["eventid"].astype(str) if "eventid" in df.columns else pd.Series("", index=df.index)
+    raw_l = df["raw"].astype(str).str.lower() if "raw" in df.columns else pd.Series("", index=df.index)
+    tgs = df[(eid == "4769") | raw_l.str.contains(r'"eventid"\s*:\s*4769', na=False, regex=True)].copy()
+    if tgs.empty:
+        return alerts
+    enc_col = None
+    for c in ("ticketencryptiontype", "tgs_encryption", "encryptiontype"):
+        if c in tgs.columns:
+            enc_col = c
+            break
+    if enc_col is None:
+        return alerts
+    tgs["_enc"] = tgs[enc_col].astype(str).str.lower()
+    weak = tgs[tgs["_enc"].isin(_WEAK_KERB_ENC)]
+    if weak.empty:
+        return alerts
+    # Target column may be TargetUserName, ServiceName, etc.
+    tgt_col = next((c for c in ("targetusername", "servicename", "user") if c in weak.columns), None)
+    if tgt_col is None:
+        return alerts
+    for target, grp in weak.groupby(weak[tgt_col].astype(str)):
+        if len(grp) < 5:
+            continue
+        ts = _safe_min_ts(grp)
+        if ts is None:
+            continue
+        alerts.append(Alert(
+            alert_id=_new_alert_id(),
+            rule_id="R033",
+            rule_name="Kerberoasting (Weak TGS Encryption)",
+            severity=AlertSeverity.CRITICAL,
+            description=f"{len(grp)} TGS requests for '{target}' with weak (RC4/DES) encryption",
+            timestamp=ts,
+            source_ip=str(grp["source_ip"].dropna().iloc[0]) if "source_ip" in grp.columns and grp["source_ip"].dropna().size else None,
+            user=str(target),
+            event_count=len(grp),
+            mitre_technique="T1558.003",
+            mitre_tactic="Credential Access",
+            tp_probability=0.95,
+            related_log_indices=list(grp.index),
+            extra={"target": str(target), "weak_count": len(grp)},
+        ))
+    return alerts
+
+
+# ---------------------------------------------------------------------------
+# R034 — Office application spawns a shell / scripting engine (T1566.001/T1059)
+# Classic macro-borne malware indicator — almost never benign in production.
+# ---------------------------------------------------------------------------
+_OFFICE_PARENTS = ("winword.exe", "excel.exe", "powerpnt.exe", "outlook.exe",
+                   "msaccess.exe", "visio.exe", "onenote.exe", "publisher.exe")
+_SHELL_CHILDREN = ("powershell.exe", "pwsh.exe", "cmd.exe", "wscript.exe",
+                   "cscript.exe", "mshta.exe", "rundll32.exe", "regsvr32.exe",
+                   "certutil.exe", "bitsadmin.exe", "msbuild.exe", "installutil.exe")
+
+
+def rule_r034_office_macro(df: pd.DataFrame) -> List[Alert]:
+    alerts: List[Alert] = []
+    if df.empty:
+        return alerts
+    parent = df["initiatingprocessfilename"].astype(str).str.lower() if "initiatingprocessfilename" in df.columns else pd.Series("", index=df.index)
+    child = df["filename"].astype(str).str.lower() if "filename" in df.columns else pd.Series("", index=df.index)
+    is_office = parent.isin(_OFFICE_PARENTS)
+    is_shell = child.isin(_SHELL_CHILDREN)
+    hits = df[is_office & is_shell]
+    if hits.empty:
+        return alerts
+    for idx, row in hits.iterrows():
+        ts = row["timestamp"].to_pydatetime() if pd.notna(row.get("timestamp")) else None
+        if ts is None:
+            continue
+        alerts.append(Alert(
+            alert_id=_new_alert_id(),
+            rule_id="R034",
+            rule_name="Office Application Spawned Shell",
+            severity=AlertSeverity.CRITICAL,
+            description=f"{row.get('initiatingprocessfilename')} spawned {row.get('filename')} — "
+                        f"cmd: {str(row.get('processcommandline',''))[:160]}",
+            timestamp=ts,
+            user=str(row.get("accountname") or row.get("user") or "") or None,
+            source_ip=str(row.get("source_ip")) if pd.notna(row.get("source_ip")) else None,
+            event_count=1,
+            mitre_technique="T1566.001",
+            mitre_tactic="Initial Access",
+            tp_probability=0.97,
+            related_log_indices=[int(idx)],
+            extra={"device": str(row.get("devicename") or ""),
+                   "child_sha256": str(row.get("sha256") or "")},
+        ))
+    return alerts
+
+
+# ---------------------------------------------------------------------------
+# R035 — LOLBin abuse (T1218 / T1105 — Defense Evasion + Ingress Tool Transfer)
+# certutil/bitsadmin/curl/mshta/regsvr32 with URL or remote-fetch arguments.
+# ---------------------------------------------------------------------------
+def rule_r035_lolbin(df: pd.DataFrame) -> List[Alert]:
+    alerts: List[Alert] = []
+    if df.empty or "raw" not in df.columns:
+        return alerts
+    raw_l = df["raw"].astype(str).str.lower()
+    pat = (
+        r"certutil(?:\.exe)?[^\n]{0,120}-urlcache|"
+        r"certutil(?:\.exe)?[^\n]{0,120}-decode|"
+        r"bitsadmin(?:\.exe)?[^\n]{0,120}/transfer|"
+        r"mshta(?:\.exe)?\s+https?://|"
+        r"mshta(?:\.exe)?\s+javascript:|"
+        r"regsvr32(?:\.exe)?\s+[^\n]{0,80}/i:https?://|"
+        r"regsvr32(?:\.exe)?[^\n]{0,80}scrobj\.dll|"
+        r"rundll32(?:\.exe)?\s+javascript:|"
+        r"rundll32(?:\.exe)?[^\n]{0,80}url\.dll,?openurl|"
+        r"installutil(?:\.exe)?[^\n]{0,80}/logfile=|"
+        r"msbuild(?:\.exe)?[^\n]{0,80}\.xml\b"
+    )
+    hits = df[raw_l.str.contains(pat, na=False, regex=True)]
+    if hits.empty:
+        return alerts
+    for idx, row in hits.iterrows():
+        ts = row["timestamp"].to_pydatetime() if pd.notna(row.get("timestamp")) else None
+        if ts is None:
+            continue
+        alerts.append(Alert(
+            alert_id=_new_alert_id(),
+            rule_id="R035",
+            rule_name="Living-off-the-Land Binary Abuse",
+            severity=AlertSeverity.HIGH,
+            description=f"LOLBin invoked with remote-fetch / loader args — "
+                        f"cmd: {str(row.get('processcommandline') or row.get('raw',''))[:160]}",
+            timestamp=ts,
+            user=str(row.get("user") or row.get("accountname") or "") or None,
+            source_ip=str(row.get("source_ip")) if pd.notna(row.get("source_ip")) else None,
+            event_count=1,
+            mitre_technique="T1218",
+            mitre_tactic="Defense Evasion",
+            tp_probability=0.90,
+            related_log_indices=[int(idx)],
+        ))
+    return alerts
+
+
+# ---------------------------------------------------------------------------
+# R036 — Service-account interactive / RDP logon (T1078.002 / Defense Evasion)
+# A `svc_*` account performing LogonType 2 (Interactive) or 10 (RemoteInteractive)
+# is almost always operator misuse or stolen-credential reuse.
+# ---------------------------------------------------------------------------
+def rule_r036_svc_interactive(df: pd.DataFrame) -> List[Alert]:
+    alerts: List[Alert] = []
+    if df.empty:
+        return alerts
+    eid = df["eventid"].astype(str) if "eventid" in df.columns else pd.Series("", index=df.index)
+    lt = df["logontype"].astype(str) if "logontype" in df.columns else pd.Series("", index=df.index)
+    user = df["targetusername"].astype(str).str.lower() if "targetusername" in df.columns else df["user"].astype(str).str.lower() if "user" in df.columns else pd.Series("", index=df.index)
+    is_logon = (eid == "4624")
+    is_interactive = lt.isin({"2", "10"})
+    is_svc = user.str.startswith("svc_") | user.str.startswith("svc-") | user.str.contains(r"\bservice\b", na=False, regex=True)
+    hits = df[is_logon & is_interactive & is_svc]
+    if hits.empty:
+        return alerts
+    for idx, row in hits.iterrows():
+        ts = row["timestamp"].to_pydatetime() if pd.notna(row.get("timestamp")) else None
+        if ts is None:
+            continue
+        alerts.append(Alert(
+            alert_id=_new_alert_id(),
+            rule_id="R036",
+            rule_name="Service Account Interactive Logon",
+            severity=AlertSeverity.HIGH,
+            description=f"Service account '{row.get('targetusername') or row.get('user')}' performed "
+                        f"LogonType {row.get('logontype')} on {row.get('computer') or row.get('devicename')}",
+            timestamp=ts,
+            user=str(row.get("targetusername") or row.get("user") or ""),
+            source_ip=str(row.get("ipaddress") or row.get("source_ip") or "") or None,
+            event_count=1,
+            mitre_technique="T1078.002",
+            mitre_tactic="Defense Evasion",
+            tp_probability=0.92,
+            related_log_indices=[int(idx)],
+        ))
+    return alerts
+
+
+# ---------------------------------------------------------------------------
+# R037 — AWS sensitive call without MFA (T1078.004 / Defense Evasion)
+# ---------------------------------------------------------------------------
+_SENSITIVE_AWS_EVENTS = {
+    "createaccesskey", "deleteaccesskey", "createuser", "deleteuser",
+    "attachuserpolicy", "attachrolepolicy", "putuserpolicy", "putrolepolicy",
+    "createpolicy", "deletetrail", "stoplogging", "putbucketpolicy",
+    "putbucketacl", "deletebucket", "createkey", "scheduleKeyDeletion",
+    "disablekey", "consoleLogin", "assumerole",
+}
+
+
+def rule_r037_aws_no_mfa(df: pd.DataFrame) -> List[Alert]:
+    alerts: List[Alert] = []
+    if df.empty or "raw" not in df.columns:
+        return alerts
+    en = df["eventname"].astype(str).str.lower() if "eventname" in df.columns else df["event_type"].astype(str).str.lower()
+    raw_l = df["raw"].astype(str).str.lower()
+    is_sensitive = en.isin(_SENSITIVE_AWS_EVENTS)
+    no_mfa = raw_l.str.contains('"mfaauthenticated"\\s*:\\s*"?false"?', na=False, regex=True)
+    hits = df[is_sensitive & no_mfa]
+    if hits.empty:
+        return alerts
+    for idx, row in hits.iterrows():
+        ts = row["timestamp"].to_pydatetime() if pd.notna(row.get("timestamp")) else None
+        if ts is None:
+            continue
+        actor = row.get("useridentity_arn") or row.get("user") or "?"
+        alerts.append(Alert(
+            alert_id=_new_alert_id(),
+            rule_id="R037",
+            rule_name="AWS Sensitive API Call Without MFA",
+            severity=AlertSeverity.HIGH,
+            description=f"{actor} performed {row.get('event_type') or row.get('eventname') or '?'} without MFA from {row.get('sourceipaddress') or row.get('source_ip')}",
+            timestamp=ts,
+            source_ip=str(row.get("sourceipaddress") or row.get("source_ip") or "") or None,
+            user=str(actor),
+            event_count=1,
+            mitre_technique="T1078.004",
+            mitre_tactic="Defense Evasion",
+            tp_probability=0.86,
+            related_log_indices=[int(idx)],
+            extra={"event_name": str(row.get("eventname") or "")},
+        ))
+    return alerts
+
+
+# ---------------------------------------------------------------------------
+# R038 — AWS CloudTrail / logging tampering (T1562.008 / Impact)
+# ---------------------------------------------------------------------------
+def rule_r038_aws_logging_tamper(df: pd.DataFrame) -> List[Alert]:
+    alerts: List[Alert] = []
+    if df.empty:
+        return alerts
+    en = df["eventname"].astype(str).str.lower() if "eventname" in df.columns else df["event_type"].astype(str).str.lower()
+    bad = en.isin({"stoplogging", "deletetrail", "updatetrail", "putconfigurationrecorder", "deleteconfigurationrecorder", "deleteflowlogs"})
+    hits = df[bad]
+    if hits.empty:
+        return alerts
+    for idx, row in hits.iterrows():
+        ts = row["timestamp"].to_pydatetime() if pd.notna(row.get("timestamp")) else None
+        if ts is None:
+            continue
+        alerts.append(Alert(
+            alert_id=_new_alert_id(),
+            rule_id="R038",
+            rule_name="AWS CloudTrail / Logging Tampering",
+            severity=AlertSeverity.CRITICAL,
+            description=f"{row.get('user')} invoked {row.get('event_type') or row.get('eventname') or '?'} — logging integrity compromised",
+            timestamp=ts,
+            source_ip=str(row.get("sourceipaddress") or row.get("source_ip") or "") or None,
+            user=str(row.get("user") or "?"),
+            event_count=1,
+            mitre_technique="T1562.008",
+            mitre_tactic="Defense Evasion",
+            tp_probability=0.98,
+            related_log_indices=[int(idx)],
+        ))
+    return alerts
+
+
+# ---------------------------------------------------------------------------
+# R039 — Anomalous AWS S3 access volume (T1530 / Collection)
+# Single principal hitting S3 > 100 times in the window is unusual outside CI.
+# ---------------------------------------------------------------------------
+def rule_r039_s3_volume(df: pd.DataFrame) -> List[Alert]:
+    alerts: List[Alert] = []
+    if df.empty:
+        return alerts
+    src_col = None
+    for c in ("eventsource", "source"):
+        if c in df.columns:
+            src_col = c
+            break
+    if src_col is None:
+        return alerts
+    s3 = df[df[src_col].astype(str).str.lower() == "s3.amazonaws.com"].copy()
+    if s3.empty:
+        return alerts
+    actor = s3.get("useridentity_arn")
+    if actor is None or actor.isna().all():
+        actor = s3.get("user", pd.Series("", index=s3.index))
+    s3["_actor"] = actor.fillna("unknown")
+    for principal, grp in s3.groupby("_actor"):
+        if len(grp) < 100:
+            continue
+        ts = _safe_min_ts(grp)
+        if ts is None:
+            continue
+        alerts.append(Alert(
+            alert_id=_new_alert_id(),
+            rule_id="R039",
+            rule_name="AWS S3 Anomalous Access Volume",
+            severity=AlertSeverity.HIGH,
+            description=f"{principal} performed {len(grp)} S3 API calls — possible data collection / exfil staging",
+            timestamp=ts,
+            source_ip=str(grp["sourceipaddress"].dropna().iloc[0]) if "sourceipaddress" in grp.columns and grp["sourceipaddress"].dropna().size else None,
+            user=str(principal),
+            event_count=len(grp),
+            mitre_technique="T1530",
+            mitre_tactic="Collection",
+            tp_probability=0.84,
+            related_log_indices=list(grp.index),
+        ))
+    return alerts
+
+
+# ---------------------------------------------------------------------------
+# R040 — SharePoint / OneDrive mass download (T1213.002 / Collection)
+# A single user pulling many files from corporate document store.
+# ---------------------------------------------------------------------------
+def rule_r040_sharepoint_exfil(df: pd.DataFrame) -> List[Alert]:
+    alerts: List[Alert] = []
+    if df.empty:
+        return alerts
+    op_col = None
+    for c in ("operation", "event_type"):
+        if c in df.columns:
+            op_col = c
+            break
+    if op_col is None:
+        return alerts
+    dl = df[df[op_col].astype(str).str.lower() == "filedownloaded"].copy()
+    if dl.empty:
+        return alerts
+    user_col = "userid" if "userid" in dl.columns else "user"
+    for u, grp in dl.groupby(dl[user_col].astype(str)):
+        if len(grp) < 25:
+            continue
+        ts = _safe_min_ts(grp)
+        if ts is None:
+            continue
+        alerts.append(Alert(
+            alert_id=_new_alert_id(),
+            rule_id="R040",
+            rule_name="SharePoint Mass File Download",
+            severity=AlertSeverity.HIGH,
+            description=f"{u} downloaded {len(grp)} files from SharePoint — possible insider exfil",
+            timestamp=ts,
+            user=str(u),
+            source_ip=str(grp["clientip"].dropna().iloc[0]) if "clientip" in grp.columns and grp["clientip"].dropna().size else None,
+            event_count=len(grp),
+            mitre_technique="T1213.002",
+            mitre_tactic="Collection",
+            tp_probability=0.88,
+            related_log_indices=list(grp.index),
+        ))
+    return alerts
+
+
+# ---------------------------------------------------------------------------
+# R041 — Entra sign-in from unexpected country (T1078 / Initial Access)
+# NorthBay employees are in IN — anything else is worth surfacing.
+# ---------------------------------------------------------------------------
+_ALLOWED_COUNTRIES = {"in", "india", ""}
+
+
+def rule_r041_geo_anomaly(df: pd.DataFrame) -> List[Alert]:
+    alerts: List[Alert] = []
+    if df.empty:
+        return alerts
+    cc_col = None
+    for c in ("location_countryorregion", "countryorregion", "country"):
+        if c in df.columns:
+            cc_col = c
+            break
+    if cc_col is None:
+        return alerts
+    work = df[df[cc_col].notna()].copy()
+    work["_cc"] = work[cc_col].astype(str).str.lower()
+    odd = work[~work["_cc"].isin(_ALLOWED_COUNTRIES)]
+    if odd.empty:
+        return alerts
+    user_col = "userprincipalname" if "userprincipalname" in odd.columns else "user"
+    for u, grp in odd.groupby(odd[user_col].astype(str)):
+        ts = _safe_min_ts(grp)
+        if ts is None:
+            continue
+        countries = sorted(grp["_cc"].unique().tolist())
+        alerts.append(Alert(
+            alert_id=_new_alert_id(),
+            rule_id="R041",
+            rule_name="Sign-In from Unexpected Country",
+            severity=AlertSeverity.HIGH,
+            description=f"User '{u}' authenticated from country {','.join(countries)} (corp baseline = IN)",
+            timestamp=ts,
+            user=str(u),
+            source_ip=str(grp["ipaddress"].dropna().iloc[0]) if "ipaddress" in grp.columns and grp["ipaddress"].dropna().size else None,
+            event_count=len(grp),
+            mitre_technique="T1078",
+            mitre_tactic="Initial Access",
+            tp_probability=0.87,
+            related_log_indices=list(grp.index),
+            extra={"countries": countries},
+        ))
+    return alerts
+
+
+# ---------------------------------------------------------------------------
+# R042 — Excessive AWS recon (T1580 / Discovery)
+# >15 Describe* / List* calls from a single principal — enumeration pattern.
+# ---------------------------------------------------------------------------
+def rule_r042_aws_recon(df: pd.DataFrame) -> List[Alert]:
+    alerts: List[Alert] = []
+    if df.empty:
+        return alerts
+    en_col = "eventname" if "eventname" in df.columns else "event_type"
+    if en_col not in df.columns:
+        return alerts
+    en = df[en_col].astype(str)
+    is_recon = en.str.startswith(("Describe", "List", "Get")) & ~en.str.lower().eq("getobject")
+    src_col = "eventsource" if "eventsource" in df.columns else None
+    if src_col:
+        is_aws = df[src_col].astype(str).str.contains("amazonaws.com", na=False)
+        recon = df[is_recon & is_aws].copy()
+    else:
+        recon = df[is_recon].copy()
+    if recon.empty:
+        return alerts
+    actor = recon.get("useridentity_arn")
+    if actor is None or actor.isna().all():
+        actor = recon.get("user", pd.Series("", index=recon.index))
+    recon["_actor"] = actor.fillna("unknown")
+    for principal, grp in recon.groupby("_actor"):
+        if len(grp) < 15:
+            continue
+        unique_calls = grp[en_col].nunique()
+        if unique_calls < 5:
+            continue
+        ts = _safe_min_ts(grp)
+        if ts is None:
+            continue
+        alerts.append(Alert(
+            alert_id=_new_alert_id(),
+            rule_id="R042",
+            rule_name="AWS Cloud Reconnaissance",
+            severity=AlertSeverity.MEDIUM,
+            description=f"{principal} made {len(grp)} discovery API calls ({unique_calls} distinct)",
+            timestamp=ts,
+            source_ip=str(grp["sourceipaddress"].dropna().iloc[0]) if "sourceipaddress" in grp.columns and grp["sourceipaddress"].dropna().size else None,
+            user=str(principal),
+            event_count=len(grp),
+            mitre_technique="T1580",
+            mitre_tactic="Discovery",
+            tp_probability=0.74,
+            related_log_indices=list(grp.index),
+        ))
+    return alerts
+
+
 # ---------------------------------------------------------------------------
 # Dispatcher
 # ---------------------------------------------------------------------------
@@ -1586,6 +2066,16 @@ ALL_RULES: list[Callable[[pd.DataFrame], List[Alert]]] = [
     rule_r030_cloud_admin_grant,
     rule_r031_masquerade,
     rule_r032_ps_drop_exe,
+    rule_r033_kerberoast,
+    rule_r034_office_macro,
+    rule_r035_lolbin,
+    rule_r036_svc_interactive,
+    rule_r037_aws_no_mfa,
+    rule_r038_aws_logging_tamper,
+    rule_r039_s3_volume,
+    rule_r040_sharepoint_exfil,
+    rule_r041_geo_anomaly,
+    rule_r042_aws_recon,
 ]
 
 

@@ -220,6 +220,16 @@ _HIGH_FIDELITY_RULES = {
     "R030": 0.96,  # Cloud privileged role assignment
     "R031": 0.94,  # Masquerading binary
     "R032": 0.92,  # PowerShell drops exe to temp
+    "R033": 0.96,  # Kerberoasting (weak TGS encryption)
+    "R034": 0.97,  # Office spawned shell
+    "R035": 0.90,  # LOLBin abuse
+    "R036": 0.92,  # Service-account interactive logon
+    "R037": 0.86,  # AWS sensitive call without MFA
+    "R038": 0.98,  # CloudTrail tampering
+    "R039": 0.84,  # S3 anomalous volume
+    "R040": 0.88,  # SharePoint mass download
+    "R041": 0.87,  # Geo anomaly
+    "R042": 0.74,  # AWS recon
 }
 
 
