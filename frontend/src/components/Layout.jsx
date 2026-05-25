@@ -148,49 +148,33 @@ export default function Layout() {
     <div className="min-h-screen flex flex-col" style={{ background: 'var(--bg)', position: 'relative' }}>
       <BackgroundCanvas />
 
-      {/* ── Top micro-bar ── */}
-      <div
-        className="border-b px-4 py-1.5 text-xs flex items-center justify-between gap-4"
-        style={{ background: '#080809', borderColor: 'var(--border)' }}
-      >
-        <div className="flex items-center gap-4 overflow-hidden">
-          <span className={`inline-flex items-center gap-1.5 shrink-0 ${h.fg} px-1.5 py-0.5 rounded`}
-            style={{ background: 'rgba(255,255,255,.02)', border: '1px solid rgba(255,255,255,.04)' }}>
-            <span className={`status-dot ${h.dot}`} style={{ color: 'currentColor' }} />
-            <HIcon size={10} />
-            <span className="hidden sm:inline font-semibold tracking-wider uppercase text-[10px]">{h.text}</span>
+      {/* ── Top micro-bar (v4 — bold-typography refinement) ── */}
+      <div className="topbar-v4 px-4 py-2 text-xs flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3 overflow-hidden">
+          <span className={`topbar-chip topbar-chip-dot ${health === 'online' ? 'text-emerald-300' : health === 'offline' ? 'text-red-300' : 'text-amber-300'}`}
+            style={{ background: 'rgba(255,255,255,.02)', borderColor: 'rgba(255,255,255,.06)' }}>
+            <HIcon size={9} />
+            <span className="hidden sm:inline">{h.text.toUpperCase()}</span>
           </span>
-          <span className="hidden sm:flex items-center gap-2">
-            <span className="font-mono font-extrabold text-[10px] tracking-[0.22em]"
-              style={{ color: 'var(--text-1)' }}>
-              N<span style={{ color: 'var(--accent)' }}>O</span>CTRA
-            </span>
-            <span style={{ color: 'var(--border-3)' }}>/</span>
-            <span className="text-[10px] tracking-widest uppercase font-semibold" style={{ color: 'var(--text-3)' }}>Autonomous&nbsp;SOC</span>
-            <span className="text-[10px] num px-1.5 py-[1px] rounded font-mono"
-              style={{ background: 'rgba(225,29,72,.08)', border: '1px solid rgba(225,29,72,.25)', color: '#f87171' }}>
-              v3.2
-            </span>
+          <span className="hidden sm:flex items-center gap-2 shrink-0">
+            <span className="topbar-brand">N<span className="o">O</span>CTRA</span>
+            <span className="topbar-sep">/</span>
+            <span className="text-[10px] tracking-[0.22em] uppercase font-semibold" style={{ color: 'var(--text-3)' }}>Autonomous&nbsp;SOC</span>
+            <span className="topbar-chip topbar-chip-accent">v3.2</span>
           </span>
-          <span className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-widest px-2 py-0.5 rounded border num"
-            style={{ background: threatColor.bg, borderColor: threatColor.bd, color: threatColor.fg }}>
-            <span className="w-1.5 h-1.5 rounded-full" style={{ background: threatColor.fg, boxShadow: `0 0 8px ${threatColor.fg}` }} />
-            Threat: {threatLevel}
+          <span className="topbar-chip topbar-chip-dot"
+            style={{ color: threatColor.fg, background: threatColor.bg, borderColor: threatColor.bd }}>
+            THREAT: {threatLevel}
           </span>
-          {pendingCount > 0 && (
-            <span className="text-amber-400/80 hidden md:block">
-              {pendingCount} pending
-            </span>
-          )}
           {tpCount > 0 && (
-            <span className="hidden md:flex items-center gap-1 text-red-400">
-              <span className="dot-live" />
-              {tpCount} incident{tpCount !== 1 ? 's' : ''}
+            <span className="topbar-chip topbar-chip-dot hidden md:inline-flex"
+              style={{ color: '#f87171', background: 'rgba(239,68,68,0.06)', borderColor: 'rgba(239,68,68,0.25)' }}>
+              {tpCount} INCIDENT{tpCount !== 1 ? 'S' : ''}
             </span>
           )}
         </div>
         <div className="flex items-center gap-3 shrink-0">
-          <span className="font-mono num text-[10px] hidden md:flex items-center gap-1.5" style={{ color: 'var(--text-3)' }}>
+          <span className="font-mono num text-[10px] hidden md:flex items-center gap-1.5 tracking-wider" style={{ color: 'var(--text-3)' }}>
             <span style={{ color: 'var(--text-4)' }}>{dateStr}</span>
             <span style={{ color: 'var(--accent)' }}>{hours}</span>
             <span style={{ color: 'var(--text-4)' }}>UTC</span>
@@ -198,7 +182,7 @@ export default function Layout() {
           <button
             onClick={() => setPaletteOpen(true)}
             data-tip="Command palette"
-            className="hidden sm:inline-flex items-center gap-1.5 border px-2 py-0.5 rounded text-[10px] transition-colors"
+            className="hidden sm:inline-flex items-center gap-1.5 border px-2 py-0.5 rounded text-[10px] transition-colors tracking-wider"
             style={{ borderColor: 'var(--border-2)', color: 'var(--text-3)' }}
           >
             <Command size={10} />K

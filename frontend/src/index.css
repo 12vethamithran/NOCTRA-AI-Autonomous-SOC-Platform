@@ -1396,3 +1396,109 @@ input[type="checkbox"] {
 @media (prefers-reduced-motion: reduce) {
   .reveal { opacity: 1; transform: none; transition: none; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ROLE THEMING — L1 (front-line crimson) vs L2 (deeper, darker crimson)
+   Driven by [data-role] on the .role-themed wrapper. Every interactive
+   accent inside the dashboard reads from --role-accent so flipping the
+   switcher recolors the whole surface in one transition.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.role-themed {
+  --role-accent:      #f43f5e;
+  --role-accent-2:    #e11d48;
+  --role-accent-dim:  rgba(244, 63, 94, 0.12);
+  --role-accent-ring: rgba(244, 63, 94, 0.28);
+  --role-accent-glow: rgba(244, 63, 94, 0.30);
+  transition: --role-accent .35s var(--ease);
+}
+
+.role-themed[data-role="L2"] {
+  --role-accent:      #b91c1c;
+  --role-accent-2:    #7f1d1d;
+  --role-accent-dim:  rgba(185, 28, 28, 0.14);
+  --role-accent-ring: rgba(185, 28, 28, 0.34);
+  --role-accent-glow: rgba(185, 28, 28, 0.36);
+}
+
+/* Role switcher pill — recolored to use the role accent so the
+   selected segment matches the rest of the themed surface. */
+.role-switch > button[aria-selected="true"] {
+  background: linear-gradient(135deg, var(--role-accent), var(--role-accent-2));
+  box-shadow: 0 2px 12px var(--role-accent-glow),
+              inset 0 1px 0 rgba(255,255,255,0.10);
+}
+
+/* Fade+slide swap when the role flips. The wrapper has key={role}, so
+   React unmounts/remounts which retriggers this entrance animation. */
+@keyframes role-swap {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+.role-fade {
+  animation: role-swap .35s var(--ease);
+}
+@media (prefers-reduced-motion: reduce) {
+  .role-fade { animation: none; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TOP MICRO-BAR REFINEMENT — match the bold-typography vibe.
+   The Layout.jsx top bar gets a tighter type rhythm and uses the
+   eyebrow-display dot for the brand wordmark.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.topbar-v4 {
+  background: linear-gradient(180deg, #0a0a0c 0%, #070708 100%);
+  border-bottom: 1px solid var(--border);
+  position: relative;
+}
+.topbar-v4::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 -1px 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(225,29,72,0.35), transparent);
+  pointer-events: none;
+}
+.topbar-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  font-variant-numeric: tabular-nums;
+}
+.topbar-chip-accent {
+  color: var(--accent);
+  background: rgba(225,29,72,0.06);
+  border-color: rgba(225,29,72,0.22);
+}
+.topbar-chip-neutral {
+  color: var(--text-3);
+  background: rgba(255,255,255,0.015);
+  border-color: var(--border);
+}
+.topbar-chip-dot::before {
+  content: '';
+  width: 5px; height: 5px; border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 8px currentColor;
+}
+.topbar-brand {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-weight: 800;
+  font-size: 11px;
+  letter-spacing: 0.28em;
+  color: var(--text-1);
+}
+.topbar-brand .o { color: var(--accent); }
+.topbar-sep {
+  color: var(--border-3);
+  font-weight: 400;
+}

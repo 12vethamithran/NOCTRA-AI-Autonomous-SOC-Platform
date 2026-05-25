@@ -259,24 +259,48 @@ export default function Dashboard() {
   )
 
   return (
-    <div className="space-y-6 fade-in">
+    <div className="space-y-6 fade-in role-themed" data-role={role}>
 
-      {/* ── Header ── */}
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <span className="eyebrow-display">SESSION DASHBOARD</span>
-          <h1 className="display display-sm mt-3" style={{ color: 'var(--text-1)' }}>SITUATION ROOM.</h1>
-          <p className="text-xs mt-3 font-mono" style={{ color: 'var(--text-3)' }}>
-            {session?.session_id}
-            <span className="mx-2" style={{ color: 'var(--border-3)' }}>·</span>
-            {session?.parsed_format}
-            <span className="mx-2" style={{ color: 'var(--border-3)' }}>·</span>
-            {session?.event_count?.toLocaleString()} events parsed
-          </p>
+      {/* ── Header (heading row only — sub-nav lives below) ── */}
+      <div>
+        <span className="eyebrow-display">SESSION DASHBOARD · {role === 'L1' ? 'TIER-1 OPS' : 'TIER-2 ANALYSIS'}</span>
+        <h1 className="display display-sm mt-3" style={{ color: 'var(--text-1)' }}>SITUATION ROOM.</h1>
+        <p className="text-xs mt-3 font-mono" style={{ color: 'var(--text-3)' }}>
+          {session?.session_id}
+          <span className="mx-2" style={{ color: 'var(--border-3)' }}>·</span>
+          {session?.parsed_format}
+          <span className="mx-2" style={{ color: 'var(--border-3)' }}>·</span>
+          {session?.event_count?.toLocaleString()} events parsed
+        </p>
+      </div>
+
+      {/* ── Sub-nav row: tabs on the left, role switcher on the right.
+            Identical layout in both L1 and L2 — the prior version had
+            them in the same flex row as the title, which wrapped
+            differently depending on which role-tab label was active. ── */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-y py-2.5"
+        style={{ borderColor: 'var(--border)' }}>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {TABS.map(({ key, label, count }) => (
+            <button
+              key={key}
+              onClick={() => setActiveTab(key)}
+              className="relative text-sm font-medium px-3 py-1.5 rounded-lg transition-all"
+              style={{
+                background: activeTab === key ? 'var(--role-accent-dim)' : 'transparent',
+                color: activeTab === key ? 'var(--role-accent)' : 'var(--text-2)',
+                boxShadow: activeTab === key ? '0 0 0 1px var(--role-accent-ring)' : 'none',
+              }}
+            >
+              {label}
+              {count != null && count > 0 && (
+                <span className="ml-1 text-[10px] px-1 rounded font-bold"
+                  style={{ background: 'var(--role-accent-dim)', color: 'var(--role-accent)' }}>{count}</span>
+              )}
+            </button>
+          ))}
         </div>
-        {/* Role switcher + Tab nav */}
-        <div className="flex flex-col items-end gap-2">
-        <div className="segmented">
+        <div className="segmented role-switch">
           {[
             { id: 'L1', label: 'L1 Analyst', desc: 'Triage & Respond',  icon: ShieldAlert },
             { id: 'L2', label: 'L2 Analyst', desc: 'Threat Analysis',   icon: Shield },
@@ -295,27 +319,10 @@ export default function Dashboard() {
             )
           })}
         </div>
-        <div className="flex items-center gap-2">
-          {TABS.map(({ key, label, count }) => (
-            <button
-              key={key}
-              onClick={() => setActiveTab(key)}
-              className="relative text-sm font-medium px-3 py-1.5 rounded-lg transition-all"
-              style={{
-                background: activeTab === key ? 'rgba(225,29,72,0.12)' : 'transparent',
-                color: activeTab === key ? '#f43f5e' : 'var(--text-2)',
-                boxShadow: activeTab === key ? '0 0 0 1px rgba(225,29,72,0.25)' : 'none',
-              }}
-            >
-              {label}
-              {count != null && count > 0 && (
-                <span className="ml-1 text-[10px] px-1 rounded font-bold" style={{ background: 'rgba(225,29,72,0.2)', color: '#f87171' }}>{count}</span>
-              )}
-            </button>
-          ))}
-        </div>
-        </div>
       </div>
+
+      {/* Role transition wrapper — animates content swap. */}
+      <div key={role} className="role-fade">
 
       {/* ── KPI Row ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-3">
@@ -1554,6 +1561,7 @@ export default function Dashboard() {
           </button>
         </div>
       )}
+      </div>
     </div>
   )
 }
