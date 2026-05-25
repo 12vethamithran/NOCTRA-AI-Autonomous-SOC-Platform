@@ -43,6 +43,67 @@ log = logging.getLogger("noctra.ingest")
 router = APIRouter(prefix="/ingest", tags=["ingest"])
 
 
+def _collapse_duplicate_alerts(alerts: list[dict]) -> list[dict]:
+    """
+    Collapse alerts that describe the same logical event.
+
+    A duplicate is defined as: same (rule_id, source_ip, user, dest_ip).
+    When we collapse, we keep the earliest timestamp, sum event_count, merge
+    related_log_indices, and surface the collapsed count in extra. This is the
+    safety net that catches any per-row rule loops we missed and stops repeated
+    uploads of the same activity from compounding into a flood.
+
+    Conservative on purpose — we never merge across rule_ids, so an analyst
+    still sees each detection family separately.
+    """
+    if not alerts:
+        return alerts
+
+    buckets: dict[tuple, dict] = {}
+    order: list[tuple] = []
+
+    for a in alerts:
+        key = (
+            a.get("rule_id"),
+            a.get("source_ip") or "",
+            a.get("user") or "",
+            a.get("dest_ip") or "",
+        )
+        existing = buckets.get(key)
+        if existing is None:
+            buckets[key] = a
+            order.append(key)
+            continue
+
+        # Same logical event — merge into the earlier one.
+        existing["event_count"] = int(existing.get("event_count") or 1) + int(a.get("event_count") or 1)
+
+        # Earliest timestamp wins (preserve attack start).
+        a_ts, e_ts = a.get("timestamp"), existing.get("timestamp")
+        if a_ts and (not e_ts or a_ts < e_ts):
+            existing["timestamp"] = a_ts
+
+        # Highest severity wins.
+        sev_rank = {"low": 1, "medium": 2, "high": 3, "critical": 4}
+        if sev_rank.get(str(a.get("severity", "")).lower(), 0) > sev_rank.get(str(existing.get("severity", "")).lower(), 0):
+            existing["severity"] = a["severity"]
+
+        # Highest tp_probability wins (most confident scoring).
+        if (a.get("tp_probability") or 0) > (existing.get("tp_probability") or 0):
+            existing["tp_probability"] = a["tp_probability"]
+
+        # Merge log indices (cap to avoid bloating the payload).
+        merged_idx = list(existing.get("related_log_indices") or []) + list(a.get("related_log_indices") or [])
+        existing["related_log_indices"] = sorted(set(merged_idx))[:500]
+
+        # Track the collapse in extra so the UI can show "rolled up N alerts".
+        extra = dict(existing.get("extra") or {})
+        extra["rolled_up_count"] = int(extra.get("rolled_up_count", 1)) + 1
+        existing["extra"] = extra
+
+    return [buckets[k] for k in order]
+
+
 @router.post(
     "",
     response_model=IngestResponse,
@@ -220,6 +281,17 @@ async def _run_pipeline(filename: str, content: bytes) -> IngestResponse:
         log.info("Chain correlation: detected %d attack chains", len(chains))
     except Exception as e:
         log.exception("Chain correlation crashed: %s", e)
+
+    # --- 5e. Dedup pass — collapse identical alerts before persistence -------
+    # Safety net for any per-row rule loops and for repeated uploads of the
+    # same activity. Keeps the UI focused on distinct threats, not duplicates.
+    pre_dedup = len(alerts_dicts)
+    alerts_dicts = _collapse_duplicate_alerts(alerts_dicts)
+    if pre_dedup != len(alerts_dicts):
+        log.info(
+            "Dedup: collapsed %d → %d alerts (suppressed %d duplicates)",
+            pre_dedup, len(alerts_dicts), pre_dedup - len(alerts_dicts),
+        )
 
     # --- 6. Persist alerts on the session ------------------------------------
     sess.alerts = alerts_dicts

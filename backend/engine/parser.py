@@ -232,10 +232,13 @@ _PRIMARY_FOR = {
     "source_ip": (
         "source_ip", "src_ip", "srcip", "src", "client_ip", "clientip", "remote_addr",
         "remoteaddress", "ipaddress", "senderipv4", "callerip", "sourceipaddress",
+        "source_ipaddress", "source_address", "src_address", "src_ipaddress",
+        "initiatedby_user_ipaddress", "caller_ip_address", "x_forwarded_for",
         "ip", "source",
     ),
     "dest_ip": (
         "dest_ip", "dst_ip", "dstip", "dst", "destination_ip", "destinationaddress",
+        "destinationip", "destination_ipaddress", "dst_address", "dest_address",
         "remoteip", "target",
     ),
     "dest_host": (
@@ -255,8 +258,10 @@ _PRIMARY_FOR = {
         "targetuserprincipalname",
     ),
     "status": (
-        "status", "result", "outcome", "response", "status_code", "errorcode",
-        "deliveryaction", "action_result",
+        "status", "result", "outcome", "response", "status_code", "statuscode",
+        "responsestatus", "response_code", "responsecode", "http_status",
+        "httpstatus", "errorcode", "error_code", "deliveryaction", "action_result",
+        "resultdescription", "resulttype",
     ),
     "bytes": (
         "bytes", "bytes_sent", "bytes_out", "bytestoserver", "size", "length",
@@ -294,8 +299,17 @@ def _derive_status(df: pd.DataFrame) -> pd.DataFrame:
     When a log encodes success/failure inside event_type or the message rather
     than a dedicated status field, derive it so the detection rules can fire.
     """
-    if "status" in df.columns and df["status"].notna().any():
-        return df
+    # NB: CSV reader uses keep_default_na=False, so empty cells arrive as "" not
+    # NaN. Treat "", "nan", "none" as missing too — otherwise the heuristic
+    # below never runs on logs whose status column is present-but-empty, and
+    # every status-based rule (R001, R003, R006, R010, …) silently misses.
+    if "status" in df.columns:
+        existing = (
+            df["status"].astype(str).str.strip().str.lower()
+            .replace({"nan": "", "none": "", "null": ""})
+        )
+        if existing.ne("").any():
+            return df
     haystack = pd.Series("", index=df.index, dtype=str)
     for col in ("event_type", "message", "raw"):
         if col in df.columns:
@@ -710,9 +724,15 @@ def _finalise(df: pd.DataFrame) -> pd.DataFrame:
         except Exception:  # noqa: BLE001
             df[num_col] = pd.Series([pd.NA] * len(df), dtype="Int64")
 
-    # Empty strings → None for string columns (cleaner downstream).
-    for str_col in ("source_ip", "dest_ip", "event_type", "user", "status"):
-        df[str_col] = df[str_col].replace({"": None, "nan": None, "None": None})
+    # Empty strings → None across ALL object columns so rules using
+    # `row.get(col)` or `.notna()` behave correctly on cloud schemas that
+    # produce sparse columns (Entra initiatedby_*, MDE filename/folderpath, …).
+    _EMPTY_TOKENS = {"": None, "nan": None, "None": None, "none": None, "null": None, "NULL": None}
+    for col in df.columns:
+        if col in ("timestamp", "bytes", "port", "raw"):
+            continue
+        if df[col].dtype == object:
+            df[col] = df[col].replace(_EMPTY_TOKENS)
 
     # `raw` must always be a string.
     df["raw"] = df["raw"].astype(str)

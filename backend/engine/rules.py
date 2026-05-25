@@ -395,21 +395,34 @@ def rule_r006_off_hours(df: pd.DataFrame) -> List[Alert]:
         (auths["hour"].between(0, 5))
         & (~auths["user"].astype(str).str.lower().isin(_SERVICE_USERS))
     ]
-    for idx, row in odd.iterrows():
+    # Aggregate per user so a single account logging in 50 times off-hours emits
+    # ONE alert, not 50. The description preserves the count and the time range.
+    for user, grp in odd.groupby(odd["user"].astype(str)):
+        ts_min = grp["timestamp"].min()
+        ts_max = grp["timestamp"].max()
+        src_ips = sorted({str(s) for s in grp.get("source_ip", pd.Series(dtype=str)).dropna().unique()})
+        rep_ip = src_ips[0] if src_ips else None
+        desc = (
+            f"{user} had {len(grp)} off-hours login(s) between "
+            f"{ts_min.strftime('%H:%M')}–{ts_max.strftime('%H:%M')} UTC"
+            if len(grp) > 1
+            else f"{user} logged in at {ts_min.strftime('%H:%M')} UTC"
+        )
         alerts.append(
             Alert(
                 alert_id=_new_alert_id(),
                 rule_id="R006",
                 rule_name="Suspicious Login Time",
                 severity=AlertSeverity.MEDIUM,
-                description=f"{row['user']} logged in at {row['timestamp'].strftime('%H:%M')} UTC",
-                timestamp=row["timestamp"].to_pydatetime(),
-                source_ip=row.get("source_ip"),
-                user=str(row["user"]),
-                event_count=1,
+                description=desc,
+                timestamp=ts_min.to_pydatetime(),
+                source_ip=rep_ip,
+                user=str(user),
+                event_count=len(grp),
                 mitre_technique="T1078",
                 mitre_tactic="Defense Evasion",
-                related_log_indices=[int(idx)],
+                related_log_indices=[int(i) for i in grp.index],
+                extra={"source_ips": src_ips[:10]} if src_ips else None,
             )
         )
     return alerts
@@ -488,25 +501,46 @@ def rule_r008_fuzzing(df: pd.DataFrame) -> List[Alert]:
     if http.empty:
         return alerts
     http = http[http["status"].astype(str) == "404"]
+    http = http[http["timestamp"].notna()]
     if http.empty:
         return alerts
-    by_ip = http.groupby("source_ip")
-    for src_ip, group in by_ip:
-        if len(group) < 20:
+    # Burst gate: only count 404s that fall inside a 5-minute sliding window.
+    # 20 scattered 404s over a week is normal browsing noise; 20 in 5 minutes
+    # is fuzzing. Avoids the "log file spans 7 days" false positive.
+    WINDOW = pd.Timedelta(minutes=5)
+    THRESHOLD = 20
+    for src_ip, group in http.groupby("source_ip"):
+        g = group.sort_values("timestamp")
+        ts = g["timestamp"].reset_index(drop=True)
+        max_burst = 0
+        burst_idx: list[int] = []
+        i = 0
+        for j in range(len(ts)):
+            while ts[j] - ts[i] > WINDOW:
+                i += 1
+            if j - i + 1 > max_burst:
+                max_burst = j - i + 1
+                burst_idx = list(g.index[i:j + 1])
+        if max_burst < THRESHOLD:
             continue
+        burst = g.loc[burst_idx]
         alerts.append(
             Alert(
                 alert_id=_new_alert_id(),
                 rule_id="R008",
                 rule_name="Web Recon / Fuzzing",
                 severity=AlertSeverity.MEDIUM,
-                description=f"{len(group)} HTTP 404 responses to {src_ip}",
-                timestamp=group["timestamp"].min().to_pydatetime() if pd.notna(group["timestamp"].min()) else None,
+                description=(
+                    f"{max_burst} HTTP 404 responses from {src_ip} within 5 minutes"
+                ),
+                timestamp=burst["timestamp"].min().to_pydatetime(),
                 source_ip=str(src_ip),
-                event_count=len(group),
+                event_count=max_burst,
                 mitre_technique="T1595",
                 mitre_tactic="Reconnaissance",
-                related_log_indices=list(group.index),
+                related_log_indices=[int(i) for i in burst_idx],
+                extra={"window_minutes": 5, "burst_size": max_burst,
+                       "total_404s_from_ip": len(group)},
             )
         )
     return alerts
@@ -536,8 +570,11 @@ def rule_r010_multi_service(df: pd.DataFrame) -> List[Alert]:
     alerts: List[Alert] = []
     if df.empty:
         return alerts
+    # 404 is a benign client error (broken links, link-checkers) — exclude it
+    # from the "auth failure" set. Genuine credential abuse shows up as
+    # FAILED/401/403, not 404. Keeps multi-service noise from link rot.
     bad = df[
-        df["status"].astype(str).str.upper().isin(["FAILED", "401", "403", "404"])
+        df["status"].astype(str).str.upper().isin(["FAILED", "401", "403"])
         & df["source_ip"].notna()
         & df["event_type"].notna()
     ]
@@ -551,7 +588,9 @@ def rule_r010_multi_service(df: pd.DataFrame) -> List[Alert]:
         }
         # Normalise http_get/http_post -> http for the distinct-service count.
         norm = {s.split("_")[0] for s in services}
-        if len(norm) < 3:
+        # Need both: 3+ distinct services AND enough volume per service to
+        # rule out an accidental one-shot failure on each.
+        if len(norm) < 3 or len(group) < 6:
             continue
         alerts.append(
             Alert(
@@ -1415,27 +1454,48 @@ def rule_r029_phishing(df: pd.DataFrame) -> List[Alert]:
     hits = df[strong] if strong.any() else df[mask]
     if hits.empty:
         return alerts
-    for idx, row in hits.iterrows():
-        ts = row["timestamp"].to_pydatetime() if pd.notna(row.get("timestamp")) else None
-        if ts is None:
-            continue
-        sender = row.get("senderfromaddress") or row.get("user") or "unknown"
-        recipient = row.get("recipientemailaddress") or "unknown"
+    # Aggregate per sender so the same phishing campaign blasted to 100
+    # recipients fires ONE alert per sender, not 100 separate ones.
+    hits = hits[hits["timestamp"].notna()]
+    if hits.empty:
+        return alerts
+    sender_col = (
+        hits["senderfromaddress"] if "senderfromaddress" in hits.columns
+        else hits.get("user", pd.Series("unknown", index=hits.index))
+    ).astype(str).fillna("unknown")
+    for sender, grp in hits.groupby(sender_col):
+        recipients = sorted({
+            str(r) for r in grp.get("recipientemailaddress", pd.Series(dtype=str)).dropna().unique()
+        })
+        rcpt_summary = (
+            recipients[0] if len(recipients) == 1
+            else f"{len(recipients)} recipients" if recipients
+            else "unknown"
+        )
+        ts_min = grp["timestamp"].min().to_pydatetime()
+        src_ip = next(
+            (str(s) for s in grp.get("source_ip", pd.Series(dtype=str)).dropna().tolist()),
+            None,
+        )
         alerts.append(Alert(
             alert_id=_new_alert_id(),
             rule_id="R029",
             rule_name="Phishing Email (Risky Attachment / Auth Fail)",
             severity=AlertSeverity.HIGH,
-            description=f"Email from {sender} → {recipient} with risky attachment and/or DKIM/DMARC failure",
-            timestamp=ts,
-            user=str(recipient) if recipient != "unknown" else None,
-            source_ip=str(row.get("source_ip")) if pd.notna(row.get("source_ip")) else None,
-            event_count=1,
+            description=(
+                f"Email from {sender} → {rcpt_summary} with risky attachment "
+                f"and/or DKIM/DMARC failure ({len(grp)} message(s))"
+            ),
+            timestamp=ts_min,
+            user=recipients[0] if len(recipients) == 1 else None,
+            source_ip=src_ip,
+            event_count=len(grp),
             mitre_technique="T1566.001",
             mitre_tactic="Initial Access",
             tp_probability=0.90,
-            related_log_indices=[int(idx)],
-            extra={"sender": str(sender), "recipient": str(recipient)},
+            related_log_indices=[int(i) for i in grp.index],
+            extra={"sender": str(sender), "recipient_count": len(recipients),
+                   "recipients_sample": recipients[:5]},
         ))
     return alerts
 
@@ -1521,25 +1581,47 @@ def rule_r031_masquerade(df: pd.DataFrame) -> List[Alert]:
     hits = df[name_mask & in_temp & has_fname]
     if hits.empty:
         return alerts
-    for idx, row in hits.iterrows():
-        ts = row["timestamp"].to_pydatetime() if pd.notna(row.get("timestamp")) else None
-        if ts is None:
-            continue
+    hits = hits[hits["timestamp"].notna()]
+    if hits.empty:
+        return alerts
+    device_col = hits["devicename"].astype(str).fillna("?") if "devicename" in hits.columns else pd.Series("?", index=hits.index)
+    # Aggregate per device — one ransomware run dropping 200 files now emits
+    # ONE alert per host, with a sample of the filenames in extra.
+    for device, grp in hits.groupby(device_col):
+        ts_min = grp["timestamp"].min().to_pydatetime()
+        files = sorted({str(f) for f in grp.get("filename", pd.Series(dtype=str)).dropna().unique()})
+        folders = sorted({str(f) for f in grp.get("folderpath", pd.Series(dtype=str)).dropna().unique()})
+        src_ip = next((str(s) for s in grp.get("source_ip", pd.Series(dtype=str)).dropna().tolist()), None)
+        user = next(
+            (str(u) for u in (
+                grp.get("user", pd.Series(dtype=str)).dropna().tolist()
+                + grp.get("initiatingprocessaccountname", pd.Series(dtype=str)).dropna().tolist()
+            )),
+            None,
+        )
+        desc = (
+            f"{len(files)} masquerading binaries on '{device}' "
+            f"(e.g. '{files[0]}' under '{folders[0] if folders else 'temp'}')"
+            if len(files) > 1
+            else f"Suspicious binary '{files[0] if files else 'unknown'}' "
+                 f"written to '{folders[0] if folders else 'temp'}'"
+        )
         alerts.append(Alert(
             alert_id=_new_alert_id(),
             rule_id="R031",
             rule_name="Masquerading Binary in Temp Path",
             severity=AlertSeverity.CRITICAL,
-            description=f"Suspicious binary '{row.get('filename') or 'unknown'}' written to '{row.get('folderpath') or 'temp'}'",
-            timestamp=ts,
-            source_ip=str(row.get("source_ip")) if pd.notna(row.get("source_ip")) else None,
-            user=str(row.get("user") or row.get("initiatingprocessaccountname") or "") or None,
-            event_count=1,
+            description=desc,
+            timestamp=ts_min,
+            source_ip=src_ip,
+            user=user,
+            event_count=len(grp),
             mitre_technique="T1036.005",
             mitre_tactic="Defense Evasion",
             tp_probability=0.96,
-            related_log_indices=[int(idx)],
-            extra={"sha256": str(row.get("sha256") or ""), "device": str(row.get("devicename") or "")},
+            related_log_indices=[int(i) for i in grp.index],
+            extra={"device": str(device), "file_count": len(files),
+                   "files_sample": files[:10], "folders_sample": folders[:5]},
         ))
     return alerts
 
@@ -1562,25 +1644,48 @@ def rule_r032_ps_drop_exe(df: pd.DataFrame) -> List[Alert]:
     hits = df[is_ps & is_exe & in_temp]
     if hits.empty:
         return alerts
-    for idx, row in hits.iterrows():
-        ts = row["timestamp"].to_pydatetime() if pd.notna(row.get("timestamp")) else None
-        if ts is None:
-            continue
+    hits = hits[hits["timestamp"].notna()]
+    if hits.empty:
+        return alerts
+    device_col = hits["devicename"].astype(str).fillna("?") if "devicename" in hits.columns else pd.Series("?", index=hits.index)
+    init_col = hits["initiatingprocessfilename"].astype(str).fillna("?") if "initiatingprocessfilename" in hits.columns else pd.Series("?", index=hits.index)
+    # Aggregate per (device, initiating process) so a single PowerShell run
+    # dropping many files emits ONE alert rather than N.
+    for (device, init), grp in hits.groupby([device_col, init_col]):
+        ts_min = grp["timestamp"].min().to_pydatetime()
+        files = sorted({str(f) for f in grp.get("filename", pd.Series(dtype=str)).dropna().unique()})
+        folders = sorted({str(f) for f in grp.get("folderpath", pd.Series(dtype=str)).dropna().unique()})
+        src_ip = next((str(s) for s in grp.get("source_ip", pd.Series(dtype=str)).dropna().tolist()), None)
+        user = next(
+            (str(u) for u in (
+                grp.get("initiatingprocessaccountname", pd.Series(dtype=str)).dropna().tolist()
+                + grp.get("user", pd.Series(dtype=str)).dropna().tolist()
+            )),
+            None,
+        )
+        desc = (
+            f"{init} on '{device}' dropped {len(files)} executable(s) to temp "
+            f"(e.g. '{files[0]}' → '{folders[0] if folders else '?'}')"
+            if len(files) > 1
+            else f"{init} wrote {files[0] if files else '?'} to "
+                 f"{folders[0] if folders else '?'} on '{device}'"
+        )
         alerts.append(Alert(
             alert_id=_new_alert_id(),
             rule_id="R032",
             rule_name="Scripting Engine Drops Executable to Temp",
             severity=AlertSeverity.CRITICAL,
-            description=f"{row.get('initiatingprocessfilename')} wrote {row.get('filename')} to {row.get('folderpath')}",
-            timestamp=ts,
-            source_ip=str(row.get("source_ip")) if pd.notna(row.get("source_ip")) else None,
-            user=str(row.get("initiatingprocessaccountname") or row.get("user") or "") or None,
-            event_count=1,
+            description=desc,
+            timestamp=ts_min,
+            source_ip=src_ip,
+            user=user,
+            event_count=len(grp),
             mitre_technique="T1059.001",
             mitre_tactic="Execution",
             tp_probability=0.94,
-            related_log_indices=[int(idx)],
-            extra={"sha256": str(row.get("sha256") or ""), "device": str(row.get("devicename") or "")},
+            related_log_indices=[int(i) for i in grp.index],
+            extra={"device": str(device), "initiating_process": str(init),
+                   "file_count": len(files), "files_sample": files[:10]},
         ))
     return alerts
 
@@ -1601,21 +1706,35 @@ def rule_r033_kerberoast(df: pd.DataFrame) -> List[Alert]:
     alerts: List[Alert] = []
     if df.empty:
         return alerts
-    # Match by EventID (flattened to lowercase column) or raw contains.
-    eid = df["eventid"].astype(str) if "eventid" in df.columns else pd.Series("", index=df.index)
+    # Match by EventID (flattened to lowercase column) or raw contains. Tolerate
+    # integer-typed EventID by stringifying and stripping decimals ("4769.0").
+    eid = (
+        df["eventid"].astype(str).str.replace(r"\.0$", "", regex=True)
+        if "eventid" in df.columns
+        else pd.Series("", index=df.index)
+    )
     raw_l = df["raw"].astype(str).str.lower() if "raw" in df.columns else pd.Series("", index=df.index)
-    tgs = df[(eid == "4769") | raw_l.str.contains(r'"eventid"\s*:\s*4769', na=False, regex=True)].copy()
+    tgs = df[
+        (eid == "4769")
+        | raw_l.str.contains(r'eventid["\']?\s*[:=]\s*"?4769', na=False, regex=True)
+    ].copy()
     if tgs.empty:
         return alerts
     enc_col = None
-    for c in ("ticketencryptiontype", "tgs_encryption", "encryptiontype"):
+    for c in ("ticketencryptiontype", "tgs_encryption", "encryptiontype",
+              "ticket_encryption_type", "ticket_encryption"):
         if c in tgs.columns:
             enc_col = c
             break
-    if enc_col is None:
-        return alerts
-    tgs["_enc"] = tgs[enc_col].astype(str).str.lower()
-    weak = tgs[tgs["_enc"].isin(_WEAK_KERB_ENC)]
+    if enc_col is not None:
+        tgs["_enc"] = tgs[enc_col].astype(str).str.lower()
+        weak = tgs[tgs["_enc"].isin(_WEAK_KERB_ENC)]
+    else:
+        # Fallback: scan raw for the weak-encryption marker. Catches Windows
+        # logs whose encryption-type field is exported under a non-standard
+        # column name but still appears inline.
+        raw_tgs = tgs["raw"].astype(str).str.lower() if "raw" in tgs.columns else pd.Series("", index=tgs.index)
+        weak = tgs[raw_tgs.str.contains(r"0x17|0x18|rc4[-_]?hmac", na=False, regex=True)]
     if weak.empty:
         return alerts
     # Target column may be TargetUserName, ServiceName, etc.
@@ -1802,7 +1921,17 @@ def rule_r037_aws_no_mfa(df: pd.DataFrame) -> List[Alert]:
     en = df["eventname"].astype(str).str.lower() if "eventname" in df.columns else df["event_type"].astype(str).str.lower()
     raw_l = df["raw"].astype(str).str.lower()
     is_sensitive = en.isin(_SENSITIVE_AWS_EVENTS)
-    no_mfa = raw_l.str.contains('"mfaauthenticated"\\s*:\\s*"?false"?', na=False, regex=True)
+    # raw is lower-cased already, so we just need to tolerate quoted vs bare
+    # false, JSON or pipe-joined serialisation, and a flattened
+    # `mfaauthenticated` column from the JSON flattener.
+    no_mfa_raw = raw_l.str.contains(
+        r'mfaauthenticated["\']?\s*[:=]\s*["\']?false', na=False, regex=True,
+    )
+    if "mfaauthenticated" in df.columns:
+        no_mfa_col = df["mfaauthenticated"].astype(str).str.lower().isin({"false", "0", "no"})
+        no_mfa = no_mfa_raw | no_mfa_col
+    else:
+        no_mfa = no_mfa_raw
     hits = df[is_sensitive & no_mfa]
     if hits.empty:
         return alerts
