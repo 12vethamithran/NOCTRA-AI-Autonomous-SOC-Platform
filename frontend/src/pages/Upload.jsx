@@ -501,10 +501,8 @@ export default function Upload() {
                   <button key={title}
                     onClick={() => navigate(to)}
                     disabled={disabled}
-                    className="text-left p-3 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="text-left p-3 rounded-md lift ring-accent disabled:opacity-40 disabled:cursor-not-allowed"
                     style={{ background: 'var(--surface-2)', border: '1px solid var(--border-2)' }}
-                    onMouseEnter={e => !e.currentTarget.disabled && (e.currentTarget.style.borderColor = 'var(--border-3)')}
-                    onMouseLeave={e => !e.currentTarget.disabled && (e.currentTarget.style.borderColor = 'var(--border-2)')}
                   >
                     <div className="flex items-center justify-between mb-1.5">
                       <span className="ent-section-eyebrow">{title}</span>
@@ -536,10 +534,8 @@ export default function Upload() {
                   const I = s.icon
                   return (
                     <button key={s.id} onClick={loadDemoLog}
-                      className="text-left p-3 rounded-md transition-colors"
+                      className="text-left p-3 rounded-md lift ring-accent"
                       style={{ background: 'var(--surface)', border: '1px solid var(--border-2)' }}
-                      onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--border-3)')}
-                      onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border-2)')}
                     >
                       <div className="flex items-center justify-between mb-2">
                         <div className="w-8 h-8 rounded-md flex items-center justify-center"

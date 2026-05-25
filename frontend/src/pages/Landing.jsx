@@ -22,6 +22,7 @@ import {
 } from 'lucide-react'
 import { useSession } from '../App'
 import useApiHealth from '../utils/useApiHealth'
+import useCountUp from '../utils/useCountUp'
 import Card from '../components/ui/Card'
 import SectionHeader from '../components/ui/SectionHeader'
 import StatusPill from '../components/ui/StatusPill'
@@ -29,12 +30,29 @@ import Kbd from '../components/ui/Kbd'
 
 /* ── DATA ─────────────────────────────────────────────────────────────────── */
 
+// Metrics with a numeric `n` get a count-up; metrics without (or with a
+// `prefix`) render statically. Format string lets us reuse the same loop
+// for "42", "<50ms" and "0".
 const HERO_METRICS = [
-  { k: 'detection_rules',  v: '42',   l: 'Detection rules',  s: 'R001 → R042 across MITRE ATT&CK' },
-  { k: 'mitre_tactics',    v: '12',   l: 'MITRE tactics',    s: 'Initial Access → Impact' },
-  { k: 'detection_p50',    v: '<50ms', l: 'Rule eval p50',   s: 'on a 100k-row log file' },
-  { k: 'bytes_persisted',  v: '0',    l: 'Bytes persisted',  s: 'storageless by design' },
+  { k: 'detection_rules',  n: 42, fmt: v => v.toString(),       l: 'Detection rules', s: 'R001 → R042 across MITRE ATT&CK' },
+  { k: 'mitre_tactics',    n: 12, fmt: v => v.toString(),       l: 'MITRE tactics',   s: 'Initial Access → Impact' },
+  { k: 'detection_p50',    n: 50, fmt: v => `<${v}ms`,          l: 'Rule eval p50',   s: 'on a 100k-row log file' },
+  { k: 'bytes_persisted',  n: 0,  fmt: () => '0',               l: 'Bytes persisted', s: 'storageless by design' },
 ]
+
+function HeroMetric({ n, fmt, l, s }) {
+  const { ref, value } = useCountUp(n, { duration: 800 })
+  return (
+    <div className="space-y-1.5">
+      <p className="ent-section-eyebrow">{l}</p>
+      <p ref={ref} className="tabular font-semibold leading-none"
+        style={{ fontSize: 'var(--fs-2xl)', color: 'var(--text-1)' }}>
+        {fmt(value)}
+      </p>
+      <p className="text-xs" style={{ color: 'var(--text-3)' }}>{s}</p>
+    </div>
+  )
+}
 
 const CAPABILITIES = [
   {
@@ -190,14 +208,7 @@ export default function Landing() {
               title={<span className="text-base font-semibold">At a glance</span>} />
             <div className="grid grid-cols-2 gap-4">
               {HERO_METRICS.map(m => (
-                <div key={m.k} className="space-y-1.5">
-                  <p className="ent-section-eyebrow">{m.l}</p>
-                  <p className="tabular font-semibold leading-none"
-                    style={{ fontSize: 'var(--fs-2xl)', color: 'var(--text-1)' }}>
-                    {m.v}
-                  </p>
-                  <p className="text-xs" style={{ color: 'var(--text-3)' }}>{m.s}</p>
-                </div>
+                <HeroMetric key={m.k} {...m} />
               ))}
             </div>
             <div className="ent-divider" />
@@ -224,7 +235,7 @@ export default function Landing() {
             const Icon = c.icon
             const disabled = c.cta.auth && !session
             return (
-              <Card key={c.title} variant="elevated" padding="lg" className="flex flex-col">
+              <Card key={c.title} variant="elevated" padding="lg" className="flex flex-col lift ring-accent">
                 <div className="flex items-start gap-3 mb-3">
                   <div
                     className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
@@ -268,7 +279,7 @@ export default function Landing() {
           {PIPELINE.map(p => {
             const Icon = p.icon
             return (
-              <Card key={p.n} padding="md" className="flex gap-3 items-start">
+              <Card key={p.n} padding="md" className="flex gap-3 items-start lift">
                 <div
                   className="w-8 h-8 rounded-md flex items-center justify-center shrink-0 tabular text-xs font-bold"
                   style={{ background: 'var(--surface-3)', color: 'var(--text-3)', border: '1px solid var(--border-2)' }}
@@ -404,7 +415,7 @@ export default function Landing() {
             { i: Activity,    t: 'Behavioral anomaly',  d: 'IsolationForest UEBA model on per-user and per-IP features. Flags σ-deviation from baseline. Scored even if no rule fires.' },
             { i: Sparkles,    t: 'AI re-scoring',       d: 'Gemini classifier blended 70/30 with the deterministic heuristic. Returns a TP probability and structured rationale.' },
           ].map(({ i: Icon, t, d }) => (
-            <Card key={t} variant="elevated" padding="lg">
+            <Card key={t} variant="elevated" padding="lg" className="lift">
               <Icon size={18} style={{ color: 'var(--accent)' }} className="mb-3" />
               <p className="font-semibold mb-1.5" style={{ color: 'var(--text-1)' }}>{t}</p>
               <p className="text-sm" style={{ color: 'var(--text-2)', lineHeight: 1.55 }}>{d}</p>
@@ -454,7 +465,7 @@ export default function Landing() {
             { i: ShieldCheck,t: 'Boundary minimal', d: 'Only the alert envelope (rule, technique, timestamps, optional IPs/users) crosses the boundary to the AI classifier — never raw lines.' },
             { i: Workflow,   t: 'Every decision auditable', d: 'Each alert carries its rule ID, MITRE technique, evidence indices, and rationale. Verdicts log to the session in the same shape.' },
           ].map(({ i: Icon, t, d }) => (
-            <Card key={t} padding="lg">
+            <Card key={t} padding="lg" className="lift">
               <Icon size={16} style={{ color: 'var(--accent)' }} className="mb-3" />
               <p className="font-semibold text-sm mb-1.5" style={{ color: 'var(--text-1)' }}>{t}</p>
               <p className="text-xs" style={{ color: 'var(--text-3)', lineHeight: 1.55 }}>{d}</p>

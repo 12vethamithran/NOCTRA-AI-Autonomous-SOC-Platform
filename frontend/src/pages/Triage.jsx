@@ -166,18 +166,29 @@ const MethodBadges = memo(({ methods = [] }) => {
 // only the affected row re-renders.
 function AlertRowImpl({ alert, verdict, onVerdict, selected, onSelect, focused, onOpenDrawer }) {
   const [submitting, setSub]  = useState(false)
+  // Optimistic verdict: render immediately on click, before the API call
+  // returns. If onVerdict rejects, we clear it. Removes the 300–500 ms
+  // dead zone the analyst used to wait through after each click.
+  const [optimisticVerdict, setOptimistic] = useState(null)
   const rowRef    = useRef()
   const s         = SEV_STYLE[alert.severity] || SEV_STYLE.LOW
+  const shownVerdict = verdict || (optimisticVerdict ? { decision: optimisticVerdict } : null)
 
   useEffect(() => {
     if (focused && rowRef.current) rowRef.current.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
   }, [focused])
 
+  // Clear the optimistic state once the real verdict has landed in props.
+  useEffect(() => { if (verdict) setOptimistic(null) }, [verdict])
+
   const submit = async (decision) => {
     if (submitting) return
     setSub(true)
+    setOptimistic(decision)
     try {
       await onVerdict({ alert_id: alert.alert_id, decision })
+    } catch {
+      setOptimistic(null)
     } finally { setSub(false) }
   }
 
@@ -186,10 +197,11 @@ function AlertRowImpl({ alert, verdict, onVerdict, selected, onSelect, focused, 
       ref={rowRef}
       onClick={() => onOpenDrawer(alert)}
       data-focused={focused ? 'true' : 'false'}
-      className={`border-b cursor-pointer data-row ${s.row}`}
+      className={`border-b cursor-pointer data-row fade-in ${s.row} ${focused ? 'focus-glow' : ''}`}
       style={{
         borderColor: 'var(--border)',
         background: selected ? 'rgba(225,29,72,0.04)' : 'transparent',
+        transition: 'background .15s var(--ease), box-shadow .15s var(--ease)',
       }}
     >
       <td className="px-3 py-3 w-8" onClick={e => e.stopPropagation()}>
@@ -225,7 +237,11 @@ function AlertRowImpl({ alert, verdict, onVerdict, selected, onSelect, focused, 
         {alertAge(alert.timestamp) && <span className="text-xs" style={{ color: 'var(--text-4)' }}>{alertAge(alert.timestamp)}</span>}
       </td>
       <td className="px-3 py-3" onClick={e => e.stopPropagation()}>
-        {verdict ? <VerdictBadge verdict={verdict.decision} /> : (
+        {shownVerdict ? (
+          <span className={optimisticVerdict ? 'inline-block verdict-pulse' : ''}>
+            <VerdictBadge verdict={shownVerdict.decision} />
+          </span>
+        ) : (
           <div className="flex items-center gap-1">
             {aiRec(alert) && (
               <span className="text-[9px] font-bold px-1 py-0.5 rounded mr-0.5" title="AI recommendation"
@@ -372,7 +388,7 @@ function DetailDrawer({ alert, onClose, verdict, submitVerdict, sessionId }) {
   return (
     <>
       <div className="drawer-overlay fade-in" onClick={onClose} />
-      <div className="drawer-content slide-up" style={{ width: '100%', maxWidth: '680px' }}>
+      <div className="drawer-content slide-up glass-panel" style={{ width: '100%', maxWidth: '680px' }}>
         <div className="p-6 border-b flex items-center justify-between" style={{ borderColor: 'var(--border)' }}>
           <div>
             <h2 className="text-xl font-bold text-white flex items-center gap-3">
@@ -947,7 +963,7 @@ export default function Triage() {
                 <th className="px-3 py-3 w-8" />
               </tr>
             </thead>
-            <tbody>
+            <tbody className="stagger-children">
               {displayed.map((alert, idx) => (
                 <AlertRow
                   key={alert.alert_id}

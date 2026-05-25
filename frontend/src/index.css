@@ -850,11 +850,15 @@ input[type="checkbox"] {
 }
 .cmdk-panel {
   width: min(640px, 92vw);
-  background: var(--surface);
+  /* Frosted: shows the blurred overlay behind, then the BackgroundCanvas
+     particles, then any underlying content. Reads as depth. */
+  background: rgba(17, 17, 20, 0.78);
+  backdrop-filter: blur(22px) saturate(150%);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
   border: 1px solid var(--border-2);
   border-radius: 16px;
   box-shadow:
-    0 0 0 1px rgba(225,29,72,.18),
+    0 0 0 1px rgba(225,29,72,.16),
     0 30px 80px rgba(0,0,0,.7),
     0 0 80px rgba(225,29,72,.10);
   overflow: hidden;
@@ -870,11 +874,19 @@ input[type="checkbox"] {
 .cmdk-item {
   display: flex; align-items: center; gap: 12px;
   padding: 10px 12px; border-radius: 10px; cursor: pointer;
-  color: var(--text-2); transition: background .1s, color .1s;
+  color: var(--text-2);
+  transition: background .15s var(--ease),
+              color .15s var(--ease),
+              transform .15s var(--ease),
+              box-shadow .15s var(--ease);
+  border: 1px solid transparent;
 }
 .cmdk-item:hover, .cmdk-item[data-active="true"] {
   background: rgba(225,29,72,.10);
-  color: white;
+  color: #fff;
+  transform: translateY(-1px);
+  border-color: rgba(225, 29, 72, .25);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .35);
 }
 .cmdk-item-shortcut {
   margin-left: auto; font-size: 10px; color: var(--text-4);
@@ -1057,3 +1069,101 @@ input[type="checkbox"] {
 
 /* Hairline divider — replaces ad-hoc `border-t border-zinc-...`. */
 .ent-divider { height: 1px; background: var(--border); }
+
+/* ── Interactivity primitives v3.3 ─────────────────────────────────────────
+ * Layered on top of the v3.1 .ent-* tokens. These add the "alive without
+ * being noisy" interaction layer:
+ *   .lift            — Linear-style elevation on hover (cards, tiles)
+ *   .lift-strong     — Same idea, slightly stronger (KPI / hero metrics)
+ *   .focus-glow      — Inset accent shadow for keyboard-focused rows
+ *   .ring-accent     — Animated 1px accent ring on hover, no layout shift
+ *   .stagger-children > * — Cascade entrance via per-child animation delay
+ *   .glass-panel     — Frosted surface for modals / drawers
+ *   .num-pop         — Number-pop entrance (when toggling KPI values)
+ * --------------------------------------------------------------------------- */
+
+.lift {
+  transition: transform .18s var(--ease),
+              box-shadow .18s var(--ease),
+              border-color .18s var(--ease);
+}
+.lift:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--elev-3);
+  border-color: var(--border-3);
+}
+
+.lift-strong {
+  transition: transform .22s var(--ease),
+              box-shadow .22s var(--ease),
+              border-color .22s var(--ease);
+}
+.lift-strong:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--elev-4);
+  border-color: var(--border-3);
+}
+
+/* Inset glow used by Triage rows under keyboard focus. Subtle 3px accent
+   on the left edge + soft outer ring. Doesn't move the row. */
+.focus-glow {
+  box-shadow:
+    inset 3px 0 0 var(--accent),
+    0 0 0 1px rgba(225, 29, 72, .25);
+}
+
+/* Hairline accent ring that appears on hover — no layout shift because
+   it uses outline (not border). Good for tiles where we already use
+   .ent-card with its own border. */
+.ring-accent {
+  outline: 1px solid transparent;
+  outline-offset: -1px;
+  transition: outline-color .18s var(--ease), box-shadow .18s var(--ease);
+}
+.ring-accent:hover {
+  outline-color: rgba(225, 29, 72, .35);
+  box-shadow: 0 0 0 4px rgba(225, 29, 72, .08), var(--elev-3);
+}
+
+/* Cascade entrance — apply to a parent, every direct child gets a 40ms
+   compounding delay. Pairs with .fade-in / .slide-up on the children. */
+.stagger-children > *           { animation-delay: 0ms;   }
+.stagger-children > *:nth-child(2)  { animation-delay: 40ms;  }
+.stagger-children > *:nth-child(3)  { animation-delay: 80ms;  }
+.stagger-children > *:nth-child(4)  { animation-delay: 120ms; }
+.stagger-children > *:nth-child(5)  { animation-delay: 160ms; }
+.stagger-children > *:nth-child(6)  { animation-delay: 200ms; }
+.stagger-children > *:nth-child(7)  { animation-delay: 240ms; }
+.stagger-children > *:nth-child(8)  { animation-delay: 280ms; }
+.stagger-children > *:nth-child(9)  { animation-delay: 320ms; }
+.stagger-children > *:nth-child(10) { animation-delay: 360ms; }
+.stagger-children > *:nth-child(n+11) { animation-delay: 400ms; }
+
+/* Frosted surface for modals and overlays. Sits over BackgroundCanvas
+   particles so depth reads correctly. */
+.glass-panel {
+  background: rgba(17, 17, 20, 0.72);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  border: 1px solid var(--border-2);
+  box-shadow: var(--elev-4);
+}
+
+/* Pulse used by verdict badge when a decision is being submitted —
+   gives the analyst instant feedback before the API responds. */
+@keyframes verdict-pulse {
+  0%   { box-shadow: 0 0 0 0   rgba(225, 29, 72, .55); }
+  70%  { box-shadow: 0 0 0 6px rgba(225, 29, 72, 0); }
+  100% { box-shadow: 0 0 0 0   rgba(225, 29, 72, 0); }
+}
+.verdict-pulse {
+  animation: verdict-pulse .55s var(--ease);
+}
+
+/* Slow shimmer ring used on the active "engine online" pill — extends
+   the existing accent-pulse without overpowering it. */
+@keyframes status-shimmer {
+  0%, 100% { opacity: .85; }
+  50%      { opacity: 1;   }
+}
+.status-shimmer { animation: status-shimmer 2.4s ease-in-out infinite; }
