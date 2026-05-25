@@ -291,7 +291,7 @@ export default function Upload() {
       {/* Two-column layout: input on the left, context on the right. */}
       <div className="grid lg:grid-cols-[1.7fr_1fr] gap-5 items-start">
 
-        <div className="space-y-5">
+        <div className="space-y-5 min-w-0">
 
           {/* Mode toggle */}
           <div className="segmented w-fit">
@@ -379,7 +379,7 @@ export default function Upload() {
                 </div>
               </div>
               <p className="ent-section-eyebrow mb-2">Preview · first 10 lines</p>
-              <pre className="font-mono text-[11.5px] p-3 rounded-md overflow-x-auto whitespace-pre tabular"
+              <pre className="font-mono text-[11.5px] p-3 rounded-md overflow-auto whitespace-pre tabular w-full max-w-full"
                 style={{ background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text-2)', maxHeight: 240 }}>
                 {snippet || '(empty)'}
               </pre>
