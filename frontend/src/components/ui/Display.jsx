@@ -27,9 +27,10 @@ export function Eyebrow({ children, num, className = '', ...rest }) {
  *     <DisplayHeading.Muted>TWO VERY DIFFERENT CONCLUSIONS.</DisplayHeading.Muted>
  *   </DisplayHeading>
  */
-export function DisplayHeading({ size = 'md', as: Tag = 'h2', className = '', children, ...rest }) {
+export function DisplayHeading({ size = 'md', center = false, wide = false, as: Tag = 'h2', className = '', children, ...rest }) {
   const sizeClass = size === 'sm' ? 'display display-sm' : size === 'lg' ? 'display display-lg' : 'display'
-  return <Tag className={`${sizeClass} ${className}`} {...rest}>{children}</Tag>
+  const mods = [center && 'is-center', wide && 'is-wide'].filter(Boolean).join(' ')
+  return <Tag className={`${sizeClass} ${mods} ${className}`} {...rest}>{children}</Tag>
 }
 DisplayHeading.Accent = function Accent({ children }) {
   return <span className="display-accent">{children}</span>

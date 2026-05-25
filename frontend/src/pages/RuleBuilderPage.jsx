@@ -69,10 +69,12 @@ const Card = ({ children, style = {} }) => (
 
 const SectionHead = ({ title, icon: Icon }) => (
   <div className="flex items-center gap-3 mb-5">
-    <div className="w-10 h-10 rounded-xl flex items-center justify-center icon-3d-red">
-      <Icon size={18} className="text-white" />
+    <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: 'var(--accent-dim)', color: 'var(--accent)' }}>
+      <Icon size={16} />
     </div>
-    <p className="text-lg font-bold text-white">{title}</p>
+    <div>
+      <span className="eyebrow-display">{title}</span>
+    </div>
   </div>
 )
 

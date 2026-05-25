@@ -156,7 +156,7 @@ export default function Landing() {
           </Reveal>
 
           <Reveal delay={80}>
-            <DisplayHeading as="h1" size="lg" className="mt-6">
+            <DisplayHeading as="h1" size="lg" center wide className="mt-6">
               EVERY ALERT READ.{' '}
               <DisplayHeading.Accent>EVERY ATTACK MAPPED.</DisplayHeading.Accent>
             </DisplayHeading>
@@ -546,7 +546,7 @@ export default function Landing() {
           <span className="eyebrow-display">READY TO START</span>
         </Reveal>
         <Reveal delay={80}>
-          <DisplayHeading as="h2" size="md" className="mt-6 mx-auto">
+          <DisplayHeading as="h2" size="md" center wide className="mt-6">
             DROP A LOG.{' '}
             <DisplayHeading.Accent>WALK THE INCIDENT.</DisplayHeading.Accent>
           </DisplayHeading>

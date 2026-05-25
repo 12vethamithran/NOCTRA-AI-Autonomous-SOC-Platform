@@ -255,7 +255,7 @@ export default function Dashboard() {
   )
 
   const SectionHead = ({ title }) => (
-    <p className="text-xs font-bold uppercase tracking-widest px-5 pt-5 pb-0" style={{ color: 'var(--text-3)' }}>{title}</p>
+    <p className="eyebrow-display px-5 pt-5 pb-0">{title}</p>
   )
 
   return (

@@ -528,7 +528,7 @@ export default function Upload() {
           {/* Sample datasets */}
           {!uploading && !result && (
             <div className="space-y-3">
-              <SectionHeader eyebrow="Sample datasets" title="Try without your own data" level={2}
+              <SectionHeader variant="display-sm" eyebrow="SAMPLE DATASETS" title="TRY WITHOUT YOUR OWN DATA." level={2}
                 hint="Each sample runs a real backend session against the bundled multi-stage scenario." />
               <div className="grid sm:grid-cols-3 gap-2">
                 {SAMPLE_DATASETS.map(s => {

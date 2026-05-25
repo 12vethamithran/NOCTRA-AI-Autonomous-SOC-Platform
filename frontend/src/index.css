@@ -1176,10 +1176,12 @@ input[type="checkbox"] {
    ═══════════════════════════════════════════════════════════════════════════ */
 
 :root {
-  /* Oversized display scale layered ON TOP of the existing --fs-* ramp. */
-  --fs-display-sm: clamp(40px, 6vw,  64px);
-  --fs-display:    clamp(56px, 8.5vw, 112px);
-  --fs-display-lg: clamp(64px, 10vw, 144px);
+  /* Oversized display scale layered ON TOP of the existing --fs-* ramp.
+     Tuned smaller after Phase 2 review — the prior values blew past the
+     viewport on the hero. These keep impact while staying single-screen. */
+  --fs-display-sm: clamp(32px, 4.2vw, 52px);
+  --fs-display:    clamp(40px, 5.6vw, 76px);
+  --fs-display-lg: clamp(48px, 6.8vw, 96px);
 }
 
 /* Massive caps headline — the "ATTACK SURFACE MAPPED" treatment.
@@ -1188,14 +1190,18 @@ input[type="checkbox"] {
   font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
   font-weight: 900;
   font-size: var(--fs-display);
-  line-height: 0.95;
-  letter-spacing: -0.02em;
+  line-height: 1.02;
+  letter-spacing: -0.025em;
   text-transform: uppercase;
   color: var(--text-1);
   margin: 0;
+  /* Cap line length so multi-word headlines don't dominate the viewport. */
+  max-width: 18ch;
 }
-.display-sm { font-size: var(--fs-display-sm); }
-.display-lg { font-size: var(--fs-display-lg); }
+.display.is-wide { max-width: 26ch; }
+.display.is-center { margin-left: auto; margin-right: auto; }
+.display-sm { font-size: var(--fs-display-sm); max-width: 22ch; }
+.display-lg { font-size: var(--fs-display-lg); max-width: 16ch; }
 
 /* Second line demoted to gray — for "SAME PASSWORD. / TWO VERY DIFFERENT
    CONCLUSIONS." style stacked headlines. Wrap the demoted line. */
