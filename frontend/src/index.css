@@ -1669,53 +1669,30 @@ input[type="checkbox"] {
 
 .brandmark-name {
   font-family: 'Inter', system-ui, sans-serif;
-  font-weight: 900;
-  font-size: 17px;
-  letter-spacing: 0.14em;
+  font-weight: 800;
+  font-size: 16px;
+  letter-spacing: 0.18em;
   color: var(--text-1);
   line-height: 1;
   display: inline-flex;
   align-items: baseline;
-  gap: 0;
+  gap: 0.45em;
 }
-.brandmark-o {
-  position: relative;
-  display: inline-flex;
-  width: 0.9em;
-  align-items: center;
-  justify-content: center;
-  /* Replace the visual O with a thin crosshair circle to read as a scope */
-  color: transparent;
-}
-.brandmark-o::before {
-  content: '';
-  width: 0.62em; height: 0.62em;
-  border-radius: 50%;
-  border: 1.6px solid var(--accent);
-  box-shadow: 0 0 8px rgba(225, 29, 72, 0.55);
-  position: absolute;
-}
-.brandmark-o::after {
-  content: '';
-  width: 0.18em; height: 0.18em;
-  border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 6px rgba(244, 63, 94, 0.9);
-  position: absolute;
-}
+/* No special O treatment — restraint reads more grown-up than ornament.
+   The "O" simply inherits the rest of the wordmark. */
+.brandmark-o { color: inherit; }
+/* AI as a hairline-bordered tag — minimal, no glow, no gradient.
+   Just a quiet crimson outline that reads as a typographic accent. */
 .brandmark-ai {
-  margin-left: 0.6em;
-  padding: 2px 6px;
   font-size: 9.5px;
-  font-weight: 800;
-  letter-spacing: 0.18em;
-  color: #fff;
-  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
-  border-radius: 4px;
-  box-shadow:
-    0 2px 8px rgba(225, 29, 72, 0.45),
-    inset 0 1px 0 rgba(255, 255, 255, 0.18);
-  transform: translateY(-3px);
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: var(--accent);
+  padding: 2px 5px;
+  border: 1px solid rgba(225, 29, 72, 0.45);
+  border-radius: 3px;
+  background: transparent;
+  transform: translateY(-1px);
 }
 
 .brandmark-sub {
