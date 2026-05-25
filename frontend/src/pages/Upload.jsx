@@ -266,8 +266,9 @@ export default function Upload() {
 
       {/* Header */}
       <SectionHeader
-        eyebrow="Ingestion module"
-        title="Bring a log file. Get ranked incidents."
+        variant="display-sm"
+        eyebrow="INGESTION MODULE"
+        title="DROP A LOG. RANK THE INCIDENTS."
         hint="Parsed in memory, scored against 42 rules, deduplicated, then handed to the triage queue. The session lives only in RAM."
         right={
           <div className="flex items-center gap-2">

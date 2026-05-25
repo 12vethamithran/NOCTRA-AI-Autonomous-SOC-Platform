@@ -716,11 +716,12 @@ export default function Investigation() {
           >
             <ArrowLeft size={12} /> Back to Triage Queue
           </button>
-          <div className="flex items-center gap-2 mb-2">
+          <span className="eyebrow-display mb-3">INVESTIGATION</span>
+          <div className="flex items-center gap-2 mt-3 mb-2">
             <span className={SEV_CLASS[alert.severity] || SEV_CLASS.LOW}>{alert.severity}</span>
             <span className="font-mono text-xs num" style={{ color: 'var(--text-3)' }}>{alert.rule_id}</span>
           </div>
-          <h1 className="text-xl font-extrabold text-white leading-tight">{alert.rule_name}</h1>
+          <h1 className="display display-sm uppercase leading-[0.95]" style={{ color: 'var(--text-1)', fontSize: 'clamp(28px, 3.2vw, 44px)' }}>{alert.rule_name}</h1>
           <p className="text-sm mt-1" style={{ color: 'var(--text-2)' }}>{alert.description}</p>
           <div className="flex flex-wrap items-center gap-2 mt-2">
             <span className="text-xs font-mono px-2 py-0.5 rounded inline-flex items-center gap-1 num" style={{ background: 'rgba(225,29,72,0.1)', border: '1px solid rgba(225,29,72,0.2)', color: '#f87171' }}>

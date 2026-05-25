@@ -841,19 +841,15 @@ export default function Triage() {
     <div className="space-y-4 fade-in pb-24">
 
       {/* ── Header ── */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center icon-3d-red">
-              <ShieldAlert size={20} color="#f43f5e" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-extrabold text-white leading-tight">Alert Triage Queue</h1>
-              <p className="text-sm num" style={{ color: 'var(--text-3)' }}>
-                {alerts.length} total · <span className="text-red-400">{tpCount} TP</span> · <span style={{ color: 'var(--text-2)' }}>{fpCount} FP</span> · <span className="text-amber-400">{pendingCount} pending</span>
-              </p>
-            </div>
-          </div>
+          <span className="eyebrow-display">ALERT TRIAGE QUEUE</span>
+          <h1 className="display display-sm mt-3" style={{ color: 'var(--text-1)' }}>
+            CLEAR THE QUEUE.
+          </h1>
+          <p className="text-sm num mt-3" style={{ color: 'var(--text-3)' }}>
+            {alerts.length} total · <span className="text-red-400">{tpCount} TP</span> · <span style={{ color: 'var(--text-2)' }}>{fpCount} FP</span> · <span className="text-amber-400">{pendingCount} pending</span>
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => applyAiSuggestions('all')} disabled={pendingCount === 0}

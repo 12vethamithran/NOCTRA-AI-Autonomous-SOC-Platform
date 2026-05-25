@@ -224,18 +224,14 @@ export default function RuleBuilderPage() {
   return (
     <div className="space-y-6 fade-in pb-12">
       {/* Header */}
-      <div className="space-y-2">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl flex items-center justify-center icon-3d-red">
-            <SlidersHorizontal size={24} className="text-white" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-extrabold text-white">Custom Rule Builder</h1>
-            <p className="text-sm mt-1" style={{ color: 'var(--text-3)' }}>
-              Create detection rules without code. Rules apply automatically to all upcoming alerts.
-            </p>
-          </div>
-        </div>
+      <div>
+        <span className="eyebrow-display">CUSTOM RULE BUILDER</span>
+        <h1 className="display display-sm mt-3" style={{ color: 'var(--text-1)' }}>
+          DETECTION, AUTHORED.
+        </h1>
+        <p className="text-sm mt-4 max-w-2xl" style={{ color: 'var(--text-3)', lineHeight: 1.6 }}>
+          Create detection rules without code. Rules apply automatically to all upcoming alerts.
+        </p>
       </div>
 
       {/* Quick Templates */}

@@ -299,11 +299,12 @@ export default function Landing() {
       <div className="max-w-7xl mx-auto px-5 lg:px-8 pb-12 space-y-12">
 
       {/* ─── MITRE COVERAGE ───────────────────────────────────────────── */}
-      <section id="mitre" className="space-y-5">
+      <section id="mitre" className="section-frame-tight space-y-10">
         <SectionHeader
-          eyebrow="ATT&CK coverage"
-          title="42 rules mapped to 12 MITRE tactics"
-          hint="Each row lists the rule IDs that fire under that tactic. Drilldown lives in the Dashboard → MITRE Coverage tab."
+          variant="display-sm"
+          eyebrow="ATT&CK COVERAGE"
+          title="MAPPED TO MITRE."
+          hint="42 rules across 12 tactics. Each row lists the rule IDs that fire under that tactic. Drilldown lives in the Dashboard → MITRE Coverage tab."
           level={2}
           right={
             <StatusPill tone="info" icon={Network}>
@@ -356,10 +357,11 @@ export default function Landing() {
       </section>
 
       {/* ─── L1 vs L2 ─────────────────────────────────────────────────── */}
-      <section id="tiers" className="space-y-5">
+      <section id="tiers" className="section-frame-tight space-y-10">
         <SectionHeader
-          eyebrow="Analyst tiers"
-          title="L1 triage and L2 hunt — one dashboard, two lenses"
+          variant="display-sm"
+          eyebrow="ANALYST TIERS"
+          title={<>ONE DASHBOARD.<DisplayHeading.Muted>TWO LENSES.</DisplayHeading.Muted></>}
           level={2}
         />
         <div className="grid md:grid-cols-2 gap-3">
@@ -399,11 +401,12 @@ export default function Landing() {
       </section>
 
       {/* ─── ENGINE ───────────────────────────────────────────────────── */}
-      <section id="engine" className="space-y-5">
+      <section id="engine" className="section-frame-tight space-y-10">
         <SectionHeader
-          eyebrow="Detection engine"
-          title="Three independent signal layers"
-          hint="The score that lands on an analyst's desk is the agreement of these three independent inputs. Disagreement is what makes the dedup + chain stages worth running."
+          variant="display-sm"
+          eyebrow="DETECTION ENGINE"
+          title={<>THREE SIGNALS.<DisplayHeading.Muted>ONE VERDICT.</DisplayHeading.Muted></>}
+          hint="The score that lands on an analyst's desk is the agreement of three independent inputs. Disagreement is what makes the dedup + chain stages worth running."
           level={2}
         />
         <div className="grid md:grid-cols-3 gap-3">
@@ -450,10 +453,11 @@ export default function Landing() {
       </section>
 
       {/* ─── SECURITY ─────────────────────────────────────────────────── */}
-      <section id="security" className="space-y-5">
+      <section id="security" className="section-frame-tight space-y-10">
         <SectionHeader
-          eyebrow="Security"
-          title="Storageless. Stateless. Inspectable."
+          variant="display-sm"
+          eyebrow="SECURITY"
+          title={<>STORAGELESS.<DisplayHeading.Muted>INSPECTABLE.</DisplayHeading.Muted></>}
           level={2}
         />
         <div className="grid md:grid-cols-3 gap-3">
@@ -472,10 +476,11 @@ export default function Landing() {
       </section>
 
       {/* ─── FAQ ──────────────────────────────────────────────────────── */}
-      <section id="faq" className="space-y-5">
+      <section id="faq" className="section-frame-tight space-y-10">
         <SectionHeader
+          variant="display-sm"
           eyebrow="FAQ"
-          title="Common questions"
+          title="QUESTIONS, ANSWERED."
           level={2}
           right={
             <div className="relative">
@@ -536,27 +541,26 @@ export default function Landing() {
       </section>
 
       {/* ─── CTA ──────────────────────────────────────────────────────── */}
-      <section className="pt-2 pb-6">
-        <Card variant="elevated" padding="xl" className="text-center">
-          <p className="ent-section-eyebrow mb-2">Ready to start</p>
-          <h3 className="text-2xl font-semibold mb-2" style={{ color: 'var(--text-1)' }}>
-            Drop a log file and walk through an incident
-          </h3>
-          <p className="text-sm max-w-xl mx-auto mb-5" style={{ color: 'var(--text-3)' }}>
+      <section className="section-frame text-center">
+        <Reveal>
+          <span className="eyebrow-display">READY TO START</span>
+        </Reveal>
+        <Reveal delay={80}>
+          <DisplayHeading as="h2" size="md" className="mt-6 mx-auto">
+            DROP A LOG.{' '}
+            <DisplayHeading.Accent>WALK THE INCIDENT.</DisplayHeading.Accent>
+          </DisplayHeading>
+        </Reveal>
+        <Reveal delay={160}>
+          <p className="text-sm max-w-xl mx-auto mt-6" style={{ color: 'var(--text-3)' }}>
             No signup. No persistence. Session-scoped, in-memory, ephemeral.
           </p>
-          <div className="inline-flex gap-3">
-            <button
-              onClick={() => navigate('/upload')}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-md font-semibold text-sm transition-colors"
-              style={{ background: 'var(--accent)', color: '#fff', boxShadow: 'var(--elev-2)' }}
-              onMouseEnter={e => (e.currentTarget.style.background = 'var(--accent-hover)')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'var(--accent)')}
-            >
-              Open ingestion module <ArrowRight size={14} />
-            </button>
+        </Reveal>
+        <Reveal delay={240}>
+          <div className="mt-10">
+            <GhostCTA onClick={() => navigate('/upload')}>Open ingestion module</GhostCTA>
           </div>
-        </Card>
+        </Reveal>
       </section>
       </div>
     </div>

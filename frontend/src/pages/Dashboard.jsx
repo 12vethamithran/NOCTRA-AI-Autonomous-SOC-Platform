@@ -264,8 +264,9 @@ export default function Dashboard() {
       {/* ── Header ── */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-extrabold text-white">Session Dashboard</h1>
-          <p className="text-xs mt-1 font-mono" style={{ color: 'var(--text-3)' }}>
+          <span className="eyebrow-display">SESSION DASHBOARD</span>
+          <h1 className="display display-sm mt-3" style={{ color: 'var(--text-1)' }}>SITUATION ROOM.</h1>
+          <p className="text-xs mt-3 font-mono" style={{ color: 'var(--text-3)' }}>
             {session?.session_id}
             <span className="mx-2" style={{ color: 'var(--border-3)' }}>·</span>
             {session?.parsed_format}
