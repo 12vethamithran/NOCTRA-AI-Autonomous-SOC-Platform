@@ -151,9 +151,8 @@ export default function Layout() {
       {/* ── Top micro-bar (v4 — bold-typography refinement) ── */}
       <div className="topbar-v4 px-4 py-2 text-xs flex items-center justify-between gap-4">
         <div className="flex items-center gap-3 overflow-hidden">
-          <span className={`topbar-chip topbar-chip-dot ${health === 'online' ? 'text-emerald-300' : health === 'offline' ? 'text-red-300' : 'text-amber-300'}`}
-            style={{ background: 'rgba(255,255,255,.02)', borderColor: 'rgba(255,255,255,.06)' }}>
-            <HIcon size={9} />
+          <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold tracking-[0.18em] uppercase ${health === 'online' ? 'text-emerald-300' : health === 'offline' ? 'text-red-300' : 'text-amber-300'}`}>
+            <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'currentColor', boxShadow: '0 0 8px currentColor' }} />
             <span className="hidden sm:inline">{h.text.toUpperCase()}</span>
           </span>
           <span className="hidden sm:flex items-center gap-2 shrink-0">

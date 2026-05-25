@@ -1671,28 +1671,19 @@ input[type="checkbox"] {
   font-family: 'Inter', system-ui, sans-serif;
   font-weight: 800;
   font-size: 16px;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.14em;
   color: var(--text-1);
   line-height: 1;
-  display: inline-flex;
-  align-items: baseline;
-  gap: 0.45em;
+  white-space: nowrap;
 }
-/* No special O treatment — restraint reads more grown-up than ornament.
-   The "O" simply inherits the rest of the wordmark. */
 .brandmark-o { color: inherit; }
-/* AI as a hairline-bordered tag — minimal, no glow, no gradient.
-   Just a quiet crimson outline that reads as a typographic accent. */
+/* AI as a quiet inline color accent — no box, no border, no badge. */
 .brandmark-ai {
-  font-size: 9.5px;
+  margin-left: 0.5em;
   font-weight: 700;
+  font-size: 0.78em;
   letter-spacing: 0.2em;
   color: var(--accent);
-  padding: 2px 5px;
-  border: 1px solid rgba(225, 29, 72, 0.45);
-  border-radius: 3px;
-  background: transparent;
-  transform: translateY(-1px);
 }
 
 .brandmark-sub {
