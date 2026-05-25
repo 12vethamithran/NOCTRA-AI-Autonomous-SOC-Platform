@@ -1,35 +1,72 @@
-/* ── Red/Black Enterprise Design Tokens ────────────────────────────────────── */
+/* ── NOCTRA Enterprise Design Tokens ───────────────────────────────────────────
+ * A hybrid of Bloomberg (data density, restrained color), Linear (refined
+ * surfaces) and Splunk (status semantics). Crimson kept as the brand accent
+ * but no longer used for "success/warning/info" — those now use proper
+ * semantic colors so an analyst can read the UI at a glance.
+ * --------------------------------------------------------------------------- */
 :root {
-  /* Backgrounds */
-  --bg: #0c0c0e;
-  --surface: #141416;
-  --surface-2: #1c1c20;
-  --surface-3: #232329;
-  --surface-4: #2a2a32;
+  /* Surface ladder — narrower deltas than before so the UI doesn't look
+     tiered/chunky. Each step is ~4% lighter than the previous. */
+  --bg:         #0a0a0b;
+  --surface:    #111114;
+  --surface-2:  #16161a;
+  --surface-3:  #1c1c22;
+  --surface-4:  #23232a;
 
-  /* Borders */
-  --border: #252528;
-  --border-2: #2e2e35;
-  --border-3: #3d3d48;
+  /* Borders — a hairline + a divider + a hover-line. */
+  --border:     #1f1f24;
+  --border-2:   #2a2a31;
+  --border-3:   #383841;
 
-  /* Primary accent — Crimson Red */
-  --accent: #e11d48;
-  --accent-hover: #f43f5e;
-  --accent-dark: #9f1239;
-  --accent-dim: rgba(225, 29, 72, 0.12);
-  --accent-glow: rgba(225, 29, 72, 0.25);
+  /* Brand accent — crimson, used sparingly. */
+  --accent:        #e11d48;
+  --accent-hover:  #f43f5e;
+  --accent-dark:   #9f1239;
+  --accent-dim:    rgba(225, 29, 72, 0.10);
+  --accent-glow:   rgba(225, 29, 72, 0.22);
 
-  /* Status colours (Forced Red/Black theme) */
-  --success: #f43f5e;
-  --warning: #e11d48;
-  --info: #9f1239;
-  --danger: #ff0000;
+  /* Semantic status colors — distinct from accent so users can scan. */
+  --success:       #22c55e;
+  --success-dim:   rgba(34, 197, 94, 0.10);
+  --warning:       #f59e0b;
+  --warning-dim:   rgba(245, 158, 11, 0.10);
+  --info:          #3b82f6;
+  --info-dim:      rgba(59, 130, 246, 0.10);
+  --danger:        #ef4444;
+  --danger-dim:    rgba(239, 68, 68, 0.10);
 
-  /* Text */
-  --text-1: #ffffff;
-  --text-2: #9ca3af;
-  --text-3: #6b7280;
-  --text-4: #4b5563;
+  /* Text — five-stop ramp matching surface ladder for consistent contrast. */
+  --text-1: #f4f4f5;   /* primary  */
+  --text-2: #a1a1aa;   /* secondary */
+  --text-3: #71717a;   /* tertiary  */
+  --text-4: #52525b;   /* muted     */
+  --text-5: #3f3f46;   /* disabled  */
+
+  /* Elevation (z-axis). Use these instead of ad-hoc box-shadows. */
+  --elev-1: 0 1px 2px rgba(0,0,0,0.30), 0 0 0 1px rgba(255,255,255,0.02) inset;
+  --elev-2: 0 2px 6px rgba(0,0,0,0.40), 0 0 0 1px rgba(255,255,255,0.025) inset;
+  --elev-3: 0 8px 24px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.03) inset;
+  --elev-4: 0 24px 60px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.04) inset;
+
+  /* Typography scale — five steps, used by Card / SectionHeader. */
+  --fs-xs:   11px;
+  --fs-sm:   12px;
+  --fs-base: 13px;
+  --fs-md:   14px;
+  --fs-lg:   16px;
+  --fs-xl:   20px;
+  --fs-2xl:  28px;
+  --fs-3xl:  40px;
+
+  /* Radii — slightly tighter than before, more Linear-like. */
+  --r-xs: 4px;
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --r-xl: 20px;
+
+  /* Standard transition curve. */
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* ── Base ──────────────────────────────────────────────────────────────────── */
@@ -949,3 +986,74 @@ input[type="checkbox"] {
 @media print {
   .no-print { display: none !important; }
 }
+/* ── Enterprise primitives v3.1 ───────────────────────────────────────────────
+ * Tokenized building blocks used by Card / SectionHeader / StatusPill so the
+ * pages stay declarative ("variant=elevated") instead of repeating gradients
+ * and borders in 30 different inline styles. Composed by JSX wrappers in
+ * components/ui/.
+ * --------------------------------------------------------------------------- */
+
+.ent-card {
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-lg);
+  transition: border-color .18s var(--ease), box-shadow .18s var(--ease);
+}
+.ent-card-elevated { box-shadow: var(--elev-2); }
+.ent-card-interactive { cursor: pointer; }
+.ent-card-interactive:hover { border-color: var(--border-3); box-shadow: var(--elev-3); }
+.ent-card-muted { background: var(--surface-2); border-color: var(--border); }
+
+/* Section header — a tiny eyebrow + a heavier title with optional kicker. */
+.ent-section-eyebrow {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.ent-section-title {
+  font-size: var(--fs-xl);
+  font-weight: 600;
+  color: var(--text-1);
+  letter-spacing: -.01em;
+  line-height: 1.25;
+}
+
+/* Status pill — small inline indicator with semantic color. */
+.ent-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: var(--fs-xs); font-weight: 600;
+  padding: 3px 8px; border-radius: 999px;
+  border: 1px solid transparent;
+  line-height: 1;
+}
+.ent-pill-success { color: var(--success); background: var(--success-dim); border-color: rgba(34,197,94,.30); }
+.ent-pill-warning { color: var(--warning); background: var(--warning-dim); border-color: rgba(245,158,11,.30); }
+.ent-pill-danger  { color: var(--danger);  background: var(--danger-dim);  border-color: rgba(239,68,68,.30); }
+.ent-pill-info    { color: var(--info);    background: var(--info-dim);    border-color: rgba(59,130,246,.30); }
+.ent-pill-accent  { color: var(--accent);  background: var(--accent-dim);  border-color: rgba(225,29,72,.30); }
+.ent-pill-neutral { color: var(--text-2);  background: var(--surface-3);   border-color: var(--border-2); }
+
+/* Status pill dot — for the leading status indicator. */
+.ent-pill-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+
+/* Keyboard hint chip — used in command-palette + shortcuts modal. */
+.ent-kbd {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 18px; height: 18px; padding: 0 5px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px; font-weight: 600;
+  color: var(--text-2);
+  background: var(--surface-3);
+  border: 1px solid var(--border-2);
+  border-bottom-width: 2px;
+  border-radius: var(--r-sm);
+  line-height: 1;
+}
+
+/* Numeric tabular — for KPIs / counts so digits don't shift. */
+.tabular { font-variant-numeric: tabular-nums; }
+
+/* Hairline divider — replaces ad-hoc `border-t border-zinc-...`. */
+.ent-divider { height: 1px; background: var(--border); }

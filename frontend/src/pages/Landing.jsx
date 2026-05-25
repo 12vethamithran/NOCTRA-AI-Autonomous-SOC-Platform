@@ -1,849 +1,554 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+/**
+ * Landing — Overview page.
+ *
+ * Enterprise rewrite (v3.2): dense, restrained, semantic. Drops the auto-
+ * rotating capability tabs, floating ToC bling, count-up animations and
+ * mixed-glow CTAs in favour of a Bloomberg/Linear/Splunk hybrid surface:
+ *   • Above-the-fold telemetry — engine health, rule count, MITRE coverage.
+ *   • A grid of capability cards rather than a single rotating panel.
+ *   • A clean 9-stage pipeline (matches backend after the dedup pass).
+ *   • A MITRE coverage matrix in real data, not faux dashboards.
+ *   • A focused FAQ.
+ *
+ * All navigation paths and the SessionCtx flow are unchanged from v3.1.
+ */
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Sparkles, Globe, Crosshair, ClipboardList, BarChart3, Lock,
-  Upload as UploadIcon, ArrowRight, Activity, Cpu, ShieldCheck,
-  Database, Zap, Bot, Layers, FileBarChart, Network, ShieldAlert,
-  CheckCircle2, Eye, Workflow, GitBranch, AlertOctagon, TerminalSquare,
-  ChevronRight, Clock, FlaskConical, ScrollText, Search, ChevronLeft,
-  Play, Pause, Filter, Pin,
+  Activity, ArrowRight, Bot, Crosshair, Database, FileBarChart,
+  GitBranch, Globe, Layers, Lock, Network, ShieldAlert, ShieldCheck,
+  Sparkles, Workflow, Eye, Cpu, Search, ChevronDown, ChevronRight,
+  Filter as FilterIcon, ClipboardList, Zap,
 } from 'lucide-react'
 import { useSession } from '../App'
+import useApiHealth from '../utils/useApiHealth'
+import Card from '../components/ui/Card'
+import SectionHeader from '../components/ui/SectionHeader'
+import StatusPill from '../components/ui/StatusPill'
+import Kbd from '../components/ui/Kbd'
 
-/* ─────────────────────────────────────────────────────────────────────────────
-   DATA
-   ──────────────────────────────────────────────────────────────────────────── */
+/* ── DATA ─────────────────────────────────────────────────────────────────── */
 
-const SEV_CLASS = {
-  CRITICAL: 'sev-chip sev-chip-critical',
-  HIGH:     'sev-chip sev-chip-high',
-  MEDIUM:   'sev-chip sev-chip-medium',
-  LOW:      'sev-chip sev-chip-low',
-}
-
-const HERO_STATS = [
-  { v: 50,  unit: 'ms', l: 'Detection p50',   icon: Zap,         sub: 'rule eval latency', invert: true },
-  { v: 25,  unit: '+',  l: 'Detection rules', icon: ShieldCheck, sub: 'built-in + custom' },
-  { v: 12,  unit: '',   l: 'MITRE tactics',   icon: Crosshair,   sub: 'kill-chain coverage' },
-  { v: 0,   unit: '',   l: 'Bytes stored',    icon: Lock,        sub: 'storageless by design' },
+const HERO_METRICS = [
+  { k: 'detection_rules',  v: '42',   l: 'Detection rules',  s: 'R001 → R042 across MITRE ATT&CK' },
+  { k: 'mitre_tactics',    v: '12',   l: 'MITRE tactics',    s: 'Initial Access → Impact' },
+  { k: 'detection_p50',    v: '<50ms', l: 'Rule eval p50',   s: 'on a 100k-row log file' },
+  { k: 'bytes_persisted',  v: '0',    l: 'Bytes persisted',  s: 'storageless by design' },
 ]
 
-const TICKER_ITEMS = [
-  { sev: 'CRITICAL', t: 'T1110 · Credential Brute Force from 198.51.100.42' },
-  { sev: 'HIGH',     t: 'T1078 · Valid Accounts · impossible-travel · jakarta → lima' },
-  { sev: 'HIGH',     t: 'T1486 · Data Encrypted for Impact · srv-fileshare-04' },
-  { sev: 'MEDIUM',   t: 'T1059.001 · PowerShell encoded base64 payload' },
-  { sev: 'CRITICAL', t: 'T1071.004 · DNS tunneling · periodic 90s beaconing' },
-  { sev: 'HIGH',     t: 'T1003.001 · LSASS memory access · suspicious parent' },
-  { sev: 'MEDIUM',   t: 'T1021.001 · Lateral RDP · 10.0.4.7 → 10.0.5.31' },
-  { sev: 'CRITICAL', t: 'T1190 · SQL injection probe against /api/users' },
-]
-
-const CAPABILITY_TABS = [
+const CAPABILITIES = [
   {
-    key: 'triage', label: 'Triage', icon: ShieldAlert,
-    title: 'AI-augmented triage queue',
-    bullets: [
-      'Every alert receives a 0–100 TP probability with rationale',
-      'Drawer with raw evidence, MITRE context, suggested IR playbook',
-      'Bulk verdicts, AI auto-apply, keyboard-driven workflow',
-      'Severity sorting, MITRE filter, NL search across rules & IPs',
-    ],
-    blurb: 'Designed for an analyst clearing 100 alerts/hour. Keyboard-first, AI-assisted, opinionated defaults — but every decision is yours.',
+    icon: ShieldAlert, title: 'AI-augmented triage',
+    body: '0–100 TP probability per alert with SHAP rationale, evidence indices, and a one-click verdict workflow. Keyboard-first for analysts clearing 100 alerts/hour.',
+    cta: { to: '/triage', label: 'Open triage queue', auth: true },
   },
   {
-    key: 'hunt', label: 'Threat Hunt', icon: Crosshair,
-    title: 'Hypothesis-driven hunting',
-    bullets: [
-      'Saved templates: off-hours, large outbound, multi-host auth',
-      'Custom filters compose into a typed DSL',
-      'Natural-language → DSL translation by the AI agent',
-      'Save matching rows back as user-generated alerts',
-    ],
-    blurb: 'Pivot from any IOC into a structured hunt without writing SPL or KQL. The query stays explainable; nothing happens behind the curtain.',
+    icon: Crosshair, title: 'Hypothesis-driven hunting',
+    body: 'Saved templates for off-hours auth, large outbound, multi-host pivots. Compose typed filters or have the AI translate natural language into the DSL.',
+    cta: { to: '/hunt', label: 'Open hunt console', auth: true },
   },
   {
-    key: 'rules', label: 'Rule Builder', icon: ClipboardList,
-    title: 'Custom detection rules',
-    bullets: [
-      'Four prebuilt templates: brute, lateral, exfil, priv-esc',
-      'Multi-condition filters with AND/OR logic',
-      'Severity assignment + MITRE technique mapping',
-      'Live test against the current session before committing',
-    ],
-    blurb: 'Add your environment\'s tribal knowledge to the engine. Custom rules live alongside the 25 built-ins — same scoring, same MITRE annotation.',
+    icon: ClipboardList, title: 'Custom detection rules',
+    body: 'Four templates (brute, lateral, exfil, priv-esc). Multi-condition filters, MITRE technique, severity, and live-fire against the active session before commit.',
+    cta: { to: '/rules', label: 'Open rule builder', auth: true },
   },
   {
-    key: 'agent', label: 'AI Agent', icon: Bot,
-    title: 'Autonomous investigation agent',
-    bullets: [
-      'Multi-turn conversation with full alert context',
-      'Pivots into timeline / IOCs / threat intel automatically',
-      'Drafts your case notes and recommended next step',
-      'Falls back to deterministic heuristics when AI is unavailable',
-    ],
-    blurb: 'A senior-analyst sidekick that asks the next obvious question for you. Always cites which evidence it used.',
+    icon: Bot, title: 'Autonomous investigation agent',
+    body: 'Multi-turn agent that pivots into timeline, IOCs and threat intel automatically. Always cites the evidence it used. Deterministic fallback if AI is unavailable.',
+    cta: { to: '/triage', label: 'Investigate an alert', auth: true },
   },
-]
-
-const MITRE_TACTICS = [
-  { code: 'TA0001', name: 'Initial Access',          rules: ['R022','R024','R029','R034','R041'],         color: '#e11d48' },
-  { code: 'TA0002', name: 'Execution',               rules: ['R011','R032'],                              color: '#f43f5e' },
-  { code: 'TA0003', name: 'Persistence',             rules: ['R007','R017','R025','R030'],                color: '#9f1239' },
-  { code: 'TA0004', name: 'Privilege Escalation',    rules: ['R003'],                                     color: '#ff4d4d' },
-  { code: 'TA0005', name: 'Defense Evasion',         rules: ['R012','R018','R019','R031','R035','R036','R037','R038'], color: '#be123c' },
-  { code: 'TA0006', name: 'Credential Access',       rules: ['R001','R010','R013','R015','R016','R033'],  color: '#e11d48' },
-  { code: 'TA0007', name: 'Discovery',               rules: ['R002','R042'],                              color: '#881337' },
-  { code: 'TA0008', name: 'Lateral Movement',        rules: ['R004','R020'],                              color: '#f43f5e' },
-  { code: 'TA0009', name: 'Collection',              rules: ['R039','R040'],                              color: '#9f1239' },
-  { code: 'TA0011', name: 'Command & Control',       rules: ['R014','R021','R026','R028'],                color: '#e11d48' },
-  { code: 'TA0010', name: 'Exfiltration',            rules: ['R005','R027'],                              color: '#be123c' },
-  { code: 'TA0040', name: 'Impact',                  rules: ['R023'],                                     color: '#ff4d4d' },
 ]
 
 const PIPELINE = [
-  { step: '01', icon: Database,     label: 'Ingest',    desc: 'Auto-detect format (CSV, JSON, syslog, EVTX, web access).' },
-  { step: '02', icon: Cpu,          label: 'Normalize', desc: 'Standardize columns: ts, ip, user, action, status, port.' },
-  { step: '03', icon: ShieldAlert,  label: 'Detect',    desc: '42 rules + behavioral anomaly + cross-event correlation.' },
-  { step: '04', icon: Sparkles,     label: 'Score',     desc: 'AI per-alert TP probability with rationale & SHAP features.' },
-  { step: '05', icon: Globe,        label: 'Enrich',    desc: 'IP reputation, geo, ASN, hash lookup, MITRE mapping.' },
-  { step: '06', icon: GitBranch,    label: 'Chain',     desc: 'Correlate alerts into incident chains by shared entities.' },
-  { step: '07', icon: Eye,          label: 'Triage',    desc: 'L1 queue · drawer with playbook · TP/FP verdicts.' },
-  { step: '08', icon: FileBarChart, label: 'Report',    desc: 'L1 shift handover or L2 forensic dossier · PDF export.' },
+  { n: '01', icon: Database,     label: 'Ingest',    body: 'Auto-detect format. CSV / JSON / syslog / EVTX / Apache / logfmt.' },
+  { n: '02', icon: Cpu,          label: 'Normalize', body: '40+ aliases collapse cloud variants into canonical fields.' },
+  { n: '03', icon: ShieldAlert,  label: 'Detect',    body: '42 rules + UEBA anomaly model + cross-event correlation.' },
+  { n: '04', icon: Sparkles,     label: 'Score',     body: 'AI per-alert TP probability with SHAP feature attribution.' },
+  { n: '05', icon: Globe,        label: 'Enrich',    body: 'IP reputation, geo, ASN, hash lookup, MITRE mapping.' },
+  { n: '06', icon: GitBranch,    label: 'Chain',     body: 'Correlate alerts into kill-chain narratives.' },
+  { n: '07', icon: Layers,       label: 'Dedup',     body: 'Collapse identical alerts across rules and uploads.' },
+  { n: '08', icon: Eye,          label: 'Triage',    body: 'L1 queue with drawer, playbook, AI suggestion, keyboard nav.' },
+  { n: '09', icon: FileBarChart, label: 'Report',    body: 'L1 shift handover or L2 forensic dossier · PDF export.' },
+]
+
+const MITRE_TACTICS = [
+  { code: 'TA0001', name: 'Initial Access',       rules: ['R022','R024','R029','R034','R041'] },
+  { code: 'TA0002', name: 'Execution',            rules: ['R011','R032'] },
+  { code: 'TA0003', name: 'Persistence',          rules: ['R007','R017','R025','R030'] },
+  { code: 'TA0004', name: 'Privilege Escalation', rules: ['R003'] },
+  { code: 'TA0005', name: 'Defense Evasion',      rules: ['R012','R018','R019','R031','R035','R036','R037','R038'] },
+  { code: 'TA0006', name: 'Credential Access',    rules: ['R001','R010','R013','R015','R016','R033'] },
+  { code: 'TA0007', name: 'Discovery',            rules: ['R002','R042'] },
+  { code: 'TA0008', name: 'Lateral Movement',     rules: ['R004','R020'] },
+  { code: 'TA0009', name: 'Collection',           rules: ['R039','R040'] },
+  { code: 'TA0011', name: 'Command & Control',    rules: ['R014','R021','R026','R028'] },
+  { code: 'TA0010', name: 'Exfiltration',         rules: ['R005','R027'] },
+  { code: 'TA0040', name: 'Impact',               rules: ['R023'] },
 ]
 
 const FAQS = [
   { q: 'Where does the AI scoring come from?',          a: 'Each alert is sent to a Gemini-backed classifier with the relevant context (rule, MITRE technique, timestamps, source IP behavior). The model returns a 0–1 TP probability plus a short rationale shown in the drawer. When Gemini is unavailable, a deterministic 10-signal heuristic scores instead and always explains itself.' },
   { q: 'Do I have to train it on my data?',             a: 'No. Rules and the AI classifier are pre-tuned. The Learning Insights tab refines per-session weighting based on your TP/FP feedback in real time, but it never persists.' },
-  { q: 'What if my log format isn\'t listed?',          a: 'The ingest engine attempts heuristic column extraction even for unknown CSVs. JSON and JSONL also work out-of-the-box. For ad-hoc formats the Rule Builder lets you define custom field maps.' },
+  { q: 'What if my log format isn’t listed?',           a: 'The ingest engine attempts heuristic column extraction even for unknown CSVs. JSON and JSONL also work out-of-the-box. For ad-hoc formats the Rule Builder lets you define custom field maps.' },
   { q: 'How is detection accuracy >90%?',               a: 'Three layers combine: (1) deterministic rules with tight thresholds and pre-set confidence floors, (2) behavioral anomaly scoring per user/host, (3) AI re-scoring against MITRE context. Cross-signal alerts converge above 90% TP probability.' },
   { q: 'Is my data sent anywhere?',                     a: 'Only the alert envelope (rule, technique, timestamps, optional anonymised IP/user) is sent to the AI classifier — never raw log lines. Files stay in memory. Clear the session and the data is gone.' },
   { q: 'Can I bring my own detection rules?',           a: 'Yes — the Rule Builder ships with four templates (brute force, lateral movement, data exfiltration, privilege escalation). You can compose multi-condition filters, assign severity, and map a MITRE technique. Custom rules run alongside built-ins.' },
   { q: 'How does the L1 vs L2 split work?',             a: 'The dashboard ships two role lenses. L1 is queue-driven and concise — built for shift work. L2 is forensic and dense — composite threat score, kill-chain reconstruction, top entities, hypothesis-driven hunts. The role switch also changes the exported report template.' },
 ]
 
-const TOC = [
-  { id: 'hero',         label: 'Overview' },
-  { id: 'how',          label: 'How it works' },
-  { id: 'capabilities', label: 'Capabilities' },
-  { id: 'mitre',        label: 'MITRE coverage' },
-  { id: 'tiers',        label: 'L1 vs L2' },
-  { id: 'engine',       label: 'Detection engine' },
-  { id: 'demo',         label: 'Live demo' },
-  { id: 'security',     label: 'Security' },
-  { id: 'faq',          label: 'FAQ' },
-]
-
-/* ─────────────────────────────────────────────────────────────────────────────
-   HOOKS / SMALL COMPONENTS
-   ──────────────────────────────────────────────────────────────────────────── */
-
-/** IntersectionObserver-based on-view hook (one-shot). */
-function useOnView(ref, opts = { threshold: 0.4 }) {
-  const [seen, setSeen] = useState(false)
-  useEffect(() => {
-    if (!ref.current || seen) return
-    const io = new IntersectionObserver(([e]) => {
-      if (e.isIntersecting) { setSeen(true); io.disconnect() }
-    }, opts)
-    io.observe(ref.current)
-    return () => io.disconnect()
-  }, [ref, seen, opts])
-  return seen
+/* ── HEALTH → STATUSPILL TONE ─────────────────────────────────────────────── */
+const TONE_BY_HEALTH = {
+  online:   { tone: 'success', label: 'Engine online',   dot: true,  pulse: true },
+  degraded: { tone: 'warning', label: 'Engine degraded', dot: true,  pulse: false },
+  offline:  { tone: 'danger',  label: 'Engine offline',  dot: true,  pulse: false },
+  checking: { tone: 'neutral', label: 'Connecting…',     dot: false, pulse: false },
 }
 
-/** Smooth count-up animation, only fires when its container is on-screen. */
-function CountUp({ to, unit = '', durationMs = 1200 }) {
-  const ref = useRef(null)
-  const seen = useOnView(ref)
-  const [val, setVal] = useState(0)
-  useEffect(() => {
-    if (!seen) return
-    let start = null
-    let raf = 0
-    const tick = (t) => {
-      if (start == null) start = t
-      const p = Math.min(1, (t - start) / durationMs)
-      const eased = 1 - Math.pow(1 - p, 3)
-      setVal(Math.round(to * eased))
-      if (p < 1) raf = requestAnimationFrame(tick)
-    }
-    raf = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(raf)
-  }, [seen, to, durationMs])
-  return <span ref={ref} className="num">{val}{unit}</span>
-}
-
-/** Floating ToC + scroll-spy — sectioned rail with progress fill, numbers, and glow. */
-function FloatingToc() {
-  const [active, setActive] = useState('hero')
-  const [progress, setProgress] = useState(0)
-  const [hovered, setHovered] = useState(false)
-
-  useEffect(() => {
-    const sections = TOC.map(t => document.getElementById(t.id)).filter(Boolean)
-    if (!sections.length) return
-    const io = new IntersectionObserver((entries) => {
-      const hit = entries.filter(e => e.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0]
-      if (hit) setActive(hit.target.id)
-    }, { rootMargin: '-25% 0px -55% 0px', threshold: [0.1, 0.5, 1] })
-    sections.forEach(s => io.observe(s))
-
-    const onScroll = () => {
-      const h = document.documentElement
-      const pct = h.scrollHeight - h.clientHeight > 0
-        ? (h.scrollTop / (h.scrollHeight - h.clientHeight)) * 100 : 0
-      setProgress(Math.min(100, Math.max(0, pct)))
-    }
-    onScroll()
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => { io.disconnect(); window.removeEventListener('scroll', onScroll) }
-  }, [])
-
-  const activeIdx = TOC.findIndex(t => t.id === active)
-
-  return (
-    <nav
-      className="hidden lg:flex fixed right-5 top-1/2 -translate-y-1/2 z-40 items-stretch gap-3"
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      aria-label="Page sections"
-    >
-      {/* Section list */}
-      <ol className="flex flex-col gap-1 text-xs py-2 pr-1 transition-all"
-        style={{
-          background: hovered ? 'rgba(8,8,9,.85)' : 'transparent',
-          borderRadius: 12,
-          border: hovered ? '1px solid var(--border-2)' : '1px solid transparent',
-          padding: hovered ? '10px 14px 10px 10px' : '8px 4px',
-          backdropFilter: hovered ? 'blur(10px)' : 'none',
-          boxShadow: hovered ? '0 12px 30px rgba(0,0,0,.4)' : 'none',
-          minWidth: hovered ? 200 : 'auto',
-        }}>
-        {TOC.map((t, i) => {
-          const on = active === t.id
-          const past = i < activeIdx
-          return (
-            <li key={t.id}>
-              <a href={`#${t.id}`}
-                className="group flex items-center gap-3 py-1 transition-all rounded"
-                style={{
-                  color: on ? '#f87171' : past ? 'var(--text-3)' : 'var(--text-4)',
-                  paddingLeft: hovered ? 6 : 0,
-                  paddingRight: hovered ? 6 : 0,
-                }}>
-                <span className="font-mono num text-[9px] w-4 text-right shrink-0 transition-colors"
-                  style={{ color: on ? 'var(--accent)' : past ? 'var(--text-4)' : 'var(--border-3)' }}>
-                  {String(i + 1).padStart(2, '0')}
-                </span>
-                <span className="rounded-full transition-all shrink-0"
-                  style={{
-                    width: on ? 28 : past ? 14 : 10,
-                    height: on ? 3 : 2,
-                    background: on ? 'var(--accent)' : past ? 'rgba(225,29,72,.5)' : 'var(--border-3)',
-                    boxShadow: on ? '0 0 10px rgba(225,29,72,.7)' : 'none',
-                  }} />
-                <span className="transition-all whitespace-nowrap"
-                  style={{
-                    fontWeight: on ? 700 : 500,
-                    opacity: hovered ? 1 : 0,
-                    transform: hovered ? 'translateX(0)' : 'translateX(-4px)',
-                    pointerEvents: hovered ? 'auto' : 'none',
-                  }}>
-                  {t.label}
-                </span>
-              </a>
-            </li>
-          )
-        })}
-      </ol>
-
-      {/* Vertical progress rail */}
-      <div className="self-stretch w-[3px] rounded-full overflow-hidden relative my-2"
-        style={{ background: 'rgba(255,255,255,.04)' }}>
-        <div className="absolute left-0 right-0 top-0 transition-all rounded-full"
-          style={{
-            height: `${progress}%`,
-            background: 'linear-gradient(180deg, #fb7185, #e11d48, #9f1239)',
-            boxShadow: '0 0 8px rgba(225,29,72,.6)',
-          }} />
-        <span className="absolute left-1/2 -translate-x-1/2 w-2 h-2 rounded-full transition-all"
-          style={{
-            top: `calc(${progress}% - 4px)`,
-            background: '#fb7185',
-            boxShadow: '0 0 10px rgba(251,113,133,.9)',
-          }} />
-      </div>
-    </nav>
-  )
-}
-
-/** Replays a fake "detection feed" — rows appear in sequence with a typed cursor. */
-function LiveDemoConsole() {
-  const FEED = [
-    { sev: 'INFO',     t: 'connection.established',  d: 'srv-bastion-01 ⇄ 10.0.0.42', delay: 0 },
-    { sev: 'INFO',     t: 'auth.failed',             d: 'user=admin src=198.51.100.42', delay: 380 },
-    { sev: 'INFO',     t: 'auth.failed',             d: 'user=admin src=198.51.100.42', delay: 580 },
-    { sev: 'INFO',     t: 'auth.failed',             d: 'user=admin src=198.51.100.42 (×3)', delay: 780 },
-    { sev: 'MEDIUM',   t: 'rule.R001 → matched',     d: '5 fails / 60s · same src', delay: 1000 },
-    { sev: 'INFO',     t: 'auth.success',            d: 'user=admin src=198.51.100.42', delay: 1300 },
-    { sev: 'HIGH',     t: 'enrich.intel',            d: '198.51.100.42 · abuse=92/100 · 14 reports', delay: 1500 },
-    { sev: 'CRITICAL', t: 'rule.R001 + R022 chained',d: 'brute + impossible-travel → incident A4F', delay: 1800 },
-    { sev: 'CRITICAL', t: 'ai.score',                d: 'TP probability 0.94 · escalate now', delay: 2050 },
-  ]
-  const [idx, setIdx] = useState(0)
-  const [playing, setPlaying] = useState(true)
-
-  useEffect(() => {
-    if (!playing) return
-    if (idx >= FEED.length) {
-      const id = setTimeout(() => setIdx(0), 2500)
-      return () => clearTimeout(id)
-    }
-    const id = setTimeout(() => setIdx(i => i + 1), FEED[idx]?.delay || 300)
-    return () => clearTimeout(id)
-  }, [idx, playing])
-
-  return (
-    <div className="rounded-2xl gradient-border overflow-hidden" style={{ background: 'var(--surface)' }}>
-      <div className="flex items-center justify-between px-4 py-2 border-b" style={{ borderColor: 'var(--border)' }}>
-        <div className="flex items-center gap-2">
-          <span className="dot-live" />
-          <p className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>Live detection feed · simulation</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button onClick={() => setPlaying(p => !p)} className="text-[10px] inline-flex items-center gap-1 px-2 py-1 rounded border" style={{ borderColor: 'var(--border-2)', color: 'var(--text-2)' }}>
-            {playing ? <><Pause size={10} /> Pause</> : <><Play size={10} /> Play</>}
-          </button>
-          <button onClick={() => setIdx(0)} className="text-[10px] px-2 py-1 rounded border" style={{ borderColor: 'var(--border-2)', color: 'var(--text-2)' }}>
-            Replay
-          </button>
-        </div>
-      </div>
-      <div className="p-4 font-mono text-xs space-y-1 h-64 overflow-hidden">
-        {FEED.slice(0, idx).map((row, i) => (
-          <div key={i} className="flex items-center gap-2 fade-in">
-            <span className="num text-[10px]" style={{ color: 'var(--text-4)' }}>
-              {String(i + 1).padStart(2, '0')}
-            </span>
-            <span className={
-              row.sev === 'CRITICAL' ? 'text-red-400 font-bold' :
-              row.sev === 'HIGH'     ? 'text-rose-400' :
-              row.sev === 'MEDIUM'   ? 'text-amber-300' :
-              'text-zinc-500'
-            }>
-              [{row.sev.padEnd(8)}]
-            </span>
-            <span style={{ color: 'var(--text-1)' }}>{row.t}</span>
-            <span className="truncate" style={{ color: 'var(--text-3)' }}>{row.d}</span>
-          </div>
-        ))}
-        {idx < FEED.length && <span className="inline-block w-2 h-3 align-middle bg-rose-400 blink" />}
-      </div>
-    </div>
-  )
-}
-
-/* ─────────────────────────────────────────────────────────────────────────────
-   PAGE
-   ──────────────────────────────────────────────────────────────────────────── */
+/* ── PAGE ─────────────────────────────────────────────────────────────────── */
 
 export default function Landing() {
   const { session } = useSession()
-  const navigate = useNavigate()
-  const [openFaq, setOpenFaq] = useState(0)
+  const navigate    = useNavigate()
+  const health      = useApiHealth()
+  const healthMeta  = TONE_BY_HEALTH[health] || TONE_BY_HEALTH.checking
+
   const [faqQuery, setFaqQuery] = useState('')
-  const [capTab, setCapTab] = useState(0)
-  const [autoplay, setAutoplay] = useState(true)
-  const [hoverStep, setHoverStep] = useState(null)
-  const [selectedTactic, setSelectedTactic] = useState(null)
-
-  // Auto-rotate capability tabs (pauses on hover or manual click).
-  useEffect(() => {
-    if (!autoplay) return
-    const id = setInterval(() => setCapTab(t => (t + 1) % CAPABILITY_TABS.length), 5000)
-    return () => clearInterval(id)
-  }, [autoplay])
-
+  const [openFaq,  setOpenFaq]  = useState(0)
   const filteredFaqs = useMemo(() => {
     if (!faqQuery.trim()) return FAQS
     const q = faqQuery.toLowerCase()
     return FAQS.filter(f => f.q.toLowerCase().includes(q) || f.a.toLowerCase().includes(q))
   }, [faqQuery])
 
+  const goPrimary = () => navigate(session ? '/triage' : '/upload')
+
   return (
-    <div className="max-w-6xl mx-auto py-3 space-y-10 fade-in">
-      <FloatingToc />
+    <div className="max-w-7xl mx-auto px-5 lg:px-8 py-8 space-y-12 fade-in">
 
-      {/* ── HERO ───────────────────────────────────────────────── */}
-      <section id="hero" className="hero-bg text-center pt-4 pb-2">
-        <div className="inline-flex items-center gap-2 text-xs px-3 py-1.5 rounded-full border mb-5"
-          style={{ background: 'rgba(225,29,72,.06)', borderColor: 'rgba(225,29,72,.3)', color: '#f87171' }}>
-          <span className="dot-live" />
-          <span className="font-semibold">Live demo · No signup · Drop a log to start</span>
-        </div>
-        <h1 className="text-5xl sm:text-7xl font-extrabold mb-4 tracking-tight leading-none">
-          <span className="text-white">N<span style={{ color: 'var(--accent)' }}>O</span>CTRA</span>{' '}
-          <span className="aurora-text">AI</span>
-        </h1>
-        <div className="flex items-center justify-center gap-3 mb-5">
-          <span className="h-px w-12" style={{ background: 'linear-gradient(90deg, transparent, var(--accent))' }} />
-          <p className="text-[11px] font-bold tracking-[0.3em] uppercase whitespace-nowrap" style={{ color: 'var(--accent)' }}>
-            AI-Powered Autonomous SOC
-          </p>
-          <span className="h-px w-12" style={{ background: 'linear-gradient(90deg, var(--accent), transparent)' }} />
-        </div>
-        <p className="text-base sm:text-lg max-w-2xl mx-auto leading-relaxed" style={{ color: 'var(--text-2)' }}>
-          A storageless security operations platform that turns a flat log file into
-          <span style={{ color: 'var(--text-1)' }}> ranked, scored, MITRE-mapped incidents </span>
-          — with autonomous AI triage, attack-chain correlation, and a forensic report in minutes, not hours.
-        </p>
-
-        <div className="mt-7 flex items-center justify-center gap-2 flex-wrap">
-          <button onClick={() => navigate('/upload')}
-            className="btn-accent px-6 py-3 text-sm rounded-full inline-flex items-center gap-2 hover-glow font-bold">
-            <UploadIcon size={15} /> Open Ingestion Module
-            <ChevronRight size={14} />
-          </button>
-          {session ? (
-            <button onClick={() => navigate('/triage')}
-              className="text-sm px-6 py-3 rounded-full border inline-flex items-center gap-2 transition-colors"
-              style={{ borderColor: 'var(--border-2)', color: 'var(--text-1)', background: 'var(--surface)' }}>
-              <ShieldAlert size={14} color="#f43f5e" /> Resume session ({session.alerts?.length || 0} alerts)
-            </button>
-          ) : (
-            <a href="#how"
-              className="text-sm px-6 py-3 rounded-full border inline-flex items-center gap-2 transition-colors"
-              style={{ borderColor: 'var(--border-2)', color: 'var(--text-1)', background: 'var(--surface)' }}>
-              <Eye size={14} /> See how it works
-            </a>
+      {/* ─── HERO ─────────────────────────────────────────────────────── */}
+      <section id="hero" className="space-y-6">
+        <div className="flex flex-wrap items-center gap-2">
+          <StatusPill tone={healthMeta.tone} dot={healthMeta.dot} pulse={healthMeta.pulse}>
+            {healthMeta.label}
+          </StatusPill>
+          <StatusPill tone="neutral">v3.2 · Storageless</StatusPill>
+          {session && (
+            <StatusPill tone="accent">Active session · {session.event_count?.toLocaleString()} events</StatusPill>
           )}
         </div>
 
-        {/* Animated count-up hero stats */}
-        <div className="mt-9 grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-3xl mx-auto">
-          {HERO_STATS.map(s => {
-            const I = s.icon
-            return (
-              <div key={s.l} className="rounded-xl px-4 py-3 tile-lift gradient-border" style={{ background: 'var(--surface)' }}>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>{s.l}</span>
-                  <I size={12} style={{ color: 'var(--accent)' }} />
-                </div>
-                <p className="text-2xl font-extrabold text-white kpi-value">
-                  {s.invert && <span style={{ color: 'var(--text-3)', fontWeight: 600 }}>{'<'}</span>}
-                  <CountUp to={s.v} unit={s.unit} />
-                </p>
-                <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-4)' }}>{s.sub}</p>
-              </div>
-            )
-          })}
-        </div>
-      </section>
-
-      {/* ── LIVE TICKER ───────────────────────────────────────── */}
-      <section className="rounded-xl py-2 px-1 border ticker" style={{ background: 'rgba(8,8,9,.85)', borderColor: 'var(--border)' }}>
-        <div className="ticker-track text-xs">
-          {[...TICKER_ITEMS, ...TICKER_ITEMS].map((t, i) => (
-            <div key={i} className="flex items-center gap-3 shrink-0">
-              <span className={SEV_CLASS[t.sev]}>{t.sev}</span>
-              <span className="font-mono" style={{ color: 'var(--text-2)' }}>{t.t}</span>
-              <span style={{ color: 'var(--border-3)' }}>·</span>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ── HOW IT WORKS / PIPELINE ─────────────────────────── */}
-      <section id="how" className="rounded-2xl p-6 gradient-border" style={{ background: 'var(--surface)' }}>
-        <div className="flex items-end justify-between mb-5 flex-wrap gap-2">
-          <div>
-            <p className="eyebrow">How it works</p>
-            <h2 className="text-2xl font-extrabold text-white mt-1">Eight-stage detection pipeline</h2>
-            <p className="text-sm mt-1" style={{ color: 'var(--text-2)' }}>Hover any stage to focus the description.</p>
-          </div>
-          <button onClick={() => navigate('/upload')}
-            className="text-xs px-3 py-1.5 rounded-lg border inline-flex items-center gap-1.5 transition-colors"
-            style={{ borderColor: 'var(--border-2)', color: 'var(--text-1)', background: 'var(--surface-2)' }}>
-            Try a demo log <ArrowRight size={11} />
-          </button>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
-          {PIPELINE.map((s, i) => {
-            const I = s.icon
-            const focused = hoverStep === i
-            const dimmed  = hoverStep != null && !focused
-            return (
-              <div key={s.step}
-                onMouseEnter={() => setHoverStep(i)}
-                onMouseLeave={() => setHoverStep(null)}
-                className="rounded-xl p-3 transition-all tile-lift cursor-pointer"
-                style={{
-                  background: focused ? 'rgba(225,29,72,.10)' : 'var(--surface-2)',
-                  border: `1px solid ${focused ? 'rgba(225,29,72,.45)' : 'var(--border)'}`,
-                  opacity: dimmed ? 0.4 : 1,
-                  boxShadow: focused ? '0 8px 24px rgba(225,29,72,.20)' : 'none',
-                }}>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-bold uppercase tracking-widest num" style={{ color: 'var(--text-4)' }}>{s.step}</span>
-                  <I size={14} color={focused ? '#f87171' : '#f87171'} />
-                </div>
-                <p className="text-xs font-bold text-white">{s.label}</p>
-                <p className="text-[10px] leading-tight mt-1 transition-all" style={{
-                  color: focused ? 'var(--text-1)' : 'var(--text-3)',
-                  maxHeight: focused ? '120px' : '36px',
-                  overflow: 'hidden',
-                }}>{s.desc}</p>
-              </div>
-            )
-          })}
-        </div>
-
-        {/* Detailed focus card under the pipeline */}
-        <div className="mt-4 rounded-xl px-4 py-3 text-xs" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', minHeight: 44 }}>
-          {hoverStep != null ? (
-            <span style={{ color: 'var(--text-2)' }}>
-              <span className="font-mono mr-2" style={{ color: 'var(--accent)' }}>{PIPELINE[hoverStep].step}</span>
-              <span className="text-white font-semibold">{PIPELINE[hoverStep].label}</span> — {PIPELINE[hoverStep].desc}
-            </span>
-          ) : (
-            <span style={{ color: 'var(--text-4)' }}>Hover any stage above to read its description here.</span>
-          )}
-        </div>
-      </section>
-
-      {/* ── CAPABILITIES (interactive tabs with auto-rotation) ─ */}
-      <section id="capabilities"
-        onMouseEnter={() => setAutoplay(false)}
-        onMouseLeave={() => setAutoplay(true)}>
-        <div className="flex items-end justify-between mb-5 flex-wrap gap-2">
-          <div>
-            <p className="eyebrow">Capabilities</p>
-            <h2 className="text-2xl font-extrabold text-white mt-1">Four core workflows, end-to-end</h2>
-            <p className="text-sm mt-1" style={{ color: 'var(--text-2)' }}>
-              {autoplay
-                ? <>Auto-rotating · hover to pause</>
-                : <>Paused · move your cursor away to resume</>}
+        <div className="grid lg:grid-cols-[1.4fr_1fr] gap-8 items-start">
+          <div className="space-y-5">
+            <h1
+              className="font-semibold leading-[1.05] tracking-tight"
+              style={{ fontSize: 'clamp(36px, 5vw, 56px)', color: 'var(--text-1)' }}
+            >
+              The autonomous SOC for teams who
+              <span style={{ color: 'var(--accent)' }}> read every alert</span>.
+            </h1>
+            <p className="text-base max-w-2xl" style={{ color: 'var(--text-2)', lineHeight: 1.6 }}>
+              NOCTRA AI turns a flat log file into ranked, scored, MITRE-mapped incidents — with
+              evidence indices, attack-chain correlation, automatic dedup, and a one-click forensic
+              PDF report. Built for L1 triage and L2 hunt, with the AI accountable to the analyst.
             </p>
-          </div>
-          <div className="flex items-center gap-1">
-            <button onClick={() => setCapTab(t => (t - 1 + CAPABILITY_TABS.length) % CAPABILITY_TABS.length)}
-              className="w-7 h-7 rounded-full border inline-flex items-center justify-center transition-colors"
-              style={{ borderColor: 'var(--border-2)', color: 'var(--text-2)' }}>
-              <ChevronLeft size={13} />
-            </button>
-            <button onClick={() => setCapTab(t => (t + 1) % CAPABILITY_TABS.length)}
-              className="w-7 h-7 rounded-full border inline-flex items-center justify-center transition-colors"
-              style={{ borderColor: 'var(--border-2)', color: 'var(--text-2)' }}>
-              <ChevronRight size={13} />
-            </button>
-          </div>
-        </div>
 
-        <div className="rounded-2xl p-5 gradient-border" style={{ background: 'var(--surface)' }}>
-          {/* Tab strip */}
-          <div className="flex gap-1 flex-wrap mb-5">
-            {CAPABILITY_TABS.map((c, i) => {
-              const I = c.icon
-              const on = capTab === i
-              return (
-                <button key={c.key} onClick={() => { setCapTab(i); setAutoplay(false) }}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all"
-                  style={{
-                    background: on ? 'rgba(225,29,72,.10)' : 'transparent',
-                    border: `1px solid ${on ? 'rgba(225,29,72,.40)' : 'var(--border-2)'}`,
-                    color: on ? '#f87171' : 'var(--text-2)',
-                  }}>
-                  <I size={13} /> {c.label}
-                </button>
-              )
-            })}
-          </div>
-
-          {/* Tab content */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            <div className="md:col-span-1">
-              <h3 className="text-lg font-extrabold text-white">{CAPABILITY_TABS[capTab].title}</h3>
-              <p className="text-sm mt-2 leading-relaxed" style={{ color: 'var(--text-2)' }}>{CAPABILITY_TABS[capTab].blurb}</p>
-              <button onClick={() => navigate('/upload')}
-                className="text-xs mt-4 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg btn-accent font-bold">
-                Try {CAPABILITY_TABS[capTab].label} <ChevronRight size={11} />
-              </button>
-            </div>
-            <ul className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              {CAPABILITY_TABS[capTab].bullets.map(b => (
-                <li key={b} className="flex items-start gap-2 text-sm rounded-xl px-3 py-2.5 transition-all"
-                  style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
-                  <CheckCircle2 size={14} className="shrink-0 mt-0.5" color="#f87171" />
-                  <span style={{ color: 'var(--text-1)' }}>{b}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Progress dots */}
-          <div className="flex justify-center gap-1.5 mt-5">
-            {CAPABILITY_TABS.map((_, i) => (
-              <button key={i} onClick={() => setCapTab(i)}
-                className="rounded-full transition-all"
+            <div className="flex flex-wrap items-center gap-3 pt-1">
+              <button
+                onClick={goPrimary}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-md font-semibold text-sm transition-all"
                 style={{
-                  width: capTab === i ? 22 : 6,
-                  height: 6,
-                  background: capTab === i ? 'var(--accent)' : 'var(--border-3)',
-                }} />
-            ))}
+                  background: 'var(--accent)', color: '#fff',
+                  boxShadow: 'var(--elev-2)',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--accent-hover)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'var(--accent)')}
+              >
+                {session ? 'Open triage queue' : 'Ingest a log file'}
+                <ArrowRight size={14} />
+              </button>
+              <button
+                onClick={() => navigate('/upload')}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-md font-semibold text-sm transition-colors"
+                style={{
+                  background: 'transparent', color: 'var(--text-1)',
+                  border: '1px solid var(--border-2)',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-2)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+              >
+                Run demo attack
+              </button>
+              <span className="text-xs ml-1" style={{ color: 'var(--text-3)' }}>
+                Press <Kbd>⌘</Kbd> <Kbd>K</Kbd> for the command palette
+              </span>
+            </div>
           </div>
+
+          {/* Hero metrics card */}
+          <Card variant="elevated" padding="lg" className="space-y-4">
+            <SectionHeader eyebrow="Platform telemetry" level={2}
+              title={<span className="text-base font-semibold">At a glance</span>} />
+            <div className="grid grid-cols-2 gap-4">
+              {HERO_METRICS.map(m => (
+                <div key={m.k} className="space-y-1.5">
+                  <p className="ent-section-eyebrow">{m.l}</p>
+                  <p className="tabular font-semibold leading-none"
+                    style={{ fontSize: 'var(--fs-2xl)', color: 'var(--text-1)' }}>
+                    {m.v}
+                  </p>
+                  <p className="text-xs" style={{ color: 'var(--text-3)' }}>{m.s}</p>
+                </div>
+              ))}
+            </div>
+            <div className="ent-divider" />
+            <div className="flex items-center justify-between text-xs" style={{ color: 'var(--text-3)' }}>
+              <span>Engine health</span>
+              <StatusPill tone={healthMeta.tone} dot={healthMeta.dot} pulse={healthMeta.pulse}>
+                {healthMeta.label}
+              </StatusPill>
+            </div>
+          </Card>
         </div>
       </section>
 
-      {/* ── MITRE COVERAGE (clickable matrix) ───────────────── */}
-      <section id="mitre" className="rounded-2xl p-6 gradient-border" style={{ background: 'var(--surface)' }}>
-        <div className="flex items-end justify-between mb-5 flex-wrap gap-2">
-          <div>
-            <p className="eyebrow">MITRE ATT&CK coverage</p>
-            <h2 className="text-2xl font-extrabold text-white mt-1">All 12 enterprise tactics monitored</h2>
-            <p className="text-sm mt-1" style={{ color: 'var(--text-2)' }}>Click any tactic to see the detection rules covering it.</p>
-          </div>
-          <span className="text-xs num px-2.5 py-1 rounded-full border" style={{ background: 'rgba(74,222,128,.06)', borderColor: 'rgba(74,222,128,.3)', color: '#4ade80' }}>
-            12 / 12 tactics · 25 rules
-          </span>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-          {MITRE_TACTICS.map(t => {
-            const on = selectedTactic === t.code
+      {/* ─── CAPABILITIES ─────────────────────────────────────────────── */}
+      <section id="capabilities" className="space-y-5">
+        <SectionHeader
+          eyebrow="Capabilities"
+          title="Four product surfaces. One session."
+          hint="Every surface reads from the same in-RAM session — the same evidence the rules saw."
+          level={2}
+        />
+        <div className="grid sm:grid-cols-2 gap-3">
+          {CAPABILITIES.map(c => {
+            const Icon = c.icon
+            const disabled = c.cta.auth && !session
             return (
-              <button key={t.code}
-                onClick={() => setSelectedTactic(s => s === t.code ? null : t.code)}
-                className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-all text-left"
-                style={{
-                  background: on ? 'rgba(225,29,72,.10)' : 'var(--surface-2)',
-                  border: `1px solid ${on ? 'rgba(225,29,72,.45)' : 'var(--border)'}`,
-                  boxShadow: on ? '0 6px 18px rgba(225,29,72,.18)' : 'none',
-                }}>
-                <CheckCircle2 size={14} color={on ? '#f87171' : '#4ade80'} />
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-white truncate">{t.name}</p>
-                  <p className="text-[10px] font-mono num" style={{ color: 'var(--text-4)' }}>
-                    {t.code} · {t.rules.length} rule{t.rules.length !== 1 ? 's' : ''}
+              <Card key={c.title} variant="elevated" padding="lg" className="flex flex-col">
+                <div className="flex items-start gap-3 mb-3">
+                  <div
+                    className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+                    style={{ background: 'var(--accent-dim)', color: 'var(--accent)' }}
+                  >
+                    <Icon size={17} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-semibold" style={{ color: 'var(--text-1)' }}>{c.title}</p>
+                  </div>
+                </div>
+                <p className="text-sm flex-1" style={{ color: 'var(--text-2)', lineHeight: 1.55 }}>
+                  {c.body}
+                </p>
+                <div className="mt-4 flex items-center justify-between">
+                  <button
+                    disabled={disabled}
+                    onClick={() => navigate(c.cta.to)}
+                    className="inline-flex items-center gap-1.5 text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    style={{ color: 'var(--accent)' }}
+                  >
+                    {disabled ? 'Requires session' : c.cta.label}
+                    <ArrowRight size={13} />
+                  </button>
+                </div>
+              </Card>
+            )
+          })}
+        </div>
+      </section>
+
+      {/* ─── PIPELINE ─────────────────────────────────────────────────── */}
+      <section id="how" className="space-y-5">
+        <SectionHeader
+          eyebrow="How it works"
+          title="9-stage detection pipeline"
+          hint="Ingest → normalize → detect → score → enrich → chain → dedup → triage → report. Every stage is observable and replaceable."
+          level={2}
+        />
+        <div className="grid md:grid-cols-3 gap-2">
+          {PIPELINE.map(p => {
+            const Icon = p.icon
+            return (
+              <Card key={p.n} padding="md" className="flex gap-3 items-start">
+                <div
+                  className="w-8 h-8 rounded-md flex items-center justify-center shrink-0 tabular text-xs font-bold"
+                  style={{ background: 'var(--surface-3)', color: 'var(--text-3)', border: '1px solid var(--border-2)' }}
+                >
+                  {p.n}
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <Icon size={13} style={{ color: 'var(--accent)' }} />
+                    <p className="font-semibold text-sm" style={{ color: 'var(--text-1)' }}>{p.label}</p>
+                  </div>
+                  <p className="text-xs mt-1" style={{ color: 'var(--text-3)', lineHeight: 1.5 }}>
+                    {p.body}
                   </p>
                 </div>
-              </button>
+              </Card>
             )
           })}
         </div>
-
-        {/* Tactic detail tray */}
-        {selectedTactic && (() => {
-          const t = MITRE_TACTICS.find(x => x.code === selectedTactic)
-          return (
-            <div className="mt-4 rounded-xl p-4 fade-in" style={{ background: 'rgba(225,29,72,.05)', border: '1px solid rgba(225,29,72,.25)' }}>
-              <div className="flex items-center justify-between mb-2">
-                <p className="font-bold text-white">{t.name} <span className="font-mono text-xs num" style={{ color: 'var(--text-3)' }}>{t.code}</span></p>
-                <button onClick={() => setSelectedTactic(null)} className="text-xs" style={{ color: 'var(--text-3)' }}>Clear ✕</button>
-              </div>
-              {t.rules.length > 0 ? (
-                <div className="flex flex-wrap gap-1.5">
-                  {t.rules.map(r => (
-                    <span key={r} className="text-xs px-2.5 py-1 rounded-lg font-mono num"
-                      style={{ background: 'rgba(225,29,72,.12)', border: '1px solid rgba(225,29,72,.3)', color: '#f87171' }}>
-                      {r}
-                    </span>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-xs" style={{ color: 'var(--text-3)' }}>
-                  Built-in rules don't currently cover this tactic — define a custom rule in the Rule Builder.
-                </p>
-              )}
-            </div>
-          )
-        })()}
       </section>
 
-      {/* ── L1 vs L2 ──────────────────────────────────────────── */}
-      <section id="tiers" className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {[
-          {
-            tier: 'L1', title: 'Tier-1 Analyst', icon: ShieldAlert, badge: 'tier-l1',
-            tagline: 'Triage & Respond',
-            body: 'A compact, queue-driven workspace optimized for shift work. Process the backlog, escalate confirmed threats, dismiss noise, hand off cleanly at the end of shift.',
-            bullets: ['Live alert stream', 'Critical-first sorting', 'AI suggestions inline', 'Shift handover report'],
-          },
-          {
-            tier: 'L2', title: 'Tier-2 Threat Analyst', icon: ShieldCheck, badge: 'tier-l2',
-            tagline: 'Hunt & Correlate',
-            body: 'A dense forensic workbench. Reconstruct multi-stage attacks, pivot into the entity graph, run hypothesis-driven hunts, and ship a full incident dossier.',
-            bullets: ['Composite threat score', 'Kill-chain reconstruction', 'Forensic incident drill-down', 'Full IOC + raw-log report'],
-          },
-        ].map(c => {
-          const I = c.icon
-          return (
-            <div key={c.tier} className="rounded-2xl p-6 tile-lift gradient-border" style={{ background: 'var(--surface)' }}>
-              <div className="flex items-start justify-between mb-3">
-                <div className="w-12 h-12 rounded-xl flex items-center justify-center icon-3d-red">
-                  <I size={22} color="#f43f5e" strokeWidth={1.6} />
-                </div>
-                <span className={`tier-badge ${c.badge}`}>
-                  <I size={11} /> {c.tier}
-                </span>
-              </div>
-              <p className="text-lg font-extrabold text-white">{c.title}</p>
-              <p className="text-xs uppercase tracking-widest font-semibold mt-0.5" style={{ color: 'var(--accent)' }}>{c.tagline}</p>
-              <p className="text-sm mt-3" style={{ color: 'var(--text-2)' }}>{c.body}</p>
-              <ul className="mt-4 grid grid-cols-2 gap-2">
-                {c.bullets.map(b => (
-                  <li key={b} className="flex items-center gap-2 text-xs" style={{ color: 'var(--text-3)' }}>
-                    <CheckCircle2 size={12} color="#f87171" /> {b}
-                  </li>
+      {/* ─── MITRE COVERAGE ───────────────────────────────────────────── */}
+      <section id="mitre" className="space-y-5">
+        <SectionHeader
+          eyebrow="ATT&CK coverage"
+          title="42 rules mapped to 12 MITRE tactics"
+          hint="Each row lists the rule IDs that fire under that tactic. Drilldown lives in the Dashboard → MITRE Coverage tab."
+          level={2}
+          right={
+            <StatusPill tone="info" icon={Network}>
+              Open MITRE matrix
+            </StatusPill>
+          }
+        />
+        <Card padding="none" variant="elevated">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left" style={{ color: 'var(--text-3)' }}>
+                  <th className="px-4 py-2.5 font-medium ent-section-eyebrow">Tactic</th>
+                  <th className="px-4 py-2.5 font-medium ent-section-eyebrow">Code</th>
+                  <th className="px-4 py-2.5 font-medium ent-section-eyebrow">Rules</th>
+                  <th className="px-4 py-2.5 font-medium ent-section-eyebrow tabular text-right">Count</th>
+                </tr>
+              </thead>
+              <tbody>
+                {MITRE_TACTICS.map((t, i) => (
+                  <tr key={t.code}
+                    className="transition-colors hover:bg-[var(--surface-2)]"
+                    style={{ borderTop: i === 0 ? 'none' : '1px solid var(--border)' }}>
+                    <td className="px-4 py-3 font-medium" style={{ color: 'var(--text-1)' }}>{t.name}</td>
+                    <td className="px-4 py-3 font-mono text-xs" style={{ color: 'var(--text-3)' }}>{t.code}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap gap-1">
+                        {t.rules.map(r => (
+                          <span key={r}
+                            className="tabular font-mono text-[10.5px] px-1.5 py-0.5 rounded"
+                            style={{
+                              background: 'var(--surface-3)',
+                              color: 'var(--text-2)',
+                              border: '1px solid var(--border-2)',
+                            }}>
+                            {r}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 tabular text-right" style={{ color: 'var(--text-1)' }}>
+                      {t.rules.length}
+                    </td>
+                  </tr>
                 ))}
-              </ul>
-            </div>
-          )
-        })}
+              </tbody>
+            </table>
+          </div>
+        </Card>
       </section>
 
-      {/* ── DETECTION ENGINE PEEK ───────────────────────────── */}
-      <section id="engine" className="rounded-2xl p-6 gradient-border" style={{ background: 'var(--surface)' }}>
-        <div className="flex items-end justify-between mb-5 flex-wrap gap-2">
-          <div>
-            <p className="eyebrow">Detection engine</p>
-            <h2 className="text-2xl font-extrabold text-white mt-1">42 rules across 12 MITRE ATT&CK tactics</h2>
-            <p className="text-sm mt-1" style={{ color: 'var(--text-2)' }}>A representative slice — the full set is visible in the Rules module once you start a session.</p>
-          </div>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-          {[
-            { id: 'R001', n: 'Brute Force',           t: 'Credential Access' },
-            { id: 'R005', n: 'Data Exfiltration',     t: 'Exfiltration' },
-            { id: 'R011', n: 'PowerShell Suspicious', t: 'Execution' },
-            { id: 'R013', n: 'LSASS Access',          t: 'Credential Access' },
-            { id: 'R018', n: 'Event Log Cleared',     t: 'Defense Evasion' },
-            { id: 'R021', n: 'C2 Beaconing',          t: 'Command & Control' },
-            { id: 'R023', n: 'Mass Encryption',       t: 'Impact' },
-            { id: 'R026', n: 'IDS Signature',         t: 'Command & Control' },
-            { id: 'R027', n: 'Cloud Exfil',           t: 'Exfiltration' },
-            { id: 'R028', n: 'NRD Contact',           t: 'Command & Control' },
-            { id: 'R029', n: 'Phishing Email',        t: 'Initial Access' },
-            { id: 'R030', n: 'Cloud Admin Grant',     t: 'Persistence' },
-            { id: 'R031', n: 'Masquerade Binary',     t: 'Defense Evasion' },
-            { id: 'R033', n: 'Kerberoasting',         t: 'Credential Access' },
-            { id: 'R034', n: 'Office → Shell',        t: 'Initial Access' },
-            { id: 'R038', n: 'CloudTrail Tamper',     t: 'Defense Evasion' },
-            { id: 'R040', n: 'SharePoint Mass DL',    t: 'Collection' },
-            { id: 'R041', n: 'Geo Anomaly',           t: 'Initial Access' },
-          ].map(r => (
-            <div key={r.id} className="rounded-xl px-3 py-2.5 tile-lift" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
-              <div className="flex items-center justify-between mb-1">
-                <span className="font-mono text-[10px] font-bold num" style={{ color: 'var(--accent)' }}>{r.id}</span>
-                <AlertOctagon size={11} color="#f87171" />
-              </div>
-              <p className="text-xs font-bold text-white">{r.n}</p>
-              <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-4)' }}>{r.t}</p>
+      {/* ─── L1 vs L2 ─────────────────────────────────────────────────── */}
+      <section id="tiers" className="space-y-5">
+        <SectionHeader
+          eyebrow="Analyst tiers"
+          title="L1 triage and L2 hunt — one dashboard, two lenses"
+          level={2}
+        />
+        <div className="grid md:grid-cols-2 gap-3">
+          <Card variant="elevated" padding="lg">
+            <div className="flex items-center gap-2 mb-2">
+              <StatusPill tone="accent">L1</StatusPill>
+              <h3 className="font-semibold" style={{ color: 'var(--text-1)' }}>Triage analyst</h3>
             </div>
+            <p className="text-sm" style={{ color: 'var(--text-2)', lineHeight: 1.55 }}>
+              Queue-driven and concise. Built for a shift: rank, click, decide, export handover.
+              Bulk verdicts, AI auto-apply on high-confidence alerts, keyboard shortcuts for
+              every action. Optimised for clearing volume without losing context.
+            </p>
+            <ul className="text-sm mt-3 space-y-1.5" style={{ color: 'var(--text-2)' }}>
+              <li className="flex items-center gap-2"><ChevronRight size={12} style={{ color: 'var(--accent)' }} /> Severity-ranked queue with AI recommendation</li>
+              <li className="flex items-center gap-2"><ChevronRight size={12} style={{ color: 'var(--accent)' }} /> One-key TP/FP, bulk select, drawer-first detail</li>
+              <li className="flex items-center gap-2"><ChevronRight size={12} style={{ color: 'var(--accent)' }} /> Shift handover PDF in one click</li>
+            </ul>
+          </Card>
+          <Card variant="elevated" padding="lg">
+            <div className="flex items-center gap-2 mb-2">
+              <StatusPill tone="info">L2</StatusPill>
+              <h3 className="font-semibold" style={{ color: 'var(--text-1)' }}>Hunt analyst</h3>
+            </div>
+            <p className="text-sm" style={{ color: 'var(--text-2)', lineHeight: 1.55 }}>
+              Forensic and dense. Composite threat score, kill-chain reconstruction, top entities,
+              hypothesis-driven hunts, and the AI agent as a senior-analyst sidekick. The exported
+              report becomes a full incident dossier.
+            </p>
+            <ul className="text-sm mt-3 space-y-1.5" style={{ color: 'var(--text-2)' }}>
+              <li className="flex items-center gap-2"><ChevronRight size={12} style={{ color: 'var(--accent)' }} /> Attack-chain graph + timeline reconstruction</li>
+              <li className="flex items-center gap-2"><ChevronRight size={12} style={{ color: 'var(--accent)' }} /> Hypothesis-driven hunting with typed DSL</li>
+              <li className="flex items-center gap-2"><ChevronRight size={12} style={{ color: 'var(--accent)' }} /> L2 forensic dossier PDF with full evidence</li>
+            </ul>
+          </Card>
+        </div>
+      </section>
+
+      {/* ─── ENGINE ───────────────────────────────────────────────────── */}
+      <section id="engine" className="space-y-5">
+        <SectionHeader
+          eyebrow="Detection engine"
+          title="Three independent signal layers"
+          hint="The score that lands on an analyst's desk is the agreement of these three independent inputs. Disagreement is what makes the dedup + chain stages worth running."
+          level={2}
+        />
+        <div className="grid md:grid-cols-3 gap-3">
+          {[
+            { i: ShieldAlert, t: 'Deterministic rules', d: '42 rule functions grouping events by attacker context (IP, user, device) and emitting one alert per group with sliding-window thresholds.' },
+            { i: Activity,    t: 'Behavioral anomaly',  d: 'IsolationForest UEBA model on per-user and per-IP features. Flags σ-deviation from baseline. Scored even if no rule fires.' },
+            { i: Sparkles,    t: 'AI re-scoring',       d: 'Gemini classifier blended 70/30 with the deterministic heuristic. Returns a TP probability and structured rationale.' },
+          ].map(({ i: Icon, t, d }) => (
+            <Card key={t} variant="elevated" padding="lg">
+              <Icon size={18} style={{ color: 'var(--accent)' }} className="mb-3" />
+              <p className="font-semibold mb-1.5" style={{ color: 'var(--text-1)' }}>{t}</p>
+              <p className="text-sm" style={{ color: 'var(--text-2)', lineHeight: 1.55 }}>{d}</p>
+            </Card>
           ))}
         </div>
       </section>
 
-      {/* ── LIVE DEMO CONSOLE ─────────────────────────────────── */}
+      {/* ─── DEMO STRIP ───────────────────────────────────────────────── */}
       <section id="demo">
-        <div className="mb-4">
-          <p className="eyebrow">Live demo</p>
-          <h2 className="text-2xl font-extrabold text-white mt-1">Watch a brute-force incident come together</h2>
-          <p className="text-sm mt-1" style={{ color: 'var(--text-2)' }}>
-            Five failed logins → AbuseIPDB enrichment → impossible-travel correlation → AI escalation. Replay or pause.
-          </p>
-        </div>
-        <LiveDemoConsole />
-      </section>
-
-      {/* ── SECURITY / PRIVACY ────────────────────────────────── */}
-      <section id="security" className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {[
-          { icon: Lock,        title: 'Storageless by design', body: 'Files parsed in memory. Cleared on session end. No disk, no DB, no third-party retention.' },
-          { icon: Network,     title: 'Local-first ingest',    body: 'Raw logs never leave your browser-to-backend channel. Only alert envelopes reach the AI.' },
-          { icon: ShieldCheck, title: 'Auditable verdicts',    body: 'Every TP/FP captures decision, reason, AI rationale and analyst note — exportable in the report.' },
-        ].map((c, i) => {
-          const I = c.icon
-          return (
-            <div key={i} className="rounded-2xl p-5 tile-lift" style={{ background: 'var(--surface)', border: '1px solid var(--border-2)' }}>
-              <div className="flex items-center gap-3 mb-3">
-                <I size={18} color="#4ade80" />
-                <p className="font-bold text-white">{c.title}</p>
-              </div>
-              <p className="text-xs leading-relaxed" style={{ color: 'var(--text-2)' }}>{c.body}</p>
+        <Card variant="elevated" padding="lg" className="overflow-hidden">
+          <div className="flex flex-wrap gap-6 items-center justify-between">
+            <div className="space-y-2 min-w-0 flex-1">
+              <p className="ent-section-eyebrow">Live demo</p>
+              <h3 className="text-xl font-semibold" style={{ color: 'var(--text-1)' }}>
+                A synthetic kill-chain in one click
+              </h3>
+              <p className="text-sm" style={{ color: 'var(--text-2)' }}>
+                Runs the same pipeline against a multi-stage attack scenario: brute force → privilege
+                escalation → lateral movement → exfiltration. Useful for evaluating before you upload
+                production logs.
+              </p>
             </div>
-          )
-        })}
+            <button
+              onClick={() => navigate('/upload')}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-md font-semibold text-sm transition-colors"
+              style={{ background: 'var(--accent)', color: '#fff', boxShadow: 'var(--elev-2)' }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'var(--accent-hover)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'var(--accent)')}
+            >
+              Run demo scenario <ArrowRight size={14} />
+            </button>
+          </div>
+        </Card>
       </section>
 
-      {/* ── FAQ with search ───────────────────────────────────── */}
-      <section id="faq">
-        <div className="flex items-end justify-between mb-3 flex-wrap gap-2">
-          <p className="eyebrow">Frequently asked</p>
-          <div className="relative">
-            <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-4)' }} />
-            <input
-              value={faqQuery}
-              onChange={e => setFaqQuery(e.target.value)}
-              placeholder="Search the FAQ…"
-              className="text-xs pl-7 pr-3 py-1.5 rounded-lg outline-none"
-              style={{ background: 'var(--surface-2)', border: '1px solid var(--border-2)', color: 'var(--text-1)', minWidth: 220 }}
-              onFocus={e => e.target.style.borderColor = 'var(--accent)'}
-              onBlur={e => e.target.style.borderColor = 'var(--border-2)'}
-            />
-          </div>
+      {/* ─── SECURITY ─────────────────────────────────────────────────── */}
+      <section id="security" className="space-y-5">
+        <SectionHeader
+          eyebrow="Security"
+          title="Storageless. Stateless. Inspectable."
+          level={2}
+        />
+        <div className="grid md:grid-cols-3 gap-3">
+          {[
+            { i: Lock,       t: 'Zero persistence', d: 'Files are parsed in memory. Sessions evict after 30 min idle. No DB, no disk writes, nothing to subpoena.' },
+            { i: ShieldCheck,t: 'Boundary minimal', d: 'Only the alert envelope (rule, technique, timestamps, optional IPs/users) crosses the boundary to the AI classifier — never raw lines.' },
+            { i: Workflow,   t: 'Every decision auditable', d: 'Each alert carries its rule ID, MITRE technique, evidence indices, and rationale. Verdicts log to the session in the same shape.' },
+          ].map(({ i: Icon, t, d }) => (
+            <Card key={t} padding="lg">
+              <Icon size={16} style={{ color: 'var(--accent)' }} className="mb-3" />
+              <p className="font-semibold text-sm mb-1.5" style={{ color: 'var(--text-1)' }}>{t}</p>
+              <p className="text-xs" style={{ color: 'var(--text-3)', lineHeight: 1.55 }}>{d}</p>
+            </Card>
+          ))}
         </div>
-        <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--surface)', border: '1px solid var(--border-2)' }}>
+      </section>
+
+      {/* ─── FAQ ──────────────────────────────────────────────────────── */}
+      <section id="faq" className="space-y-5">
+        <SectionHeader
+          eyebrow="FAQ"
+          title="Common questions"
+          level={2}
+          right={
+            <div className="relative">
+              <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-3)' }} />
+              <input
+                type="text"
+                placeholder="Search…"
+                value={faqQuery}
+                onChange={(e) => setFaqQuery(e.target.value)}
+                aria-label="Search FAQs"
+                className="pl-7 pr-3 py-1.5 rounded-md text-sm outline-none"
+                style={{
+                  background: 'var(--surface-2)',
+                  border: '1px solid var(--border-2)',
+                  color: 'var(--text-1)',
+                  width: 200,
+                }}
+              />
+            </div>
+          }
+        />
+        <Card padding="none">
           {filteredFaqs.length === 0 && (
-            <div className="px-5 py-6 text-sm text-center" style={{ color: 'var(--text-3)' }}>
-              No matching questions — clear the search to see everything.
+            <div className="px-5 py-8 text-center text-sm" style={{ color: 'var(--text-3)' }}>
+              No FAQ matches “{faqQuery}”.
             </div>
           )}
           {filteredFaqs.map((f, i) => {
             const open = openFaq === i
             return (
-              <div key={f.q} className="border-b last:border-b-0" style={{ borderColor: 'var(--border)' }}>
-                <button onClick={() => setOpenFaq(open ? -1 : i)}
-                  className="w-full flex items-center gap-3 text-left px-5 py-4 transition-colors hover:bg-white/[0.02]">
-                  <ChevronRight size={14} className="shrink-0 transition-transform" style={{
-                    color: open ? '#f87171' : 'var(--text-3)',
-                    transform: open ? 'rotate(90deg)' : 'rotate(0deg)',
-                  }} />
-                  <span className="text-sm font-semibold text-white flex-1">{f.q}</span>
-                  <Filter size={12} style={{ color: 'var(--text-4)' }} />
+              <div key={f.q}
+                style={{ borderTop: i === 0 ? 'none' : '1px solid var(--border)' }}>
+                <button
+                  onClick={() => setOpenFaq(open ? -1 : i)}
+                  className="w-full text-left px-5 py-3.5 flex items-center justify-between gap-4 transition-colors"
+                  style={{ color: 'var(--text-1)' }}
+                  aria-expanded={open}
+                >
+                  <span className="text-sm font-medium">{f.q}</span>
+                  <ChevronDown
+                    size={15}
+                    style={{
+                      color: open ? 'var(--accent)' : 'var(--text-3)',
+                      transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
+                      transition: 'transform .18s var(--ease)',
+                    }}
+                  />
                 </button>
                 {open && (
-                  <div className="px-5 pb-4 pl-12 fade-in">
-                    <p className="text-sm leading-relaxed" style={{ color: 'var(--text-2)' }}>{f.a}</p>
+                  <div className="px-5 pb-4 text-sm" style={{ color: 'var(--text-2)', lineHeight: 1.6 }}>
+                    {f.a}
                   </div>
                 )}
               </div>
             )
           })}
-        </div>
+        </Card>
       </section>
 
-      {/* ── CTA ────────────────────────────────────────────────── */}
-      <section className="rounded-2xl p-8 text-center gradient-border" style={{ background: 'linear-gradient(135deg, rgba(225,29,72,.06), rgba(159,18,57,.02))' }}>
-        <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4 icon-3d-red">
-          <UploadIcon size={26} color="#f43f5e" strokeWidth={1.6} />
-        </div>
-        <h2 className="text-2xl sm:text-3xl font-extrabold text-white">Ready to triage your first incident?</h2>
-        <p className="text-sm sm:text-base max-w-xl mx-auto mt-2" style={{ color: 'var(--text-2)' }}>
-          Open the Ingestion Module. Drop a CSV or run the demo attack scenario. The platform takes it from there.
-        </p>
-        <div className="mt-5 inline-flex items-center gap-2 flex-wrap justify-center">
-          <button onClick={() => navigate('/upload')}
-            className="btn-accent px-6 py-3 text-sm rounded-full inline-flex items-center gap-2 hover-glow font-bold">
-            <UploadIcon size={15} /> Open Ingestion Module <ChevronRight size={14} />
-          </button>
-          <span className="text-xs num" style={{ color: 'var(--text-4)' }}>
-            <Clock size={11} className="inline-block mr-1 -mt-0.5" />
-            takes about 90 seconds for the demo
-          </span>
-        </div>
+      {/* ─── CTA ──────────────────────────────────────────────────────── */}
+      <section className="pt-2 pb-6">
+        <Card variant="elevated" padding="xl" className="text-center">
+          <p className="ent-section-eyebrow mb-2">Ready to start</p>
+          <h3 className="text-2xl font-semibold mb-2" style={{ color: 'var(--text-1)' }}>
+            Drop a log file and walk through an incident
+          </h3>
+          <p className="text-sm max-w-xl mx-auto mb-5" style={{ color: 'var(--text-3)' }}>
+            No signup. No persistence. Session-scoped, in-memory, ephemeral.
+          </p>
+          <div className="inline-flex gap-3">
+            <button
+              onClick={() => navigate('/upload')}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-md font-semibold text-sm transition-colors"
+              style={{ background: 'var(--accent)', color: '#fff', boxShadow: 'var(--elev-2)' }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'var(--accent-hover)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'var(--accent)')}
+            >
+              Open ingestion module <ArrowRight size={14} />
+            </button>
+          </div>
+        </Card>
       </section>
     </div>
   )

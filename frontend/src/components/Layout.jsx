@@ -10,6 +10,7 @@ import { deleteSession } from '../api/client'
 import toast from 'react-hot-toast'
 import BackgroundCanvas from './BackgroundCanvas'
 import CommandPalette from './CommandPalette'
+import useApiHealth from '../utils/useApiHealth'
 
 function useClock() {
   const [t, setT] = useState(new Date())
@@ -18,39 +19,6 @@ function useClock() {
     return () => clearInterval(id)
   }, [])
   return t
-}
-
-function useApiHealth() {
-  const [status, setStatus] = useState('checking')
-  useEffect(() => {
-    const base = import.meta.env.VITE_API_URL ?? '/api'
-    let cancelled = false
-
-    const check = async () => {
-      if (cancelled) return
-      setStatus(s => s === 'online' ? 'checking' : s) // only flicker if was online
-      for (let attempt = 0; attempt < 3; attempt++) {
-        try {
-          const r = await fetch(`${base}/health`, { signal: AbortSignal.timeout(60_000) })
-          if (cancelled) return
-          setStatus(r.ok ? 'online' : 'degraded')
-          return
-        } catch {
-          if (cancelled) return
-          if (attempt < 2) {
-            // wait 5s before retrying — backend may be waking up
-            await new Promise(res => setTimeout(res, 5_000))
-          }
-        }
-      }
-      if (!cancelled) setStatus('offline')
-    }
-
-    check()
-    const id = setInterval(check, 30_000)
-    return () => { cancelled = true; clearInterval(id) }
-  }, [])
-  return status
 }
 
 const SHORTCUTS = [
@@ -201,7 +169,7 @@ export default function Layout() {
             <span className="text-[10px] tracking-widest uppercase font-semibold" style={{ color: 'var(--text-3)' }}>Autonomous&nbsp;SOC</span>
             <span className="text-[10px] num px-1.5 py-[1px] rounded font-mono"
               style={{ background: 'rgba(225,29,72,.08)', border: '1px solid rgba(225,29,72,.25)', color: '#f87171' }}>
-              v3.0
+              v3.2
             </span>
           </span>
           <span className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-widest px-2 py-0.5 rounded border num"
@@ -267,7 +235,7 @@ export default function Layout() {
                 style={{ color: 'var(--accent)' }}>
                 <span>Autonomous SOC</span>
                 <span style={{ color: 'var(--border-3)' }}>·</span>
-                <span className="num" style={{ color: 'var(--text-4)' }}>v3.0</span>
+                <span className="num" style={{ color: 'var(--text-4)' }}>v3.2</span>
               </p>
             </div>
           </NavLink>
