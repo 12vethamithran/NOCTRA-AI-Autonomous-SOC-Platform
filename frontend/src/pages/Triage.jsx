@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
+import { useState, useMemo, useEffect, useRef, useCallback, memo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import {
@@ -33,9 +33,9 @@ const SEV_CLASS = {
   MEDIUM:   'sev-chip sev-chip-medium',
   LOW:      'sev-chip sev-chip-low',
 }
-const SevBadge = ({ sev }) => (
+const SevBadge = memo(({ sev }) => (
   <span className={SEV_CLASS[sev] || SEV_CLASS.LOW}>{sev}</span>
-)
+))
 
 // Build a human-readable list of signals that drove the AI score.
 // Trustable scoring: shows WHICH features moved the model, not just a percent.
@@ -105,7 +105,7 @@ function ProbBar({ prob, alert }) {
   )
 }
 
-const VerdictBadge = ({ verdict }) => {
+const VerdictBadge = memo(({ verdict }) => {
   if (!verdict) return <span className="text-xs italic" style={{ color: 'var(--text-4)' }}>pending</span>
   const isTP = verdict === 'TP'
   return (
@@ -120,7 +120,7 @@ const VerdictBadge = ({ verdict }) => {
       {verdict}
     </span>
   )
-}
+})
 
 function alertAge(ts) {
   if (!ts) return null
@@ -138,7 +138,7 @@ const getMitreTip = (technique) => {
   return `${technique}: Click to search MITRE ATT&CK database.`;
 }
 
-const MethodBadges = ({ methods = [] }) => {
+const MethodBadges = memo(({ methods = [] }) => {
   const methodMap = {
     rule_based: { label: 'R', color: '#3b82f6', bg: 'rgba(59,130,246,0.15)' },
     behavioral_anomaly: { label: 'A', color: '#a855f7', bg: 'rgba(168,85,247,0.15)' },
@@ -158,12 +158,14 @@ const MethodBadges = ({ methods = [] }) => {
       })}
     </div>
   )
-}
+})
 
 // ── Alert Row ─────────────────────────────────────────────────────────────────
-function AlertRow({ alert, verdicts, onVerdict, selected, onSelect, focused, onOpenDrawer }) {
+// Memoized so the entire 100-1000-row table doesn't re-render when one verdict
+// is marked. We pass `verdict` directly instead of the full `verdicts` map so
+// only the affected row re-renders.
+function AlertRowImpl({ alert, verdict, onVerdict, selected, onSelect, focused, onOpenDrawer }) {
   const [submitting, setSub]  = useState(false)
-  const verdict   = verdicts[alert.alert_id]
   const rowRef    = useRef()
   const s         = SEV_STYLE[alert.severity] || SEV_STYLE.LOW
 
@@ -252,6 +254,19 @@ function AlertRow({ alert, verdicts, onVerdict, selected, onSelect, focused, onO
     </tr>
   )
 }
+
+// memo with a custom comparator: only re-render when the row's own data,
+// verdict, focus or selection actually changed. Sibling row changes are now
+// no-ops, which is the whole point of the optimisation.
+const AlertRow = memo(AlertRowImpl, (a, b) => (
+  a.alert === b.alert &&
+  a.verdict === b.verdict &&
+  a.selected === b.selected &&
+  a.focused === b.focused &&
+  a.onVerdict === b.onVerdict &&
+  a.onSelect === b.onSelect &&
+  a.onOpenDrawer === b.onOpenDrawer
+))
 
 // ── Detail Drawer ─────────────────────────────────────────────────────────────
 const STATIC_TP_REASONS = [
@@ -425,20 +440,58 @@ function DetailDrawer({ alert, onClose, verdict, submitVerdict, sessionId }) {
                     </div>
                   </div>
                 )}
+                {/* Dedup badge — surfaces backend's collapse pass so analysts
+                    see "this is 1 of 5 duplicates the pipeline merged" rather
+                    than wondering where similar alerts went. */}
+                {Number(alert.extra?.rolled_up_count) > 1 && (
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg"
+                    style={{ background: 'rgba(225,29,72,0.06)', border: '1px solid rgba(225,29,72,0.25)' }}>
+                    <Hash size={14} style={{ color: 'var(--accent)' }} />
+                    <span className="text-xs" style={{ color: 'var(--text-2)' }}>
+                      Pipeline collapsed <b style={{ color: 'var(--text-1)' }}>{alert.extra.rolled_up_count}</b> near-identical alerts
+                      into this one
+                      {alert.event_count ? ` · ${alert.event_count} raw events` : ''}
+                    </span>
+                  </div>
+                )}
                 {Array.isArray(alert.extra?.evidence) && alert.extra.evidence.length > 0 && (
                   <div>
-                    <div className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>Sampled log facts ({alert.extra.evidence.length})</div>
-                    <div className="space-y-2">
-                      {alert.extra.evidence.map((ev, i) => (
-                        <div key={i} className="rounded-lg p-2 text-[11px] font-mono" style={{ background: 'var(--bg)', border: '1px solid var(--border-2)' }}>
-                          {Object.entries(ev).filter(([k]) => k !== '_log_index').map(([k, v]) => (
-                            <div key={k} className="flex gap-2 leading-relaxed">
-                              <span style={{ color: 'var(--text-4)' }}>{k}:</span>
-                              <span style={{ color: 'var(--text-1)' }} className="break-all">{String(v)}</span>
-                            </div>
-                          ))}
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-4)' }}>
+                        Evidence (showing {alert.extra.evidence.length} of {alert.event_count || alert.extra.evidence.length})
+                      </div>
+                      {Array.isArray(alert.related_log_indices) && alert.related_log_indices.length > 0 && (
+                        <div className="text-[10px] font-mono" style={{ color: 'var(--text-3)' }}>
+                          rows #{alert.related_log_indices.slice(0, 3).join(', #')}
+                          {alert.related_log_indices.length > 3 ? ` +${alert.related_log_indices.length - 3}` : ''}
                         </div>
-                      ))}
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      {alert.extra.evidence.map((ev, i) => {
+                        const logIdx = ev._log_index
+                        return (
+                          <div key={i} className="rounded-lg p-2 text-[11px] font-mono"
+                            style={{ background: 'var(--bg)', border: '1px solid var(--border-2)' }}>
+                            <div className="flex items-center justify-between mb-1 pb-1 border-b" style={{ borderColor: 'var(--border)' }}>
+                              <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: 'var(--accent)' }}>
+                                Log fact {i + 1} of {alert.extra.evidence.length}
+                              </span>
+                              {logIdx != null && (
+                                <span className="text-[9px]" style={{ color: 'var(--text-4)' }}>
+                                  row #{logIdx}
+                                </span>
+                              )}
+                            </div>
+                            {Object.entries(ev).filter(([k]) => k !== '_log_index').map(([k, v]) => (
+                              <div key={k} className="flex gap-2 leading-relaxed">
+                                <span style={{ color: 'var(--text-4)' }}>{k}:</span>
+                                <span style={{ color: 'var(--text-1)' }} className="break-all">{String(v)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )
+                      })}
                     </div>
                   </div>
                 )}
@@ -678,18 +731,22 @@ export default function Triage() {
   const toggleSelect = useCallback((id) => setSelected(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n }), [])
   const toggleAll    = () => setSelected(allSelected ? new Set() : new Set(displayed.map(a => a.alert_id)))
 
-  const handleVerdict = async (payload) => {
-    // In a real app we'd await an API call, here we'll just mock or safely catch
+  // Stable identity so the memoized AlertRow doesn't see a "changed prop"
+  // every render. Reads `verdicts` via functional setState to avoid putting
+  // it in the dep array.
+  const handleVerdict = useCallback(async (payload) => {
     try {
-      if (session.session_id && !session.session_id.startsWith('demo-')) {
+      if (session?.session_id && !session.session_id.startsWith('demo-')) {
         await submitVerdict({ ...payload, session_id: session.session_id })
       }
     } catch {}
-    const updated = { ...verdicts, [payload.alert_id]: payload }
-    setVerdicts(updated)
-    setSession(s => ({ ...s, verdicts: updated }))
+    setVerdicts(prev => {
+      const updated = { ...prev, [payload.alert_id]: payload }
+      setSession(s => ({ ...s, verdicts: updated }))
+      return updated
+    })
     toast.success(payload.decision === 'TP' ? '🔴 True Positive confirmed' : '✅ False Positive dismissed')
-  }
+  }, [session?.session_id, setSession])
 
   const bulkVerdict = async (decision) => {
     const ids = [...selected].filter(id => !verdicts[id])
@@ -895,7 +952,7 @@ export default function Triage() {
                 <AlertRow
                   key={alert.alert_id}
                   alert={alert}
-                  verdicts={verdicts}
+                  verdict={verdicts[alert.alert_id]}
                   onVerdict={handleVerdict}
                   selected={selected.has(alert.alert_id)}
                   onSelect={toggleSelect}

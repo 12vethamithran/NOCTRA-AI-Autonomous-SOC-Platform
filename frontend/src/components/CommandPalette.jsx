@@ -4,6 +4,7 @@ import {
   Search, Upload, ShieldAlert, Crosshair, SlidersHorizontal,
   LayoutDashboard, FileBarChart, Bot, Keyboard, LogOut, ArrowRight,
 } from 'lucide-react'
+import useFocusTrap from '../utils/useFocusTrap'
 
 /**
  * Cmd+K command palette. Lazy-bound so it sits in the document tree but
@@ -14,6 +15,8 @@ export default function CommandPalette({ open, onClose, hasSession, onClear }) {
   const [q, setQ] = useState('')
   const [activeIdx, setActiveIdx] = useState(0)
   const inputRef = useRef(null)
+  const panelRef = useRef(null)
+  useFocusTrap(open, panelRef)
 
   const ACTIONS = useMemo(() => ([
     { id: 'overview',  label: 'Go to Overview',        hint: 'G O',   icon: Upload,           run: () => navigate('/') },
@@ -60,8 +63,14 @@ export default function CommandPalette({ open, onClose, hasSession, onClear }) {
   if (!open) return null
 
   return (
-    <div className="cmdk-overlay" onClick={onClose}>
-      <div className="cmdk-panel" onClick={e => e.stopPropagation()}>
+    <div
+      className="cmdk-overlay"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Command palette"
+    >
+      <div ref={panelRef} className="cmdk-panel" onClick={e => e.stopPropagation()}>
         <div className="flex items-center gap-3 px-4 border-b" style={{ borderColor: 'var(--border)' }}>
           <Search size={16} style={{ color: 'var(--text-3)' }} />
           <input

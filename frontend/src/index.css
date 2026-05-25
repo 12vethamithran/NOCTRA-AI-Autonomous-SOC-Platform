@@ -706,7 +706,8 @@ input[type="checkbox"] {
 .sev-chip-high::before { background: #f43f5e; }
 .sev-chip-medium   { color: #fda4af; background: rgba(225,29,72,.08); border: 1px solid rgba(225,29,72,.25); }
 .sev-chip-medium::before { background: #e11d48; }
-.sev-chip-low      { color: #a1a1aa; background: rgba(113,113,122,.10); border: 1px solid rgba(113,113,122,.25); }
+/* low severity text bumped from #a1a1aa (WCAG fail on --bg) to #d4d4d8 (passes AA). */
+.sev-chip-low      { color: #d4d4d8; background: rgba(113,113,122,.10); border: 1px solid rgba(113,113,122,.25); }
 .sev-chip-low::before { background: #71717a; }
 
 /* ── Tier badge (L1 / L2) ─────────────────────────────────────────────────── */
