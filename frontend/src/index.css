@@ -1602,3 +1602,143 @@ input[type="checkbox"] {
   color: var(--border-3);
   font-weight: 400;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   BRANDMARK — the in-app logo + wordmark cluster, refined.
+   A bevelled diamond glyph + heavy condensed wordmark + tracked-out
+   sub-label with a pulsing crimson dot. This replaces the prior
+   inline-styled cluster that read as "casual app logo".
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.brandmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  position: relative;
+}
+
+.brandmark-icon {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  background:
+    radial-gradient(ellipse at 30% 25%, rgba(244,63,94,0.22), transparent 60%),
+    linear-gradient(140deg, #15050a 0%, #08020a 100%);
+  border: 1px solid rgba(225, 29, 72, 0.28);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 100, 130, 0.18),
+    inset 0 -2px 6px rgba(0, 0, 0, 0.6),
+    0 4px 16px rgba(225, 29, 72, 0.18);
+  transition: transform .25s var(--ease), box-shadow .25s var(--ease), border-color .25s var(--ease);
+}
+.brandmark-icon::after {
+  /* Slow scan-line sweep */
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(180deg, transparent 40%, rgba(255,77,109,0.15) 50%, transparent 60%);
+  mix-blend-mode: screen;
+  opacity: 0;
+  pointer-events: none;
+  animation: brandmark-scan 4.8s ease-in-out infinite;
+}
+@keyframes brandmark-scan {
+  0%, 100% { opacity: 0; transform: translateY(-30%); }
+  50%      { opacity: 1; transform: translateY(30%);  }
+}
+.brandmark:hover .brandmark-icon {
+  transform: scale(1.06) rotate(-2deg);
+  border-color: rgba(244, 63, 94, 0.55);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 100, 130, 0.22),
+    inset 0 -2px 6px rgba(0, 0, 0, 0.6),
+    0 8px 28px rgba(225, 29, 72, 0.40);
+}
+
+.brandmark-text {
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1;
+  gap: 4px;
+}
+
+.brandmark-name {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-weight: 900;
+  font-size: 17px;
+  letter-spacing: 0.14em;
+  color: var(--text-1);
+  line-height: 1;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0;
+}
+.brandmark-o {
+  position: relative;
+  display: inline-flex;
+  width: 0.9em;
+  align-items: center;
+  justify-content: center;
+  /* Replace the visual O with a thin crosshair circle to read as a scope */
+  color: transparent;
+}
+.brandmark-o::before {
+  content: '';
+  width: 0.62em; height: 0.62em;
+  border-radius: 50%;
+  border: 1.6px solid var(--accent);
+  box-shadow: 0 0 8px rgba(225, 29, 72, 0.55);
+  position: absolute;
+}
+.brandmark-o::after {
+  content: '';
+  width: 0.18em; height: 0.18em;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 6px rgba(244, 63, 94, 0.9);
+  position: absolute;
+}
+.brandmark-ai {
+  margin-left: 0.6em;
+  padding: 2px 6px;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+  border-radius: 4px;
+  box-shadow:
+    0 2px 8px rgba(225, 29, 72, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  transform: translateY(-3px);
+}
+
+.brandmark-sub {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  line-height: 1;
+}
+.brandmark-sub-dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 6px rgba(225, 29, 72, 0.8);
+  animation: blink 2.4s ease-in-out infinite;
+}
+.brandmark-sub-sep { color: var(--border-3); font-weight: 400; }
+.brandmark-version {
+  font-family: ui-monospace, monospace;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text-4);
+}

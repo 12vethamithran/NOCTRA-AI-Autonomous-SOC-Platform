@@ -149,14 +149,8 @@ export default function Landing() {
       {/* ─── HERO ─────────────────────────────────────────────────────── */}
       <GridBackdrop>
         <section id="hero" className="max-w-6xl mx-auto px-5 lg:px-8 text-center section-frame">
-          <Reveal>
-            <span className="eyebrow-display">
-              {healthMeta.label.toUpperCase()}
-            </span>
-          </Reveal>
-
           <Reveal delay={80}>
-            <DisplayHeading as="h1" size="lg" center wide className="mt-6">
+            <DisplayHeading as="h1" size="lg" center wide>
               EVERY ALERT READ.{' '}
               <DisplayHeading.Accent>EVERY ATTACK MAPPED.</DisplayHeading.Accent>
             </DisplayHeading>

@@ -203,24 +203,20 @@ export default function Layout() {
       >
         <div className="max-w-7xl mx-auto px-4 h-14 flex items-center gap-4">
 
-          {/* Logo */}
-          <NavLink to="/" className="flex items-center gap-2.5 shrink-0 group">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center transition-all group-hover:scale-105 relative"
-              style={{ filter: 'drop-shadow(0 0 10px rgba(225,29,72,.35))' }}>
-              <img src="/noctra-logo.svg" alt="Noctra" width={32} height={32} className="select-none" draggable="false" />
-              <span className="absolute inset-0 rounded-xl pointer-events-none"
-                style={{ boxShadow: 'inset 0 0 12px rgba(225,29,72,.18)' }} />
+          {/* Logo + wordmark */}
+          <NavLink to="/" className="brandmark shrink-0 group" aria-label="NOCTRA — home">
+            <div className="brandmark-icon">
+              <img src="/noctra-logo.svg" alt="" width={36} height={36} className="select-none" draggable="false" />
             </div>
-            <div className="hidden sm:block">
-              <p className="text-[15px] font-extrabold text-white leading-tight tracking-[0.08em]">
-                N<span style={{ color: 'var(--accent)' }}>O</span>CTRA <span className="aurora-text">AI</span>
-              </p>
-              <p className="text-[9px] font-bold tracking-[0.24em] uppercase leading-tight flex items-center gap-1.5"
-                style={{ color: 'var(--accent)' }}>
-                <span>Autonomous SOC</span>
-                <span style={{ color: 'var(--border-3)' }}>·</span>
-                <span className="num" style={{ color: 'var(--text-4)' }}>v3.2</span>
-              </p>
+            <div className="brandmark-text hidden sm:flex">
+              <span className="brandmark-name">
+                N<span className="brandmark-o">O</span>CTRA<span className="brandmark-ai">AI</span>
+              </span>
+              <span className="brandmark-sub">
+                <span className="brandmark-sub-dot" /> Autonomous SOC
+                <span className="brandmark-sub-sep">·</span>
+                <span className="brandmark-version">v3.2</span>
+              </span>
             </div>
           </NavLink>
 
