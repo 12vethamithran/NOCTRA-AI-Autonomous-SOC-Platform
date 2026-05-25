@@ -300,7 +300,8 @@ export default function Dashboard() {
             </button>
           ))}
         </div>
-        <div className="segmented role-switch">
+        <div className="toggle-pill" data-active={role} role="tablist" aria-label="Analyst tier">
+          <span className="toggle-pill-track" aria-hidden="true" />
           {[
             { id: 'L1', label: 'L1 Analyst', desc: 'Triage & Respond',  icon: ShieldAlert },
             { id: 'L2', label: 'L2 Analyst', desc: 'Threat Analysis',   icon: Shield },
@@ -311,6 +312,7 @@ export default function Dashboard() {
                 key={r.id}
                 onClick={() => { setRole(r.id); setActiveTab('ops') }}
                 title={r.desc}
+                role="tab"
                 aria-selected={role === r.id}
               >
                 <I size={13} />

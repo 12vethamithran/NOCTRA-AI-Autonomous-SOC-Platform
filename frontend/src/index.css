@@ -1429,6 +1429,106 @@ input[type="checkbox"] {
               inset 0 1px 0 rgba(255,255,255,0.10);
 }
 
+/* ── Sliding-pill toggle (L1 ↔ L2) ─────────────────────────────────────────
+   A dedicated animated toggle, not the plain .segmented. A single colored
+   pill slides between the two slots; the underlying text recolors as the
+   pill passes over it. Driven by [data-active="L1"|"L2"] on the wrapper. */
+.toggle-pill {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: rgba(15, 15, 18, 0.72);
+  border: 1px solid var(--border-2);
+  border-radius: 999px;
+  padding: 4px;
+  isolation: isolate;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.03),
+    inset 0 -1px 0 rgba(0,0,0,0.6),
+    0 2px 6px rgba(0,0,0,0.5);
+  backdrop-filter: blur(10px) saturate(140%);
+  -webkit-backdrop-filter: blur(10px) saturate(140%);
+  user-select: none;
+  /* Soft ambient glow under the pill, recolored by role accent. */
+  --pill-shadow: 0 8px 28px var(--role-accent-glow),
+                 0 0 0 1px rgba(255,255,255,0.06) inset,
+                 inset 0 1px 0 rgba(255,255,255,0.20);
+}
+
+.toggle-pill > .toggle-pill-track {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc(50% - 4px);
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--role-accent), var(--role-accent-2));
+  box-shadow: var(--pill-shadow);
+  transform: translate3d(0, 0, 0);
+  transition:
+    transform .55s cubic-bezier(0.45, 1.45, 0.35, 1),
+    background .35s var(--ease),
+    box-shadow .35s var(--ease);
+  z-index: 0;
+  pointer-events: none;
+}
+.toggle-pill[data-active="L2"] > .toggle-pill-track {
+  transform: translate3d(100%, 0, 0);
+}
+
+/* Each option button. Text recolors smoothly as the pill arrives. */
+.toggle-pill > button {
+  position: relative;
+  z-index: 1;
+  background: transparent;
+  border: none;
+  padding: 7px 18px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--text-3);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border-radius: 999px;
+  white-space: nowrap;
+  transition: color .35s var(--ease), transform .25s var(--ease);
+}
+.toggle-pill > button:hover { color: var(--text-1); }
+.toggle-pill > button[aria-selected="true"] {
+  color: #fff;
+  text-shadow: 0 1px 1px rgba(0,0,0,0.4);
+}
+.toggle-pill > button:active { transform: scale(0.97); }
+
+/* Faint sweep across the pill on every flip — a single shimmer line
+   that catches the eye without being noisy. */
+.toggle-pill > .toggle-pill-track::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(110deg, transparent 30%, rgba(255,255,255,0.22) 50%, transparent 70%);
+  opacity: 0;
+  pointer-events: none;
+}
+.toggle-pill[data-active]:hover > .toggle-pill-track::after,
+.toggle-pill.is-flipping > .toggle-pill-track::after {
+  animation: toggle-shimmer 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+}
+@keyframes toggle-shimmer {
+  0%   { opacity: 0; transform: translateX(-30%); }
+  40%  { opacity: 1; }
+  100% { opacity: 0; transform: translateX(30%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toggle-pill > .toggle-pill-track { transition: none; }
+  .toggle-pill > .toggle-pill-track::after { display: none; }
+}
+
 /* Fade+slide swap when the role flips. The wrapper has key={role}, so
    React unmounts/remounts which retriggers this entrance animation. */
 @keyframes role-swap {
