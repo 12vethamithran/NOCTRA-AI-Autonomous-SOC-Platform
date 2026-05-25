@@ -27,6 +27,9 @@ import Card from '../components/ui/Card'
 import SectionHeader from '../components/ui/SectionHeader'
 import StatusPill from '../components/ui/StatusPill'
 import Kbd from '../components/ui/Kbd'
+import {
+  DisplayHeading, Eyebrow, NumberedFeature, GhostCTA, GridBackdrop, Reveal, StatStrip, LogoStrip,
+} from '../components/ui/Display'
 
 /* ── DATA ─────────────────────────────────────────────────────────────────── */
 
@@ -141,165 +144,159 @@ export default function Landing() {
   const goPrimary = () => navigate(session ? '/triage' : '/upload')
 
   return (
-    <div className="max-w-7xl mx-auto px-5 lg:px-8 py-8 space-y-12 fade-in">
+    <div className="fade-in">
 
       {/* ─── HERO ─────────────────────────────────────────────────────── */}
-      <section id="hero" className="space-y-6">
-        <div className="flex flex-wrap items-center gap-2">
-          <StatusPill tone={healthMeta.tone} dot={healthMeta.dot} pulse={healthMeta.pulse}>
-            {healthMeta.label}
-          </StatusPill>
-          <StatusPill tone="neutral">v3.2 · Storageless</StatusPill>
-          {session && (
-            <StatusPill tone="accent">Active session · {session.event_count?.toLocaleString()} events</StatusPill>
-          )}
-        </div>
+      <GridBackdrop>
+        <section id="hero" className="max-w-6xl mx-auto px-5 lg:px-8 text-center section-frame">
+          <Reveal>
+            <span className="eyebrow-display">
+              {healthMeta.label.toUpperCase()}
+            </span>
+          </Reveal>
 
-        <div className="grid lg:grid-cols-[1.4fr_1fr] gap-8 items-start">
-          <div className="space-y-5">
-            <h1
-              className="font-semibold leading-[1.05] tracking-tight"
-              style={{ fontSize: 'clamp(36px, 5vw, 56px)', color: 'var(--text-1)' }}
-            >
-              The autonomous SOC for teams who
-              <span style={{ color: 'var(--accent)' }}> read every alert</span>.
-            </h1>
-            <p className="text-base max-w-2xl" style={{ color: 'var(--text-2)', lineHeight: 1.6 }}>
-              NOCTRA AI turns a flat log file into ranked, scored, MITRE-mapped incidents — with
-              evidence indices, attack-chain correlation, automatic dedup, and a one-click forensic
-              PDF report. Built for L1 triage and L2 hunt, with the AI accountable to the analyst.
+          <Reveal delay={80}>
+            <DisplayHeading as="h1" size="lg" className="mt-6">
+              EVERY ALERT READ.{' '}
+              <DisplayHeading.Accent>EVERY ATTACK MAPPED.</DisplayHeading.Accent>
+            </DisplayHeading>
+          </Reveal>
+
+          <Reveal delay={160}>
+            <p className="mx-auto mt-7 max-w-2xl text-base lg:text-lg"
+              style={{ color: 'var(--text-2)', lineHeight: 1.6 }}>
+              NOCTRA AI turns a flat log file into ranked, scored, MITRE-mapped incidents —
+              with evidence indices, attack-chain correlation, automatic dedup, and a one-click
+              forensic report. Built for L1 triage and L2 hunt.
             </p>
+          </Reveal>
 
-            <div className="flex flex-wrap items-center gap-3 pt-1">
-              <button
-                onClick={goPrimary}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-md font-semibold text-sm transition-all"
-                style={{
-                  background: 'var(--accent)', color: '#fff',
-                  boxShadow: 'var(--elev-2)',
-                }}
-                onMouseEnter={e => (e.currentTarget.style.background = 'var(--accent-hover)')}
-                onMouseLeave={e => (e.currentTarget.style.background = 'var(--accent)')}
-              >
-                {session ? 'Open triage queue' : 'Ingest a log file'}
-                <ArrowRight size={14} />
-              </button>
-              <button
-                onClick={() => navigate('/upload')}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-md font-semibold text-sm transition-colors"
-                style={{
-                  background: 'transparent', color: 'var(--text-1)',
-                  border: '1px solid var(--border-2)',
-                }}
-                onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-2)')}
-                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-              >
-                Run demo attack
-              </button>
-              <span className="text-xs ml-1" style={{ color: 'var(--text-3)' }}>
-                Press <Kbd>⌘</Kbd> <Kbd>K</Kbd> for the command palette
-              </span>
+          <Reveal delay={240}>
+            <div className="mt-10 flex flex-wrap items-center justify-center gap-x-10 gap-y-4">
+              <GhostCTA onClick={goPrimary}>
+                {session ? 'Open triage queue' : 'Launch operation'}
+              </GhostCTA>
+              <GhostCTA onClick={() => navigate('/upload')}>
+                $ Run demo attack
+              </GhostCTA>
             </div>
-          </div>
+            <p className="mt-6 text-xs" style={{ color: 'var(--text-4)' }}>
+              Press <Kbd>⌘</Kbd> <Kbd>K</Kbd> for the command palette
+            </p>
+          </Reveal>
 
-          {/* Hero metrics card */}
-          <Card variant="elevated" padding="lg" className="space-y-4">
-            <SectionHeader eyebrow="Platform telemetry" level={2}
-              title={<span className="text-base font-semibold">At a glance</span>} />
-            <div className="grid grid-cols-2 gap-4">
-              {HERO_METRICS.map(m => (
-                <HeroMetric key={m.k} {...m} />
-              ))}
-            </div>
-            <div className="ent-divider" />
-            <div className="flex items-center justify-between text-xs" style={{ color: 'var(--text-3)' }}>
-              <span>Engine health</span>
-              <StatusPill tone={healthMeta.tone} dot={healthMeta.dot} pulse={healthMeta.pulse}>
-                {healthMeta.label}
-              </StatusPill>
-            </div>
-          </Card>
-        </div>
-      </section>
+          {/* Product mock card — keeps the original metrics surface as the
+              "screenshot" inset below the hero, in the reference's rhythm. */}
+          <Reveal delay={360}>
+            <Card variant="elevated" padding="lg" className="mt-16 mx-auto max-w-4xl text-left space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ background: '#ef4444' }} />
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ background: '#f59e0b' }} />
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ background: '#22c55e' }} />
+                  <span className="ml-3 text-xs tabular" style={{ color: 'var(--text-4)' }}>
+                    noctra.engine — live telemetry
+                  </span>
+                </div>
+                <StatusPill tone={healthMeta.tone} dot={healthMeta.dot} pulse={healthMeta.pulse}>
+                  {healthMeta.label}
+                </StatusPill>
+              </div>
+              <div className="ent-divider" />
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+                {HERO_METRICS.map(m => (
+                  <HeroMetric key={m.k} {...m} />
+                ))}
+              </div>
+            </Card>
+          </Reveal>
+        </section>
+      </GridBackdrop>
+
+      {/* ─── LOGO STRIP — sub-headline tactic markers ─────────────────── */}
+      <div className="max-w-6xl mx-auto px-5 lg:px-8">
+        <LogoStrip names={['INITIAL ACCESS', 'EXECUTION', 'PERSISTENCE', 'CRED ACCESS', 'LATERAL', 'EXFIL', 'C2', 'IMPACT']} />
+      </div>
 
       {/* ─── CAPABILITIES ─────────────────────────────────────────────── */}
-      <section id="capabilities" className="space-y-5">
-        <SectionHeader
-          eyebrow="Capabilities"
-          title="Four product surfaces. One session."
-          hint="Every surface reads from the same in-RAM session — the same evidence the rules saw."
-          level={2}
-        />
-        <div className="grid sm:grid-cols-2 gap-3">
-          {CAPABILITIES.map(c => {
-            const Icon = c.icon
+      <section id="capabilities" className="max-w-6xl mx-auto px-5 lg:px-8 section-frame">
+        <Reveal>
+          <span className="eyebrow-display">ONE PLATFORM, FOUR SURFACES</span>
+        </Reveal>
+        <Reveal delay={80}>
+          <DisplayHeading as="h2" size="md" className="mt-6">
+            BUILT FOR THE QUEUE.
+            <DisplayHeading.Muted>TUNED FOR THE HUNT.</DisplayHeading.Muted>
+          </DisplayHeading>
+        </Reveal>
+
+        <div className="grid sm:grid-cols-2 gap-4 mt-14">
+          {CAPABILITIES.map((c, i) => {
             const disabled = c.cta.auth && !session
             return (
-              <Card key={c.title} variant="elevated" padding="lg" className="flex flex-col lift ring-accent">
-                <div className="flex items-start gap-3 mb-3">
-                  <div
-                    className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-                    style={{ background: 'var(--accent-dim)', color: 'var(--accent)' }}
-                  >
-                    <Icon size={17} />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="font-semibold" style={{ color: 'var(--text-1)' }}>{c.title}</p>
+              <Reveal key={c.title} delay={i * 80}>
+                <div className="feature-numbered h-full flex flex-col">
+                  <Eyebrow num={i + 1} />
+                  <h3 className="font-bold uppercase tracking-tight mt-4"
+                    style={{ fontSize: '20px', color: 'var(--text-1)', letterSpacing: '-0.01em' }}>
+                    {c.title}
+                  </h3>
+                  <p className="text-sm mt-3 flex-1" style={{ color: 'var(--text-3)', lineHeight: 1.6 }}>
+                    {c.body}
+                  </p>
+                  <div className="mt-6">
+                    <button
+                      disabled={disabled}
+                      onClick={() => navigate(c.cta.to)}
+                      className="cta-ghost disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      {disabled ? 'Requires session' : c.cta.label} <span aria-hidden>→</span>
+                    </button>
                   </div>
                 </div>
-                <p className="text-sm flex-1" style={{ color: 'var(--text-2)', lineHeight: 1.55 }}>
-                  {c.body}
-                </p>
-                <div className="mt-4 flex items-center justify-between">
-                  <button
-                    disabled={disabled}
-                    onClick={() => navigate(c.cta.to)}
-                    className="inline-flex items-center gap-1.5 text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                    style={{ color: 'var(--accent)' }}
-                  >
-                    {disabled ? 'Requires session' : c.cta.label}
-                    <ArrowRight size={13} />
-                  </button>
-                </div>
-              </Card>
+              </Reveal>
             )
           })}
         </div>
       </section>
 
       {/* ─── PIPELINE ─────────────────────────────────────────────────── */}
-      <section id="how" className="space-y-5">
-        <SectionHeader
-          eyebrow="How it works"
-          title="9-stage detection pipeline"
-          hint="Ingest → normalize → detect → score → enrich → chain → dedup → triage → report. Every stage is observable and replaceable."
-          level={2}
-        />
-        <div className="grid md:grid-cols-3 gap-2">
-          {PIPELINE.map(p => {
-            const Icon = p.icon
-            return (
-              <Card key={p.n} padding="md" className="flex gap-3 items-start lift">
-                <div
-                  className="w-8 h-8 rounded-md flex items-center justify-center shrink-0 tabular text-xs font-bold"
-                  style={{ background: 'var(--surface-3)', color: 'var(--text-3)', border: '1px solid var(--border-2)' }}
-                >
-                  {p.n}
-                </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <Icon size={13} style={{ color: 'var(--accent)' }} />
-                    <p className="font-semibold text-sm" style={{ color: 'var(--text-1)' }}>{p.label}</p>
-                  </div>
-                  <p className="text-xs mt-1" style={{ color: 'var(--text-3)', lineHeight: 1.5 }}>
-                    {p.body}
-                  </p>
-                </div>
-              </Card>
-            )
-          })}
+      <section id="how" className="max-w-6xl mx-auto px-5 lg:px-8 section-frame">
+        <Reveal>
+          <span className="eyebrow-display">THE FULL STACK</span>
+        </Reveal>
+        <Reveal delay={80}>
+          <DisplayHeading as="h2" size="md" className="mt-6">
+            NINE STAGES.
+            <DisplayHeading.Muted>ZERO BLACK BOXES.</DisplayHeading.Muted>
+          </DisplayHeading>
+        </Reveal>
+        <Reveal delay={160}>
+          <p className="mt-6 max-w-2xl text-sm" style={{ color: 'var(--text-3)', lineHeight: 1.6 }}>
+            Ingest → normalize → detect → score → enrich → chain → dedup → triage → report. Every stage is observable, every score is explained.
+          </p>
+        </Reveal>
+
+        <div className="grid md:grid-cols-3 gap-4 mt-14">
+          {PIPELINE.map((p, i) => (
+            <Reveal key={p.n} delay={i * 50}>
+              <div className="feature-numbered h-full">
+                <Eyebrow num={parseInt(p.n, 10)} />
+                <h3 className="font-bold uppercase tracking-tight mt-4"
+                  style={{ fontSize: '17px', color: 'var(--text-1)' }}>
+                  {p.label}
+                </h3>
+                <p className="text-xs mt-2" style={{ color: 'var(--text-3)', lineHeight: 1.55 }}>
+                  {p.body}
+                </p>
+              </div>
+            </Reveal>
+          ))}
         </div>
       </section>
+
+      {/* Original sections continue below — wrapped to preserve max-width. */}
+      <div className="max-w-7xl mx-auto px-5 lg:px-8 pb-12 space-y-12">
 
       {/* ─── MITRE COVERAGE ───────────────────────────────────────────── */}
       <section id="mitre" className="space-y-5">
@@ -561,6 +558,7 @@ export default function Landing() {
           </div>
         </Card>
       </section>
+      </div>
     </div>
   )
 }
