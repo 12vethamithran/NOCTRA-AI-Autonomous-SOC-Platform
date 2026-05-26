@@ -12,13 +12,13 @@
  *
  * All navigation paths and the SessionCtx flow are unchanged from v3.1.
  */
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Activity, ArrowRight, Bot, Crosshair, Database, FileBarChart,
   GitBranch, Globe, Layers, Lock, Network, ShieldAlert, ShieldCheck,
   Sparkles, Workflow, Eye, Cpu, Search, ChevronDown, ChevronRight,
-  Filter as FilterIcon, ClipboardList, Zap,
+  Filter as FilterIcon, ClipboardList, Zap, Play, Pause, TerminalSquare,
 } from 'lucide-react'
 import { useSession } from '../App'
 import useApiHealth from '../utils/useApiHealth'
@@ -123,6 +123,97 @@ const TONE_BY_HEALTH = {
   degraded: { tone: 'warning', label: 'Engine degraded', dot: true,  pulse: false },
   offline:  { tone: 'danger',  label: 'Engine offline',  dot: true,  pulse: false },
   checking: { tone: 'neutral', label: 'Connecting…',     dot: false, pulse: false },
+}
+
+/* ── LIVE TERMINAL ────────────────────────────────────────────────────────── */
+const FEED = [
+  { sev: 'INFO',     t: 'connection.established',   d: 'srv-bastion-01 ⇄ 10.0.0.42',                 delay: 0    },
+  { sev: 'INFO',     t: 'auth.failed',               d: 'user=admin src=198.51.100.42',                delay: 420  },
+  { sev: 'INFO',     t: 'auth.failed',               d: 'user=admin src=198.51.100.42',                delay: 620  },
+  { sev: 'INFO',     t: 'auth.failed',               d: 'user=admin src=198.51.100.42 (×3)',           delay: 820  },
+  { sev: 'MEDIUM',   t: 'rule.R001 → matched',       d: '5 failures / 60s · same source IP',          delay: 1050 },
+  { sev: 'INFO',     t: 'auth.success',              d: 'user=admin src=198.51.100.42',                delay: 1350 },
+  { sev: 'HIGH',     t: 'enrich.threatintel',        d: '198.51.100.42 · abuse=92/100 · 14 reports',  delay: 1580 },
+  { sev: 'HIGH',     t: 'rule.R022 → matched',       d: 'impossible-travel · 3 geo in 8 min',         delay: 1820 },
+  { sev: 'CRITICAL', t: 'chain.R001+R022 → incident',d: 'brute-force + travel correlated → INC-A4F',  delay: 2100 },
+  { sev: 'CRITICAL', t: 'ai.score',                  d: 'TP probability 0.94 · ESCALATE IMMEDIATELY', delay: 2380 },
+]
+
+function LiveDemoConsole() {
+  const [idx,     setIdx]     = useState(0)
+  const [playing, setPlaying] = useState(true)
+
+  useEffect(() => {
+    if (!playing) return
+    if (idx >= FEED.length) {
+      const id = setTimeout(() => setIdx(0), 3000)
+      return () => clearTimeout(id)
+    }
+    const id = setTimeout(() => setIdx(i => i + 1), FEED[idx]?.delay || 350)
+    return () => clearTimeout(id)
+  }, [idx, playing])
+
+  const sevColor = (s) =>
+    s === 'CRITICAL' ? '#f87171' :
+    s === 'HIGH'     ? '#fb923c' :
+    s === 'MEDIUM'   ? '#fbbf24' : '#52525b'
+
+  return (
+    <Card variant="elevated" padding="none" className="overflow-hidden">
+      {/* Terminal titlebar */}
+      <div className="flex items-center justify-between px-4 py-2.5 border-b" style={{ borderColor: 'var(--border)', background: 'var(--surface-2)' }}>
+        <div className="flex items-center gap-2.5">
+          <div className="flex gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-full" style={{ background: '#ef4444' }} />
+            <span className="w-2.5 h-2.5 rounded-full" style={{ background: '#f59e0b' }} />
+            <span className="w-2.5 h-2.5 rounded-full" style={{ background: '#22c55e' }} />
+          </div>
+          <div className="flex items-center gap-1.5 ml-1">
+            <span className="dot-live" />
+            <span className="text-[11px] font-bold tracking-[0.15em] uppercase" style={{ color: 'var(--text-3)' }}>
+              noctra.engine — live detection simulation
+            </span>
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <button onClick={() => { setPlaying(p => !p) }}
+            className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded border transition-colors"
+            style={{ borderColor: 'var(--border-2)', color: 'var(--text-2)' }}>
+            {playing ? <><Pause size={9} /> Pause</> : <><Play size={9} /> Play</>}
+          </button>
+          <button onClick={() => setIdx(0)}
+            className="text-[10px] px-2 py-1 rounded border transition-colors"
+            style={{ borderColor: 'var(--border-2)', color: 'var(--text-2)' }}>
+            Replay
+          </button>
+        </div>
+      </div>
+
+      {/* Feed rows */}
+      <div className="p-4 font-mono text-xs space-y-1.5 overflow-hidden" style={{ height: 260, background: 'var(--bg)' }}>
+        {FEED.slice(0, idx).map((row, i) => (
+          <div key={i} className="flex items-start gap-2.5 fade-in">
+            <span className="shrink-0 tabular-nums" style={{ color: 'var(--text-5)' }}>
+              {String(i + 1).padStart(2, '0')}
+            </span>
+            <span className="shrink-0 font-bold w-20" style={{ color: sevColor(row.sev) }}>
+              [{row.sev}]
+            </span>
+            <span className="shrink-0" style={{ color: 'var(--text-1)' }}>{row.t}</span>
+            <span className="truncate" style={{ color: 'var(--text-3)' }}>{row.d}</span>
+          </div>
+        ))}
+        {idx < FEED.length && playing && (
+          <span className="inline-block w-2 h-3.5 align-middle rounded-sm" style={{ background: 'var(--accent)', animation: 'blink 1s step-end infinite' }} />
+        )}
+        {idx >= FEED.length && (
+          <div className="pt-2 text-[10px] tracking-widest uppercase" style={{ color: 'var(--accent)' }}>
+            ■ incident INC-A4F raised · AI verdict: TRUE POSITIVE · escalated to L2
+          </div>
+        )}
+      </div>
+    </Card>
+  )
 }
 
 /* ── PAGE ─────────────────────────────────────────────────────────────────── */
@@ -301,9 +392,14 @@ export default function Landing() {
           hint="42 rules across 12 tactics. Each row lists the rule IDs that fire under that tactic. Drilldown lives in the Dashboard → MITRE Coverage tab."
           level={2}
           right={
-            <StatusPill tone="info" icon={Network}>
-              Open MITRE matrix
-            </StatusPill>
+            <button onClick={() => navigate('/dashboard')}
+              className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md transition-colors"
+              style={{ background: 'var(--info-dim)', border: '1px solid rgba(59,130,246,0.3)', color: '#60a5fa' }}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(59,130,246,0.15)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'var(--info-dim)'}
+            >
+              <Network size={12} /> Open MITRE matrix
+            </button>
           }
         />
         <Card padding="none" variant="elevated">
@@ -532,6 +628,28 @@ export default function Landing() {
             )
           })}
         </Card>
+      </section>
+
+      {/* ─── LIVE TERMINAL ────────────────────────────────────────────── */}
+      <section id="terminal" className="section-frame-tight space-y-8">
+        <Reveal>
+          <span className="eyebrow-display">LIVE SIMULATION</span>
+        </Reveal>
+        <Reveal delay={80}>
+          <DisplayHeading as="h2" size="md" className="mt-6">
+            WATCH A BRUTE-FORCE
+            <DisplayHeading.Muted>BECOME AN INCIDENT.</DisplayHeading.Muted>
+          </DisplayHeading>
+        </Reveal>
+        <Reveal delay={160}>
+          <p className="text-sm max-w-2xl" style={{ color: 'var(--text-3)', lineHeight: 1.6 }}>
+            The engine detects, enriches, correlates and escalates — in real time.
+            This simulation replays a multi-signal brute-force → impossible-travel kill chain.
+          </p>
+        </Reveal>
+        <Reveal delay={240}>
+          <LiveDemoConsole />
+        </Reveal>
       </section>
 
       {/* ─── CTA ──────────────────────────────────────────────────────── */}
