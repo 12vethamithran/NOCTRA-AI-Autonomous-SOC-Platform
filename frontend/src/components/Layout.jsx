@@ -148,47 +148,6 @@ export default function Layout() {
     <div className="min-h-screen flex flex-col" style={{ background: 'var(--bg)', position: 'relative' }}>
       <BackgroundCanvas />
 
-      {/* ── Top micro-bar (v4 — bold-typography refinement) ── */}
-      <div className="topbar-v4 px-4 py-2 text-xs flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3 overflow-hidden">
-          <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold tracking-[0.18em] uppercase ${health === 'online' ? 'text-emerald-300' : health === 'offline' ? 'text-red-300' : 'text-amber-300'}`}>
-            <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'currentColor', boxShadow: '0 0 8px currentColor' }} />
-            <span className="hidden sm:inline">{h.text.toUpperCase()}</span>
-          </span>
-          <span className="topbar-chip topbar-chip-dot"
-            style={{ color: threatColor.fg, background: threatColor.bg, borderColor: threatColor.bd }}>
-            THREAT: {threatLevel}
-          </span>
-          {tpCount > 0 && (
-            <span className="topbar-chip topbar-chip-dot hidden md:inline-flex"
-              style={{ color: '#f87171', background: 'rgba(239,68,68,0.06)', borderColor: 'rgba(239,68,68,0.25)' }}>
-              {tpCount} INCIDENT{tpCount !== 1 ? 'S' : ''}
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-3 shrink-0">
-          <span className="font-mono num text-[10px] hidden md:flex items-center gap-1.5 tracking-wider" style={{ color: 'var(--text-3)' }}>
-            <span style={{ color: 'var(--text-4)' }}>{dateStr}</span>
-            <span style={{ color: 'var(--accent)' }}>{hours}</span>
-            <span style={{ color: 'var(--text-4)' }}>UTC</span>
-          </span>
-          <button
-            onClick={() => setPaletteOpen(true)}
-            data-tip="Command palette"
-            className="hidden sm:inline-flex items-center gap-1.5 border px-2 py-0.5 rounded text-[10px] transition-colors tracking-wider"
-            style={{ borderColor: 'var(--border-2)', color: 'var(--text-3)' }}
-          >
-            <Command size={10} />K
-          </button>
-          <button
-            onClick={() => setShowHelp(h => !h)}
-            data-tip="Keyboard shortcuts"
-            className="border px-1.5 py-0.5 rounded font-mono transition-colors text-zinc-600 hover:text-zinc-300"
-            style={{ borderColor: 'var(--border-2)' }}
-          >?</button>
-        </div>
-      </div>
-
       {/* ── Main nav ── */}
       <header
         className="sticky top-0 z-50 border-b glass elev-3"
