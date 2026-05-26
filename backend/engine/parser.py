@@ -172,7 +172,10 @@ def _detect_format(filename: str, text: str) -> str:
         apache_hits = sum(1 for ln in sample_lines if _APACHE_RE.match(ln))
         if apache_hits >= max(1, len(sample_lines) // 2):
             return "apache"
-        syslog_hits = sum(1 for ln in sample_lines if _SYSLOG_RE.match(ln))
+        syslog_hits = sum(
+            1 for ln in sample_lines
+            if _SYSLOG_RE.match(ln) or _SYSLOG_ISO_RE.match(ln)
+        )
         if syslog_hits >= max(1, len(sample_lines) // 2):
             return "syslog"
 
@@ -484,8 +487,14 @@ def _try_parse_apache_ts(s: str) -> Optional[datetime]:
 # Syslog (RFC3164-ish)
 #   Jan 15 14:02:01 server01 sshd[1234]: Failed password for admin from 203.0.113.42
 # -----------------------------------------------------------------------------
+# RFC 3164: "Jan 15 14:02:01 host proc[pid]: msg"
 _SYSLOG_RE = re.compile(
     r'^(?P<ts>\w{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2})\s+'
+    r'(?P<host>\S+)\s+(?P<proc>[^\s:\[]+)(?:\[\d+\])?:\s+(?P<msg>.*)$'
+)
+# ISO 8601 syslog: "2026-05-26T08:12:01.124Z host proc[pid]: msg"
+_SYSLOG_ISO_RE = re.compile(
+    r'^(?P<ts>\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?)\s+'
     r'(?P<host>\S+)\s+(?P<proc>[^\s:\[]+)(?:\[\d+\])?:\s+(?P<msg>.*)$'
 )
 _IP_RE = re.compile(r"\b\d{1,3}(?:\.\d{1,3}){3}\b")
@@ -499,6 +508,10 @@ def _parse_syslog(text: str) -> Tuple[pd.DataFrame, int]:
         if not line.strip():
             continue
         m = _SYSLOG_RE.match(line)
+        iso = False
+        if not m:
+            m = _SYSLOG_ISO_RE.match(line)
+            iso = True
         if not m:
             dropped += 1
             continue
@@ -511,9 +524,17 @@ def _parse_syslog(text: str) -> Tuple[pd.DataFrame, int]:
         elif "accepted" in lower or "success" in lower:
             status = "SUCCESS"
         user_match = re.search(r"\b(?:for|user)\s+(\S+)", msg)
+        ts_raw = m.group("ts")
+        if iso:
+            try:
+                ts = pd.to_datetime(ts_raw, utc=True).to_pydatetime()
+            except Exception:
+                ts = None
+        else:
+            ts = _try_parse_syslog_ts(ts_raw, current_year)
         rows.append(
             {
-                "timestamp": _try_parse_syslog_ts(m.group("ts"), current_year),
+                "timestamp": ts,
                 "source_ip": ip_match.group(0) if ip_match else None,
                 "dest_ip": None,
                 "event_type": m.group("proc"),
