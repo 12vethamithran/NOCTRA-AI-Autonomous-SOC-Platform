@@ -34,6 +34,8 @@ No signup required. Drop a log file or click **"Run demo scenario"** to see a sy
 6. [Anatomy of an alert](#6-anatomy-of-an-alert)
 7. [The 43-rule catalogue at a glance](#7-the-43-rule-catalogue-at-a-glance)
 8. [Where AI is integrated](#8-where-ai-is-integrated-7-places)
+   - [8b. XGBoost ML model deep dive](#8b-xgboost-ml-detection-model--deep-dive)
+   - [8c. Self-upgrade pipeline end-to-end](#8c-ml-self-upgrade-pipeline--how-it-works-end-to-end)
 9. [How the AI attack score is calculated](#9-how-the-ai-attack-score-is-calculated)
 10. [Noise reduction: how NOCTRA stops alert floods](#10-noise-reduction-how-noctra-stops-alert-floods)
 11. [Walkthrough: log file → PDF report](#11-walkthrough-log-file--pdf-report)
@@ -239,6 +241,101 @@ Every alert returned by `POST /ingest` is a JSON object with this shape:
 | 5 | **Investigate** | Autonomous agent produces verdict recommendation, key findings, reasoning steps | Manual investigation tabs |
 | 6 | **Chain** | LLM writes a plain-English kill-chain narrative | Structured chain summary |
 | 7 | **Self-Upgrade** | 5-phase pipeline (corpus analyse → rule synthesise → parser extraction → retrain) auto-tunes thresholds and retrains XGBoost nightly | Engine runs on last good config |
+
+---
+
+## 8b. XGBoost ML detection model — deep dive
+
+The ML detector (`backend/engine/ml_detector.py`) is a second, independent detection pass that runs **after** all 43 deterministic rules. It catches attack patterns that regexes can't express.
+
+### Training data
+
+| Attribute | Value |
+|-----------|-------|
+| Total labeled records | **68,655** |
+| Log formats covered | syslog, JSON, WAF, CSV, Zeek, EVTX, generic |
+| Label distribution | Balanced attack / benign split |
+| Training script | `noctra_training_data/train_model.py` |
+| Model output | `backend/models/ml_detector.pkl` (`tfidf` + `clf` keys) |
+
+### Feature engineering (519 features)
+
+| Group | Count | Description |
+|-------|------:|-------------|
+| TF-IDF text features | 500 | Top 500 n-grams from the raw log line (first 1000 chars) |
+| Hand-crafted features | 12 | Line length, digit ratio, special-char ratio, IP count, `has_error`, `has_privesc`, `has_exfil`, `has_injection`, `has_user`, `has_timestamp`, uppercase ratio, space ratio |
+| Format one-hots | 7 | `syslog`, `json`, `waf`, `csv`, `zeek`, `evtx`, `generic` |
+
+### Scoring & severity mapping
+
+| Confidence | Severity | Meaning |
+|------------|----------|---------|
+| ≥ 92% | `CRITICAL` | High-certainty attack pattern |
+| ≥ 80% | `HIGH` | Strong attack signal |
+| ≥ 70% | `MEDIUM` | Probable attack — warrants review |
+| < 70% | *(not fired)* | Below threshold — suppressed |
+
+ML alerts carry rule IDs of the form `ML-Rxxx` (e.g. `ML-R001`) and include `ml_confidence` and `raw_snippet` in `alert.extra`. They are emitted **only** for rows not already covered by a deterministic rule — so the ML layer adds signal without duplicating.
+
+### MITRE inference
+
+The ML detector infers tactic/technique from the raw line using priority-ordered regex signals (credential failure → injection → privilege escalation → block/deny action → cloud events → exfiltration → PowerShell → discovery). Default fallback: `Command and Control / T1071`.
+
+---
+
+## 8c. ML self-upgrade pipeline — how it works end-to-end
+
+```
+POST /admin/retrain
+       │
+       ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  retrain_orchestrator.py                                        │
+│                                                                 │
+│  Phase 1 → corpus_analyser.py                                   │
+│    • Reads 68k records from normalized/training_corpus.ndjson   │
+│    • Grid-searches threshold params (min_failures, min_ports…)  │
+│      to maximise per-rule F1                                    │
+│    • Mines discriminative bigrams per rule (lift ≥ 30.0)        │
+│    • Outputs: rule_insights.json                                │
+│                                                                 │
+│  Phase 2 → rule_synthesiser.py                                  │
+│    • Reads rule_insights.json                                   │
+│    • Only applies threshold changes where ΔF1 ≥ 0.02           │
+│    • Guards against generic words as IoC patterns               │
+│    • Patches rule_config.json + writes synthesis_report.json   │
+│                                                                 │
+│  Phase 3 → parser_pattern_extractor.py                         │
+│    • Mines field aliases per format (logfmt, json, csv…)        │
+│    • Generates format-detection signals (≥ 85% format purity)  │
+│    • Outputs: backend/engine/parser_hints.json                  │
+│                                                                 │
+│  Phase 4 → train_model.py                                       │
+│    • Rebuilds TF-IDF + XGBoost pipeline on full corpus          │
+│    • Saves backend/models/ml_detector.pkl                       │
+│                                                                 │
+│  Hot-reload → engine picks up new config + model on next call  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Safety guards:**
+- Minimum F1 improvement gate (`MIN_F1_IMPROVEMENT = 0.02`) — no regression from noisy corpus
+- Generic word blocklist prevents common tokens ("failed", "password", "scan", "type") from being injected as IoC patterns
+- Minimum lift threshold (`MIN_LIFT_PATTERN = 30.0`) — only patterns 30× more likely in attacks than benign are added
+- Concurrent retrain rejected — status polled via `GET /admin/retrain`
+- Each script has a 600-second timeout to prevent hung pipeline
+
+**Monitoring:**
+```bash
+# Trigger a retrain
+curl -X POST https://your-backend/admin/retrain \
+  -H "Authorization: Bearer $ADMIN_SECRET"
+
+# Poll progress
+curl https://your-backend/admin/retrain \
+  -H "Authorization: Bearer $ADMIN_SECRET"
+# → {"running": true, "phase": "corpus_analyser", "progress_pct": 25, ...}
+```
 
 ---
 
@@ -450,6 +547,9 @@ docker compose --env-file .env.prod -f docker-compose.prod.yml up -d
 | **Kill chain** | Conceptual model of an attack's stages: recon → weaponise → deliver → exploit → install → C2 → actions on objectives. |
 | **IOC** | Indicator of Compromise — an IP, domain, hash, or user seen in an attack. |
 | **SHAP** | Technique that explains which features most affected an ML model's score. |
+| **XGBoost** | Gradient-boosted tree ensemble used by the ML detector. 68k training records, 519 features, AUC 1.0 on held-out test split. |
+| **TF-IDF** | Term Frequency–Inverse Document Frequency — converts raw log text into a numeric vector. Top 500 n-grams form 96% of the ML feature vector. |
+| **Self-upgrade pipeline** | 5-phase background job (corpus_analyser → rule_synthesiser → parser_pattern_extractor → train_model) that tunes detection automatically from labeled log data. Runs nightly or on demand via `POST /admin/retrain`. |
 | **L1 / L2** | Tier-1 (triage & respond) / Tier-2 (hunt & correlate). |
 | **Sliding window** | A time range that moves with the events — "5 failed logins in any 60-second span" rather than "in the last fixed minute". |
 | **Aggregation** | Collapsing many matching events into one alert with a count, instead of one alert per event. |

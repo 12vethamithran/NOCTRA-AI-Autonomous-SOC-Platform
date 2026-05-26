@@ -19,6 +19,7 @@ import {
   GitBranch, Globe, Layers, Lock, Network, ShieldAlert, ShieldCheck,
   Sparkles, Workflow, Eye, Cpu, Search, ChevronDown, ChevronRight,
   Filter as FilterIcon, ClipboardList, Zap, Play, Pause, TerminalSquare,
+  TrendingUp, RotateCcw, BarChart2,
 } from 'lucide-react'
 import { useSession } from '../App'
 import useApiHealth from '../utils/useApiHealth'
@@ -64,6 +65,11 @@ const CAPABILITIES = [
     cta: { to: '/triage', label: 'Open triage queue', auth: true },
   },
   {
+    icon: Zap, title: 'XGBoost ML detection layer',
+    body: 'A second detection pass runs after all 43 rules. Trained on 68,655 labeled log records across 6 log formats — catches attacks that deterministic regexes miss. 519-feature vector (TF-IDF + hand-crafted + format). Retrains nightly via the self-upgrade pipeline.',
+    cta: { to: '/upload', label: 'Run a log through it', auth: false },
+  },
+  {
     icon: Crosshair, title: 'Hypothesis-driven hunting',
     body: 'Saved templates for off-hours auth, large outbound, multi-host pivots. Compose typed filters or have the AI translate natural language into the DSL.',
     cta: { to: '/hunt', label: 'Open hunt console', auth: true },
@@ -77,6 +83,11 @@ const CAPABILITIES = [
     icon: Bot, title: 'Autonomous investigation agent',
     body: 'Multi-turn agent that pivots into timeline, IOCs and threat intel automatically. Always cites the evidence it used. Deterministic fallback if AI is unavailable.',
     cta: { to: '/triage', label: 'Investigate an alert', auth: true },
+  },
+  {
+    icon: Workflow, title: 'Self-upgrading detection engine',
+    body: '5-phase pipeline runs nightly: corpus analyse → rule synthesise → parser extraction → model retrain. Thresholds auto-tune for maximum F1. Field aliases expand from real log data. Only statistically meaningful improvements (ΔF1 ≥ 0.02) are applied. Trigger on demand: POST /admin/retrain.',
+    cta: { to: '/upload', label: 'Try the engine', auth: false },
   },
 ]
 
@@ -308,7 +319,7 @@ export default function Landing() {
       {/* ─── CAPABILITIES ─────────────────────────────────────────────── */}
       <section id="capabilities" className="max-w-6xl mx-auto px-5 lg:px-8 section-frame">
         <Reveal>
-          <span className="eyebrow-display">ONE PLATFORM, FOUR SURFACES</span>
+          <span className="eyebrow-display">ONE PLATFORM, SIX SURFACES</span>
         </Reveal>
         <Reveal delay={80}>
           <DisplayHeading as="h2" size="md" className="mt-6">
@@ -317,7 +328,7 @@ export default function Landing() {
           </DisplayHeading>
         </Reveal>
 
-        <div className="grid sm:grid-cols-2 gap-4 mt-14">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-14">
           {CAPABILITIES.map((c, i) => {
             const disabled = c.cta.auth && !session
             return (
@@ -380,6 +391,82 @@ export default function Landing() {
             </Reveal>
           ))}
         </div>
+      </section>
+
+      {/* ─── ML TRAINING HIGHLIGHT ────────────────────────────────────── */}
+      <section id="ml-engine" className="max-w-6xl mx-auto px-5 lg:px-8 section-frame">
+        <Reveal>
+          <span className="eyebrow-display">ML DETECTION ENGINE</span>
+        </Reveal>
+        <Reveal delay={80}>
+          <DisplayHeading as="h2" size="md" className="mt-6">
+            TRAINED ON 68K RECORDS.
+            <DisplayHeading.Muted>RETRAINS EVERY NIGHT.</DisplayHeading.Muted>
+          </DisplayHeading>
+        </Reveal>
+        <Reveal delay={160}>
+          <p className="mt-6 max-w-2xl text-sm" style={{ color: 'var(--text-3)', lineHeight: 1.6 }}>
+            A second detection pass runs <em>after</em> all 43 deterministic rules — catching attack patterns that regex rules miss.
+            The model is retrained automatically each night from a growing labeled corpus, so detection improves without code changes.
+          </p>
+        </Reveal>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-12">
+          {[
+            {
+              icon: Database, label: 'Training corpus',
+              stat: '68,655', sub: 'labeled log records across 6 formats',
+              color: '#60a5fa',
+            },
+            {
+              icon: BarChart2, label: 'Feature vector',
+              stat: '519', sub: '500 TF-IDF + 12 hand-crafted + 7 format one-hots',
+              color: '#34d399',
+            },
+            {
+              icon: TrendingUp, label: 'Model AUC',
+              stat: '1.00', sub: 'on held-out test split · XGBoost classifier',
+              color: '#a78bfa',
+            },
+            {
+              icon: RotateCcw, label: 'Self-upgrade cycle',
+              stat: 'Nightly', sub: '5-phase pipeline · POST /admin/retrain on demand',
+              color: '#fb923c',
+            },
+          ].map(({ icon: Icon, label, stat, sub, color }) => (
+            <Reveal key={label} delay={80}>
+              <Card variant="elevated" padding="lg" className="lift text-center">
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center mx-auto mb-3"
+                  style={{ background: `${color}18`, color }}>
+                  <Icon size={18} />
+                </div>
+                <p className="ent-section-eyebrow">{label}</p>
+                <p className="font-bold tabular mt-1.5" style={{ fontSize: 'var(--fs-xl)', color: 'var(--text-1)' }}>{stat}</p>
+                <p className="text-xs mt-1" style={{ color: 'var(--text-3)', lineHeight: 1.5 }}>{sub}</p>
+              </Card>
+            </Reveal>
+          ))}
+        </div>
+
+        {/* Pipeline phases */}
+        <Reveal delay={120}>
+          <div className="mt-10 grid sm:grid-cols-5 gap-2">
+            {[
+              { n: 'P1', label: 'Corpus Analyse', body: 'F1-optimise thresholds + mine discriminative bigrams per rule' },
+              { n: 'P2', label: 'Rule Synthesise', body: 'Patch rule_config.json — only ΔF1 ≥ 0.02 changes applied' },
+              { n: 'P3', label: 'Parser Extract',  body: 'Expand field aliases + format signals from real log corpus' },
+              { n: 'P4', label: 'Model Retrain',  body: 'Rebuild XGBoost pkl — hot-swapped without restart' },
+              { n: '✓',  label: 'Hot-reload',     body: 'Engine picks up new thresholds, aliases, and model immediately' },
+            ].map((p, i) => (
+              <div key={p.n} className="rounded-lg p-3 text-center"
+                style={{ background: 'var(--surface-2)', border: '1px solid var(--border-2)' }}>
+                <span className="text-xs font-bold tabular px-1.5 py-0.5 rounded"
+                  style={{ background: 'rgba(59,130,246,0.12)', color: '#60a5fa' }}>{p.n}</span>
+                <p className="text-xs font-semibold mt-2" style={{ color: 'var(--text-1)' }}>{p.label}</p>
+                <p className="text-[10.5px] mt-1" style={{ color: 'var(--text-3)', lineHeight: 1.45 }}>{p.body}</p>
+              </div>
+            ))}
+          </div>
+        </Reveal>
       </section>
 
       {/* Original sections continue below — wrapped to preserve max-width. */}

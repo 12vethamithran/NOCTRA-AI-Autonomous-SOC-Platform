@@ -1,14 +1,15 @@
 /**
  * Upload — Ingestion Module.
  *
- * Enterprise rewrite (v3.2): the playful gradient hero is replaced with a
- * tight workflow surface. Every flow from v3.1 is preserved:
+ * Enterprise rewrite (v4.0): tight workflow surface.
  *   file mode · paste mode · staged preview · upload progress · result
  *   destinations · sample datasets · recent sessions · format reference ·
  *   global drag overlay · engine health · run-demo path.
  *
- * Visual layer is now built on Card / SectionHeader / StatusPill so it
- * matches the redesigned Landing page and reads as one product.
+ * v4.0 additions:
+ *   • 10-stage pipeline (+ XGBoost ML Scan stage after Detect)
+ *   • ML Engine card in right rail (model stats, self-upgrade info)
+ *   • Header/hint updated: 43 rules + XGBoost ML detector
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -20,6 +21,7 @@ import {
   HardDrive, AlertOctagon, Layers, ClipboardPaste, Trash2,
   X, FileSearch, Sparkles, Eye, ShieldAlert,
   LayoutDashboard, RefreshCw, GitBranch, FileBarChart,
+  Zap, Bot, RotateCcw, TrendingUp,
 } from 'lucide-react'
 import { ingestFile, ingestDemo } from '../api/client'
 import { useSession } from '../App'
@@ -42,17 +44,18 @@ const FORMATS = [
   { label: 'Anything else',  icon: Layers,     tag: 'Generic fallback' },
 ]
 
-// 9 stages — matches the backend pipeline after the dedup pass.
+// 10 stages — matches the v4.0 backend pipeline (XGBoost ML Scan added after Detect).
 const PIPELINE_STEPS = [
-  { icon: Database,     label: 'Ingest',    desc: 'Auto-detect format, parse rows' },
-  { icon: Cpu,          label: 'Normalize', desc: 'Collapse 40+ aliases to canonical fields' },
-  { icon: AlertOctagon, label: 'Detect',    desc: '42 rules + UEBA anomaly + correlation' },
-  { icon: Sparkles,     label: 'Score',     desc: 'AI TP probability + SHAP attribution' },
-  { icon: Globe,        label: 'Enrich',    desc: 'IP rep, geo, ASN, hash → MITRE' },
-  { icon: GitBranch,    label: 'Chain',     desc: 'Stitch alerts into kill chains' },
-  { icon: Layers,       label: 'Dedup',     desc: 'Collapse identical alerts' },
-  { icon: Eye,          label: 'Triage',    desc: 'Hand off to L1/L2 queues' },
-  { icon: FileBarChart, label: 'Report',    desc: 'Forensic PDF on demand' },
+  { icon: Database,     label: 'Ingest',    desc: 'Auto-detect format · corpus-learned format signals applied', ml: false },
+  { icon: Cpu,          label: 'Normalize', desc: '95+ field aliases (corpus-learned) → canonical schema', ml: false },
+  { icon: AlertOctagon, label: 'Detect',    desc: '43 deterministic rules + UEBA + hot-reloaded thresholds', ml: false },
+  { icon: Zap,          label: 'ML Scan',   desc: 'XGBoost · 519 features · 68k training records · ≥ 70% fires ML-* alert', ml: true },
+  { icon: Sparkles,     label: 'Score',     desc: 'AI TP probability + SHAP attribution per alert', ml: false },
+  { icon: Globe,        label: 'Enrich',    desc: 'IP rep, geo, ASN, hash → MITRE', ml: false },
+  { icon: GitBranch,    label: 'Chain',     desc: 'Stitch related alerts into kill-chain narratives', ml: false },
+  { icon: Layers,       label: 'Dedup',     desc: 'Collapse identical alerts across rules and uploads', ml: false },
+  { icon: Eye,          label: 'Triage',    desc: 'Hand off to L1/L2 queues', ml: false },
+  { icon: FileBarChart, label: 'Report',    desc: 'Forensic PDF on demand', ml: false },
 ]
 
 const SAMPLE_DATASETS = [
@@ -155,7 +158,7 @@ export default function Upload() {
   const [pasteText, setPasteText] = useState('')
   const pasteFormat = pasteText ? detectFormat('paste.txt', pasteText) : null
 
-  // Map upload progress to the 9 pipeline stages.
+  // Map upload progress to the 10 pipeline stages.
   useEffect(() => {
     if (!uploading) { setActiveStep(0); return }
     if (progress < 100) {
@@ -269,7 +272,7 @@ export default function Upload() {
         variant="display-sm"
         eyebrow="INGESTION MODULE"
         title="DROP A LOG. RANK THE INCIDENTS."
-        hint="Parsed in memory, scored against 42 rules, deduplicated, then handed to the triage queue. The session lives only in RAM."
+        hint="Parsed in memory · 43 deterministic rules + XGBoost ML detector · auto-dedup · MITRE-mapped · handed to triage. Session lives only in RAM."
         right={
           <div className="flex items-center gap-2">
             <button onClick={() => navigate('/')}
@@ -561,33 +564,79 @@ export default function Upload() {
 
           {/* Pipeline diagram */}
           <Card variant="elevated" padding="lg">
-            <p className="ent-section-eyebrow mb-3">Detection pipeline</p>
-            <ol className="space-y-2.5">
+            <div className="flex items-center justify-between mb-3">
+              <p className="ent-section-eyebrow">Detection pipeline · 10 stages</p>
+              <span className="text-[10px] px-1.5 py-0.5 rounded font-bold tracking-wider"
+                style={{ background: 'rgba(59,130,246,0.12)', color: '#60a5fa', border: '1px solid rgba(59,130,246,0.25)' }}>
+                v4.0
+              </span>
+            </div>
+            <ol className="space-y-2">
               {PIPELINE_STEPS.map((s, i) => {
                 const I = s.icon
                 const live = uploading && i === activeStep
+                const isML = s.ml
                 return (
                   <li key={s.label} className="flex items-start gap-2.5">
                     <div className="w-6 h-6 rounded-md flex items-center justify-center shrink-0 tabular text-[10.5px] font-bold"
                       style={{
-                        background: live ? 'var(--accent-dim)' : 'var(--surface-3)',
-                        color: live ? 'var(--accent)' : 'var(--text-3)',
-                        border: `1px solid ${live ? 'var(--accent)' : 'var(--border-2)'}`,
+                        background: live ? 'var(--accent-dim)' : isML ? 'rgba(59,130,246,0.12)' : 'var(--surface-3)',
+                        color: live ? 'var(--accent)' : isML ? '#60a5fa' : 'var(--text-3)',
+                        border: `1px solid ${live ? 'var(--accent)' : isML ? 'rgba(59,130,246,0.3)' : 'var(--border-2)'}`,
                       }}>
                       {String(i + 1).padStart(2, '0')}
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="flex items-center gap-1.5 text-sm font-semibold"
                         style={{ color: live ? 'var(--text-1)' : 'var(--text-2)' }}>
-                        <I size={12} style={{ color: live ? 'var(--accent)' : 'var(--text-4)' }} />
+                        <I size={12} style={{ color: live ? 'var(--accent)' : isML ? '#60a5fa' : 'var(--text-4)' }} />
                         {s.label}
+                        {isML && (
+                          <span className="text-[9px] px-1 py-0.5 rounded font-bold tracking-wider"
+                            style={{ background: 'rgba(59,130,246,0.12)', color: '#60a5fa', border: '1px solid rgba(59,130,246,0.2)' }}>
+                            XGBoost
+                          </span>
+                        )}
                       </p>
-                      <p className="text-xs" style={{ color: 'var(--text-3)' }}>{s.desc}</p>
+                      <p className="text-xs" style={{ color: 'var(--text-3)', lineHeight: 1.4 }}>{s.desc}</p>
                     </div>
                   </li>
                 )
               })}
             </ol>
+          </Card>
+
+          {/* ML Engine card */}
+          <Card variant="elevated" padding="lg">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-7 h-7 rounded-md flex items-center justify-center shrink-0"
+                style={{ background: 'rgba(59,130,246,0.12)', color: '#60a5fa' }}>
+                <Bot size={14} />
+              </div>
+              <p className="ent-section-eyebrow">ML Detection Engine</p>
+            </div>
+            <div className="space-y-2.5">
+              {[
+                { icon: TrendingUp,  label: 'Training records',  value: '68,655 labeled logs' },
+                { icon: Zap,         label: 'Feature vector',    value: '519 features (TF-IDF + hand-crafted + format)' },
+                { icon: ShieldCheck, label: 'Model AUC',         value: '1.00 on held-out test split' },
+                { icon: AlertOctagon,label: 'Fire threshold',    value: '≥ 70% confidence → ML-* alert' },
+                { icon: RotateCcw,   label: 'Self-upgrade',      value: 'Retrains nightly · POST /admin/retrain' },
+              ].map(({ icon: Icon, label, value }) => (
+                <div key={label} className="flex items-start gap-2">
+                  <Icon size={11} className="mt-0.5 shrink-0" style={{ color: '#60a5fa' }} />
+                  <div className="min-w-0">
+                    <p className="text-[10.5px] font-semibold" style={{ color: 'var(--text-2)' }}>{label}</p>
+                    <p className="text-[10.5px]" style={{ color: 'var(--text-3)' }}>{value}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-3 pt-3" style={{ borderTop: '1px solid var(--border)' }}>
+              <p className="text-[10.5px]" style={{ color: 'var(--text-4)', lineHeight: 1.5 }}>
+                Runs <em>after</em> deterministic rules — catches attack patterns that regexes miss. Severity scales with confidence: ≥ 92% → CRITICAL · ≥ 80% → HIGH · ≥ 70% → MEDIUM.
+              </p>
+            </div>
           </Card>
 
           {/* Recent sessions */}
