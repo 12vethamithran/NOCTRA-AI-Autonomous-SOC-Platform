@@ -156,9 +156,11 @@ def ml_scan(df: pd.DataFrame) -> List:
         src_ip = getattr(row_series, "source_ip", None) or None
         dest_ip = getattr(row_series, "dest_ip", None) or None
         user = getattr(row_series, "user", None) or None
+        ts = getattr(row_series, "timestamp", None)
 
         alert = Alert(
             alert_id=uuid.uuid4().hex[:12],
+            timestamp=ts if ts is not None else None,
             rule_id=f"ML-{rule_id}",
             rule_name=f"ML Detector · {tactic}",
             severity=sev,
