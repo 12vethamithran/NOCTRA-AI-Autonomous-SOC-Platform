@@ -166,6 +166,8 @@ def _detect_format(filename: str, text: str) -> str:
         return "json"
     if "EventID" in first_line and "TimeCreated" in first_line:
         return "winevent"
+    if first_line.upper().startswith("CEF:"):
+        return "cef"
 
     # Apache / syslog: a majority of the sampled lines must match.
     if sample_lines:
@@ -617,6 +619,76 @@ def _parse_logfmt(text: str) -> Tuple[pd.DataFrame, int]:
 
 
 # -----------------------------------------------------------------------------
+# CEF (Common Event Format) parser
+# Format: CEF:Version|Device|Product|Version|SignatureID|Name|Severity|Extensions
+# Extensions are space-separated key=value pairs (values may be quoted).
+# -----------------------------------------------------------------------------
+_CEF_EXT_RE = re.compile(r'(\w+)=((?:[^=\\]|\\.)+?)(?=\s+\w+=|$)')
+
+
+def _parse_cef(text: str) -> Tuple[pd.DataFrame, int]:
+    rows: List[Dict[str, Any]] = []
+    dropped = 0
+    for line in text.splitlines():
+        ln = line.strip()
+        if not ln:
+            continue
+        if not ln.upper().startswith("CEF:"):
+            dropped += 1
+            continue
+        # Split header (first 8 pipe-segments)
+        parts = ln.split("|", 7)
+        if len(parts) < 7:
+            dropped += 1
+            continue
+        rec: Dict[str, Any] = {
+            "raw": ln,
+            "_cef_vendor": parts[1],
+            "_cef_product": parts[2],
+            "_cef_sig_id": parts[4],
+            "_cef_name": parts[5],
+            "_cef_severity": parts[6],
+        }
+        # Parse extension key=value pairs
+        ext_str = parts[7] if len(parts) > 7 else ""
+        for m in _CEF_EXT_RE.finditer(ext_str):
+            k, v = m.group(1).strip(), m.group(2).strip()
+            rec[k] = v
+        # Map well-known CEF extension keys to our schema
+        cef_alias = {
+            "src": "source_ip", "spt": "port", "dst": "dest_ip", "dpt": "port",
+            "suser": "user", "duser": "user", "outcome": "status",
+            "start": "timestamp", "end": "timestamp", "rt": "timestamp",
+            "act": "event_type", "msg": "raw",
+            "request": "url", "fname": "path",
+        }
+        for cef_k, norm_k in cef_alias.items():
+            if cef_k in rec and norm_k not in rec:
+                rec[norm_k] = rec[cef_k]
+        # Derive event_type from signature name / id if not set
+        if "event_type" not in rec:
+            sig = str(rec.get("_cef_sig_id", ""))
+            name_lower = rec.get("_cef_name", "").lower()
+            if sig in ("4625", "4771"):
+                rec["event_type"] = "auth"
+                rec.setdefault("status", "FAILED")
+            elif sig in ("4624",):
+                rec["event_type"] = "auth"
+                rec.setdefault("status", "SUCCESS")
+            elif "logon" in name_lower or "login" in name_lower:
+                rec["event_type"] = "auth"
+            else:
+                rec["event_type"] = rec.get("_cef_name", "cef_event").lower().replace(" ", "_")
+        rows.append(rec)
+    if not rows:
+        return pd.DataFrame(), dropped
+    df = pd.DataFrame(rows)
+    df = _apply_aliases(df)
+    df = _derive_status(df)
+    return df, dropped
+
+
+# -----------------------------------------------------------------------------
 # Generic line parser — the universal fallback.
 # Treats EVERY non-empty line as one event and extracts whatever it can.
 # -----------------------------------------------------------------------------
@@ -715,6 +787,7 @@ _PARSERS = {
     "syslog": _parse_syslog,
     "winevent": _parse_winevent_csv,
     "logfmt": _parse_logfmt,
+    "cef": _parse_cef,
     "generic": _parse_generic,
 }
 

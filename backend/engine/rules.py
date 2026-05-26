@@ -2206,19 +2206,24 @@ def rule_r043_idor_enumeration(df: pd.DataFrame) -> List[Alert]:
         return alerts
 
     import re as _re
-    _ID_TAIL = _re.compile(r'/(\d{2,10})(?:[/?#]|$)')
+    _ID_TAIL = _re.compile(r'/(\d{2,10})(?:[/?#"\'<\s]|$)')
 
     # Only look at HTTP GET rows if event_type is available; otherwise all rows.
     if "event_type" in work.columns:
-        http = work[work["event_type"].astype(str).str.lower().str.contains("http|get|api", na=False)].copy()
+        et_mask = work["event_type"].astype(str).str.lower().str.contains("http|get|api", na=False)
+        # If none match by event_type, also include rows where raw contains a URL pattern
+        url_in_raw = work["raw"].astype(str).str.contains(r'/\w+/\d{2,}', na=False, regex=True)
+        http = work[et_mask | url_in_raw].copy()
     else:
         http = work.copy()
     if http.empty:
         return alerts
 
-    # Extract the URL column (prefer dedicated url/path field, fall back to raw).
-    if "url" in http.columns:
-        url_series = http["url"].astype(str)
+    # Extract the URL column (prefer dedicated url/path/dest_host field, fall back to raw).
+    for _url_col in ("url", "path", "dest_host", "request"):
+        if _url_col in http.columns and http[_url_col].notna().any():
+            url_series = http[_url_col].astype(str)
+            break
     else:
         url_series = http["raw"].astype(str)
 
