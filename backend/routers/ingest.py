@@ -30,6 +30,7 @@ from engine.demo_data import build_demo_csv
 from engine.classifier import score_alerts
 from engine.parser import parse
 from engine.rules import run_all_rules
+from engine.ml_detector import ml_scan
 from engine.ueba import run_ueba
 from engine.dsl import run_custom_rules
 from engine.shap_explainer import attach_shap_explanations
@@ -223,7 +224,25 @@ async def _run_pipeline(filename: str, content: bytes) -> IngestResponse:
         len(alerts),
     )
 
-    # --- 4b. Feature 1 — UEBA behavioral anomaly detection -------------------
+    # --- 4b. ML model detection (catches what rules miss) --------------------
+    try:
+        ml_alerts = ml_scan(parsed.dataframe)
+        # Only add ML alerts that aren't already covered by a rule alert on the same row
+        rule_row_indices = {
+            idx
+            for a in alerts
+            for idx in (a.related_log_indices or [])
+        }
+        novel_ml = [
+            a for a in ml_alerts
+            if not any(i in rule_row_indices for i in (a.related_log_indices or []))
+        ]
+        alerts.extend(novel_ml)
+        log.info("ML detector: %d total alerts, %d novel (rule not already fired)", len(ml_alerts), len(novel_ml))
+    except Exception as e:
+        log.exception("ML detector crashed: %s", e)
+
+    # --- 4c. Feature 1 — UEBA behavioral anomaly detection -------------------
     try:
         from engine.ueba import run_isolation_forest
         ueba_alerts, user_profiles, ip_profiles = run_ueba(parsed.dataframe)

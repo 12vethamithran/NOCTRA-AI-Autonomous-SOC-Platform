@@ -1,0 +1,22 @@
+{
+  "trained_at": "2026-05-26T08:28:07.787746",
+  "corpus_records": 68655,
+  "attack_records": 24831,
+  "benign_records": 43824,
+  "feature_dim": 519,
+  "tfidf_vocab_size": 500,
+  "cv_auc_mean": 1.0,
+  "cv_auc_std": 0.0,
+  "model": "XGBClassifier",
+  "n_estimators": 300,
+  "format_features": [
+    "syslog",
+    "json",
+    "waf",
+    "csv",
+    "zeek",
+    "evtx",
+    "generic"
+  ],
+  "handcrafted_dim": 12
+}
