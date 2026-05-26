@@ -26,14 +26,60 @@ Rule list (matches MySOC_Notes.md):
 from __future__ import annotations
 
 import ipaddress
+import json
+import logging
+import os
 import uuid
 from datetime import timedelta
-from typing import Callable, List
+from pathlib import Path
+from typing import Any, Callable, Dict, List
 
 import pandas as pd
 
 from schemas.alert import Alert, AlertSeverity
 
+log = logging.getLogger("noctra.rules")
+
+# ---------------------------------------------------------------------------
+# Rule config — loaded from rule_config.json, hot-reloaded on change
+# ---------------------------------------------------------------------------
+_CONFIG_PATH = Path(__file__).parent / "rule_config.json"
+_config_mtime: float = 0.0
+_CFG: Dict[str, Any] = {}
+
+
+def _load_config() -> Dict[str, Any]:
+    """Load rule_config.json. Called once at import and again if file changes."""
+    global _config_mtime, _CFG
+    try:
+        mtime = _CONFIG_PATH.stat().st_mtime
+        if mtime == _config_mtime and _CFG:
+            return _CFG
+        with open(_CONFIG_PATH, encoding="utf-8") as f:
+            data = json.load(f)
+        _CFG = data
+        _config_mtime = mtime
+        log.info("Rule config loaded from %s (v%s, updated_by=%s)",
+                 _CONFIG_PATH, data.get("_version", "?"), data.get("_updated_by", "?"))
+    except Exception as exc:
+        log.warning("Could not load rule_config.json (%s) — using defaults", exc)
+    return _CFG
+
+
+def _cfg(rule_id: str, key: str, default: Any) -> Any:
+    """Fetch a config value for a rule, falling back to default."""
+    cfg = _load_config()
+    return cfg.get(rule_id, {}).get(key, default)
+
+
+def _raw_patterns(rule_id: str) -> list[str]:
+    """Return the raw-pattern list for a rule from config."""
+    cfg = _load_config()
+    return cfg.get("_raw_pattern_rules", {}).get(rule_id, {}).get("patterns", [])
+
+
+# Load config eagerly at import time
+_load_config()
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -82,12 +128,11 @@ def rule_r001_brute_force(df: pd.DataFrame) -> List[Alert]:
     if failed.empty:
         return alerts
 
+    min_failures = _cfg("R001", "min_failures", 3)
     failed = failed.sort_values("timestamp")
     for src_ip, group in failed.groupby("source_ip"):
-        # Sliding 60-second window — for each row, count how many failures
-        # happened within the last 60s from the same IP.
         times = group["timestamp"]
-        window = timedelta(seconds=60)
+        window = timedelta(seconds=_cfg("R001", "window_seconds", 60))
         # Vectorised: searchsorted from each timestamp - 60s
         starts = times - window
         # `searchsorted` on a sorted Series gives us indices.
@@ -96,7 +141,7 @@ def rule_r001_brute_force(df: pd.DataFrame) -> List[Alert]:
         for t in times:
             counts.append(((times >= (t - window)) & (times <= t)).sum())
         group = group.assign(_window_count=counts)
-        spike = group[group["_window_count"] >= 3]
+        spike = group[group["_window_count"] >= min_failures]
         if spike.empty:
             continue
         # Build a single alert per IP keyed on the worst window.
@@ -163,9 +208,10 @@ def rule_r002_port_scan(df: pd.DataFrame) -> List[Alert]:
         return alerts
 
     work = work.sort_values("timestamp")
-    window = timedelta(seconds=30)
+    window = timedelta(seconds=_cfg("R002", "window_seconds", 30))
+    min_ports = _cfg("R002", "min_distinct_ports", 10)
     for src_ip, group in work.groupby("source_ip"):
-        if group["port"].nunique() < 10:
+        if group["port"].nunique() < min_ports:
             continue  # cheap pre-filter
         # Sliding window: count distinct ports in each 30s window.
         peak_distinct = 0
@@ -176,7 +222,7 @@ def rule_r002_port_scan(df: pd.DataFrame) -> List[Alert]:
             if distinct > peak_distinct:
                 peak_distinct = distinct
                 peak_rows = list(window_rows.index)
-        if peak_distinct <= 10:
+        if peak_distinct <= min_ports:
             continue
         alerts.append(
             Alert(
@@ -230,7 +276,7 @@ def rule_r003_priv_esc(df: pd.DataFrame) -> List[Alert]:
         # Did an admin auth happen within 10 minutes after a normal one?
         for _, n in normals.iterrows():
             window = admins[(admins["timestamp"] > n["timestamp"])
-                            & (admins["timestamp"] <= n["timestamp"] + timedelta(minutes=10))]
+                            & (admins["timestamp"] <= n["timestamp"] + timedelta(minutes=_cfg("R003", "window_minutes", 10)))]
             if window.empty:
                 continue
             a = window.iloc[0]
@@ -277,9 +323,10 @@ def rule_r004_lateral(df: pd.DataFrame) -> List[Alert]:
     ].copy()
     if auths.empty:
         return alerts
-    window = timedelta(minutes=5)
+    window = timedelta(minutes=_cfg("R004", "window_minutes", 5))
+    min_hosts = _cfg("R004", "min_hosts", 3)
     for user, group in auths.groupby("user"):
-        if group["dest_ip"].nunique() < 3:
+        if group["dest_ip"].nunique() < min_hosts:
             continue
         group = group.sort_values("timestamp")
         for _, row in group.iterrows():
@@ -330,8 +377,9 @@ def rule_r005_exfil(df: pd.DataFrame) -> List[Alert]:
     work = work[work["dest_ip"].apply(_is_external_ip)]
     if work.empty:
         return alerts
-    single_threshold = 100 * 1024 * 1024   # 100 MB
-    cumulative_threshold = 250 * 1024 * 1024  # 250 MB
+    single_threshold   = int(_cfg("R005", "single_session_threshold_mb", 100)) * 1024 * 1024
+    cumulative_threshold = int(_cfg("R005", "cumulative_threshold_mb", 250)) * 1024 * 1024
+    critical_threshold = int(_cfg("R005", "critical_threshold_gb", 1)) * 1024 * 1024 * 1024
     for (src, dst), grp in work.groupby(["source_ip", "dest_ip"]):
         total = int(grp["_b"].sum())
         peak = int(grp["_b"].max())
@@ -342,7 +390,7 @@ def rule_r005_exfil(df: pd.DataFrame) -> List[Alert]:
             continue
         mb_total = total / 1024 / 1024
         mb_peak = peak / 1024 / 1024
-        sev = AlertSeverity.CRITICAL if total > 1024 * 1024 * 1024 else AlertSeverity.HIGH
+        sev = AlertSeverity.CRITICAL if total > critical_threshold else AlertSeverity.HIGH
         alerts.append(Alert(
             alert_id=_new_alert_id(),
             rule_id="R005",
@@ -392,8 +440,10 @@ def rule_r006_off_hours(df: pd.DataFrame) -> List[Alert]:
     if auths.empty:
         return alerts
     auths["hour"] = auths["timestamp"].dt.hour
+    off_start = _cfg("R006", "off_hours_start", 0)
+    off_end   = _cfg("R006", "off_hours_end", 5)
     odd = auths[
-        (auths["hour"].between(0, 5))
+        (auths["hour"].between(off_start, off_end))
         & (~auths["user"].astype(str).str.lower().isin(_SERVICE_USERS))
     ]
     # Aggregate per user so a single account logging in 50 times off-hours emits
@@ -466,6 +516,7 @@ def rule_r007_new_admin(df: pd.DataFrame) -> List[Alert]:
         | creations_raw_l.str.contains("global administrator|administrators|administrator role|privileged role", na=False, regex=True)
     ]
     for idx, row in creations.iterrows():
+        _src = row.get("source_ip")
         alerts.append(
             Alert(
                 alert_id=_new_alert_id(),
@@ -474,7 +525,7 @@ def rule_r007_new_admin(df: pd.DataFrame) -> List[Alert]:
                 severity=AlertSeverity.HIGH,
                 description=f"Admin account '{row['user']}' was created",
                 timestamp=row["timestamp"].to_pydatetime() if pd.notna(row.get("timestamp")) else None,
-                source_ip=row.get("source_ip"),
+                source_ip=str(_src) if _src is not None and str(_src) not in ("nan","None","") else None,
                 user=str(row["user"]),
                 event_count=1,
                 mitre_technique="T1136",
@@ -508,8 +559,8 @@ def rule_r008_fuzzing(df: pd.DataFrame) -> List[Alert]:
     # Burst gate: only count 404s that fall inside a 5-minute sliding window.
     # 20 scattered 404s over a week is normal browsing noise; 20 in 5 minutes
     # is fuzzing. Avoids the "log file spans 7 days" false positive.
-    WINDOW = pd.Timedelta(minutes=5)
-    THRESHOLD = 20
+    WINDOW = pd.Timedelta(minutes=_cfg("R008", "window_minutes", 5))
+    THRESHOLD = _cfg("R008", "min_404s", 20)
     for src_ip, group in http.groupby("source_ip"):
         g = group.sort_values("timestamp")
         ts = g["timestamp"].reset_index(drop=True)
@@ -591,7 +642,7 @@ def rule_r010_multi_service(df: pd.DataFrame) -> List[Alert]:
         norm = {s.split("_")[0] for s in services}
         # Need both: 3+ distinct services AND enough volume per service to
         # rule out an accidental one-shot failure on each.
-        if len(norm) < 3 or len(group) < 6:
+        if len(norm) < _cfg("R010", "min_services", 3) or len(group) < _cfg("R010", "min_events", 6):
             continue
         alerts.append(
             Alert(
@@ -697,7 +748,7 @@ def rule_r011_powershell(df: pd.DataFrame) -> List[Alert]:
 # ---------------------------------------------------------------------------
 def rule_r012_process_injection(df: pd.DataFrame) -> List[Alert]:
     alerts: List[Alert] = []
-    hits = _raw_contains(df, [
+    hits = _raw_contains(df, _raw_patterns("R012") or [
         "createremotethread", "writeprocessmemory", "ntmapviewofsection",
         "queueuserapc", "setwindowshookex", "reflective dll",
     ])
@@ -730,7 +781,7 @@ def rule_r012_process_injection(df: pd.DataFrame) -> List[Alert]:
 # ---------------------------------------------------------------------------
 def rule_r013_lsass(df: pd.DataFrame) -> List[Alert]:
     alerts: List[Alert] = []
-    hits = _raw_contains(df, [
+    hits = _raw_contains(df, _raw_patterns("R013") or [
         "lsass.exe", "lsass.dmp", "minidumpwritedump",
         "procdump -ma lsass", "comsvcs.dll, minidump",
         "sekurlsa::logonpasswords", "mimikatz",
@@ -771,10 +822,10 @@ def rule_r014_dns_tunnel(df: pd.DataFrame) -> List[Alert]:
     # Indicator: > 50 DNS queries from one source AND avg label length > 30
     by_src = dns.groupby(dns["source_ip"].fillna("local"))
     for src, grp in by_src:
-        if len(grp) < 50:
+        if len(grp) < _cfg("R014", "min_queries", 50):
             continue
         raw_avg_len = grp["raw"].astype(str).str.len().mean() if "raw" in grp.columns else 0
-        if raw_avg_len < 60:
+        if raw_avg_len < _cfg("R014", "min_avg_raw_length", 60):
             continue
         ts = _safe_min_ts(grp)
         if ts is None:
@@ -801,7 +852,7 @@ def rule_r014_dns_tunnel(df: pd.DataFrame) -> List[Alert]:
 # ---------------------------------------------------------------------------
 def rule_r015_cleartext_creds(df: pd.DataFrame) -> List[Alert]:
     alerts: List[Alert] = []
-    hits = _raw_contains(df, [
+    hits = _raw_contains(df, _raw_patterns("R015") or [
         "password=", "passwd=", "pwd=", "api_key=", "apikey=",
         "secret=", "token=", "authorization: basic ",
     ])
@@ -843,7 +894,7 @@ def rule_r016_lockout_storm(df: pd.DataFrame) -> List[Alert]:
     by_src = locks.groupby(locks["source_ip"].fillna("unknown"))
     for src, grp in by_src:
         users = grp["user"].dropna().unique()
-        if len(users) < 5:
+        if len(users) < _cfg("R016", "min_locked_users", 5):
             continue
         ts = _safe_min_ts(grp)
         if ts is None:
@@ -871,7 +922,7 @@ def rule_r016_lockout_storm(df: pd.DataFrame) -> List[Alert]:
 # ---------------------------------------------------------------------------
 def rule_r017_persistence(df: pd.DataFrame) -> List[Alert]:
     alerts: List[Alert] = []
-    hits = _raw_contains(df, [
+    hits = _raw_contains(df, _raw_patterns("R017") or [
         "sc.exe create", "new-service", "schtasks /create", "at \\\\",
         "crontab -e", "/etc/cron.d/", "systemctl enable",
         "registry run key", "hklm\\software\\microsoft\\windows\\currentversion\\run",
@@ -906,7 +957,7 @@ def rule_r017_persistence(df: pd.DataFrame) -> List[Alert]:
 # ---------------------------------------------------------------------------
 def rule_r018_log_cleared(df: pd.DataFrame) -> List[Alert]:
     alerts: List[Alert] = []
-    hits = _raw_contains(df, [
+    hits = _raw_contains(df, _raw_patterns("R018") or [
         "eventid: 1102", "eventid:1102", "event log was cleared",
         "wevtutil cl ", "clear-eventlog", "audit log was cleared",
     ])
@@ -939,7 +990,7 @@ def rule_r018_log_cleared(df: pd.DataFrame) -> List[Alert]:
 # ---------------------------------------------------------------------------
 def rule_r019_av_tamper(df: pd.DataFrame) -> List[Alert]:
     alerts: List[Alert] = []
-    hits = _raw_contains(df, [
+    hits = _raw_contains(df, _raw_patterns("R019") or [
         "set-mppreference -disablerealtimemonitoring",
         "stop-service windefend", "sc stop windefend",
         "uninstall sentinelone", "stop-service crowdstrikefalconservice",
@@ -985,7 +1036,7 @@ def rule_r020_rdp_brute(df: pd.DataFrame) -> List[Alert]:
         return alerts
     by_src = failed.groupby(failed["source_ip"].fillna("unknown"))
     for src, grp in by_src:
-        if len(grp) < 8 or src == "unknown":
+        if len(grp) < _cfg("R020", "min_failures", 8) or src == "unknown":
             continue
         ts = _safe_min_ts(grp)
         if ts is None:
@@ -1025,21 +1076,20 @@ def rule_r021_beaconing(df: pd.DataFrame) -> List[Alert]:
         return alerts
     by_pair = work.groupby(["source_ip", "dest_ip"])
     for (src, dst), grp in by_pair:
-        if len(grp) < 6:
+        if len(grp) < _cfg("R021", "min_connections", 6):
             continue
         ts_sorted = grp["timestamp"].sort_values()
         deltas = ts_sorted.diff().dropna().dt.total_seconds()
         if deltas.empty:
             continue
-        # Coefficient of variation low → very regular cadence
         mean = float(deltas.mean()) if not deltas.empty else 0.0
         std = float(deltas.std()) if not deltas.empty else 0.0
-        if mean < 30 or mean > 3600:
+        if mean < _cfg("R021", "min_interval_seconds", 30) or mean > _cfg("R021", "max_interval_seconds", 3600):
             continue
         # Perfectly periodic (std==0) is the MOST suspicious pattern, not a
         # reason to skip — that was a bug. Only reject if cadence is irregular.
         cv = (std / mean) if mean > 0 else 0.0
-        if cv > 0.30:
+        if cv > _cfg("R021", "max_cv", 0.30):
             continue
         ts = _safe_min_ts(grp)
         if ts is None:
@@ -1140,7 +1190,7 @@ def rule_r023_ransomware(df: pd.DataFrame) -> List[Alert]:
     if not ext_hits.empty:
         by_src = ext_hits.groupby(ext_hits["source_ip"].fillna("local"))
         for src, grp in by_src:
-            if len(grp) < 30:
+            if len(grp) < _cfg("R023", "min_ransom_files", 30):
                 continue
             ts = _safe_min_ts(grp)
             if ts is None:
@@ -1184,9 +1234,8 @@ def rule_r023_ransomware(df: pd.DataFrame) -> List[Alert]:
 # ---------------------------------------------------------------------------
 def rule_r024_sql_injection(df: pd.DataFrame) -> List[Alert]:
     alerts: List[Alert] = []
-    hits = _raw_contains(df, [
+    hits = _raw_contains(df, _raw_patterns("R024") or [
         "' or '1'='1", "' or 1=1--", "union select", "union all select",
-        # URL-encoded variants (+ = space, %20 = space)
         "'+or+", "1=1--", "union+select", "union%20select",
         "sleep(", "benchmark(", "information_schema.tables",
         "xp_cmdshell", "convert(int,", "load_file(",
@@ -1222,7 +1271,7 @@ def rule_r024_sql_injection(df: pd.DataFrame) -> List[Alert]:
 # ---------------------------------------------------------------------------
 def rule_r025_web_shell(df: pd.DataFrame) -> List[Alert]:
     alerts: List[Alert] = []
-    hits = _raw_contains(df, [
+    hits = _raw_contains(df, _raw_patterns("R025") or [
         "cmd.aspx", "cmd.jsp", "shell.php", "webshell.php",
         "c99.php", "r57.php", "/wp-admin/shell", "?cmd=",
         "user-agent: sqlmap", "user-agent: nikto", "user-agent: nmap",
@@ -1749,7 +1798,7 @@ def rule_r033_kerberoast(df: pd.DataFrame) -> List[Alert]:
     if tgt_col is None:
         return alerts
     for target, grp in weak.groupby(weak[tgt_col].astype(str)):
-        if len(grp) < 5:
+        if len(grp) < _cfg("R033", "min_tgs_requests", 5):
             continue
         ts = _safe_min_ts(grp)
         if ts is None:
@@ -2023,7 +2072,7 @@ def rule_r039_s3_volume(df: pd.DataFrame) -> List[Alert]:
         actor = s3.get("user", pd.Series("", index=s3.index))
     s3["_actor"] = actor.fillna("unknown")
     for principal, grp in s3.groupby("_actor"):
-        if len(grp) < 100:
+        if len(grp) < _cfg("R039", "min_api_calls", 100):
             continue
         ts = _safe_min_ts(grp)
         if ts is None:
@@ -2066,7 +2115,7 @@ def rule_r040_sharepoint_exfil(df: pd.DataFrame) -> List[Alert]:
         return alerts
     user_col = "userid" if "userid" in dl.columns else "user"
     for u, grp in dl.groupby(dl[user_col].astype(str)):
-        if len(grp) < 25:
+        if len(grp) < _cfg("R040", "min_downloads", 25):
             continue
         ts = _safe_min_ts(grp)
         if ts is None:
@@ -2163,10 +2212,10 @@ def rule_r042_aws_recon(df: pd.DataFrame) -> List[Alert]:
         actor = recon.get("user", pd.Series("", index=recon.index))
     recon["_actor"] = actor.fillna("unknown")
     for principal, grp in recon.groupby("_actor"):
-        if len(grp) < 15:
+        if len(grp) < _cfg("R042", "min_api_calls", 15):
             continue
         unique_calls = grp[en_col].nunique()
-        if unique_calls < 5:
+        if unique_calls < _cfg("R042", "min_distinct_verbs", 5):
             continue
         ts = _safe_min_ts(grp)
         if ts is None:

@@ -1,0 +1,2934 @@
+{
+  "generated_at": "2026-05-26T09:11:40.587444+00:00",
+  "corpus_summary": {
+    "total_records": 68655,
+    "attack_records": 24831,
+    "benign_records": 43824,
+    "rules_with_samples": 33,
+    "uncovered_attack_records": 0,
+    "tactic_distribution": {
+      "Credential Access": 2070,
+      "Initial Access": 2070,
+      "Privilege Escalation": 2070,
+      "Command and Control": 2069,
+      "Persistence": 2069,
+      "Exfiltration": 2069,
+      "Execution": 2069,
+      "Discovery": 2069,
+      "Lateral Movement": 2069,
+      "Defense Evasion": 2069,
+      "Collection": 2069,
+      "Impact": 2069
+    }
+  },
+  "rule_insights": {
+    "R001": {
+      "rule_id": "R001",
+      "attack_samples": 11624,
+      "top_tactics": {
+        "Initial Access": 969,
+        "Privilege Escalation": 969,
+        "Command and Control": 969
+      },
+      "top_discriminative_patterns": [
+        {
+          "pattern": "sshd failed",
+          "attack_count": 11624,
+          "lift": 49677.86
+        },
+        {
+          "pattern": "failed password",
+          "attack_count": 11624,
+          "lift": 49677.86
+        },
+        {
+          "pattern": "password ubuntu",
+          "attack_count": 722,
+          "lift": 1028.54
+        },
+        {
+          "pattern": "ubuntu port",
+          "attack_count": 722,
+          "lift": 1028.54
+        },
+        {
+          "pattern": "password root",
+          "attack_count": 399,
+          "lift": 852.61
+        },
+        {
+          "pattern": "root port",
+          "attack_count": 399,
+          "lift": 852.61
+        },
+        {
+          "pattern": "password ec2-user",
+          "attack_count": 187,
+          "lift": 799.19
+        },
+        {
+          "pattern": "ec2-user port",
+          "attack_count": 187,
+          "lift": 799.19
+        },
+        {
+          "pattern": "password admin",
+          "attack_count": 267,
+          "lift": 570.54
+        },
+        {
+          "pattern": "admin port",
+          "attack_count": 267,
+          "lift": 570.54
+        },
+        {
+          "pattern": "password jordantami",
+          "attack_count": 724,
+          "lift": 56.26
+        },
+        {
+          "pattern": "jordantami port",
+          "attack_count": 724,
+          "lift": 56.26
+        },
+        {
+          "pattern": "password wardbrittany",
+          "attack_count": 522,
+          "lift": 53.12
+        },
+        {
+          "pattern": "wardbrittany port",
+          "attack_count": 522,
+          "lift": 53.12
+        },
+        {
+          "pattern": "password deborahmontgomery",
+          "attack_count": 550,
+          "lift": 51.1
+        }
+      ],
+      "threshold_optimisation": {
+        "threshold": 3,
+        "f1": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "current_threshold": 3,
+        "param": "min_failures"
+      }
+    },
+    "R002": {
+      "rule_id": "R002",
+      "attack_samples": 1041,
+      "top_tactics": {
+        "Credential Access": 1041
+      },
+      "top_discriminative_patterns": [
+        {
+          "pattern": "sshd failed",
+          "attack_count": 495,
+          "lift": 14057.47
+        },
+        {
+          "pattern": "failed password",
+          "attack_count": 495,
+          "lift": 14057.47
+        },
+        {
+          "pattern": "failed logon",
+          "attack_count": 166,
+          "lift": 4714.22
+        },
+        {
+          "pattern": "apr get",
+          "attack_count": 123,
+          "lift": 3493.07
+        },
+        {
+          "pattern": "cef microsoft",
+          "attack_count": 122,
+          "lift": 3464.67
+        },
+        {
+          "pattern": "microsoft windows",
+          "attack_count": 122,
+          "lift": 3464.67
+        },
+        {
+          "pattern": "windows security",
+          "attack_count": 122,
+          "lift": 3464.67
+        },
+        {
+          "pattern": "src dhost",
+          "attack_count": 122,
+          "lift": 3464.67
+        },
+        {
+          "pattern": "cs1label process",
+          "attack_count": 122,
+          "lift": 3464.67
+        },
+        {
+          "pattern": "process cs1",
+          "attack_count": 122,
+          "lift": 3464.67
+        },
+        {
+          "pattern": "security failed",
+          "attack_count": 83,
+          "lift": 2357.11
+        },
+        {
+          "pattern": "logon start",
+          "attack_count": 83,
+          "lift": 2357.11
+        },
+        {
+          "pattern": "cs1 msg",
+          "attack_count": 83,
+          "lift": 2357.11
+        },
+        {
+          "pattern": "msg failed",
+          "attack_count": 83,
+          "lift": 2357.11
+        },
+        {
+          "pattern": "user account",
+          "attack_count": 74,
+          "lift": 2101.52
+        }
+      ],
+      "threshold_optimisation": {
+        "threshold": 5,
+        "f1": 0.1245,
+        "precision": 0.1025,
+        "recall": 0.1585,
+        "current_threshold": 10,
+        "param": "min_distinct_ports"
+      }
+    },
+    "R003": {
+      "rule_id": "R003",
+      "attack_samples": 1029,
+      "top_tactics": {
+        "Credential Access": 1029
+      },
+      "top_discriminative_patterns": [
+        {
+          "pattern": "sshd failed",
+          "attack_count": 473,
+          "lift": 13168.15
+        },
+        {
+          "pattern": "failed password",
+          "attack_count": 473,
+          "lift": 13168.15
+        },
+        {
+          "pattern": "failed logon",
+          "attack_count": 144,
+          "lift": 4008.91
+        },
+        {
+          "pattern": "apr get",
+          "attack_count": 124,
+          "lift": 3452.12
+        },
+        {
+          "pattern": "cef microsoft",
+          "attack_count": 104,
+          "lift": 2895.32
+        },
+        {
+          "pattern": "microsoft windows",
+          "attack_count": 104,
+          "lift": 2895.32
+        },
+        {
+          "pattern": "windows security",
+          "attack_count": 104,
+          "lift": 2895.32
+        },
+        {
+          "pattern": "src dhost",
+          "attack_count": 104,
+          "lift": 2895.32
+        },
+        {
+          "pattern": "cs1label process",
+          "attack_count": 104,
+          "lift": 2895.32
+        },
+        {
+          "pattern": "process cs1",
+          "attack_count": 104,
+          "lift": 2895.32
+        },
+        {
+          "pattern": "mitre_technique t1048",
+          "attack_count": 89,
+          "lift": 2477.73
+        },
+        {
+          "pattern": "security failed",
+          "attack_count": 72,
+          "lift": 2004.45
+        },
+        {
+          "pattern": "logon start",
+          "attack_count": 72,
+          "lift": 2004.45
+        },
+        {
+          "pattern": "cs1 msg",
+          "attack_count": 72,
+          "lift": 2004.45
+        },
+        {
+          "pattern": "msg failed",
+          "attack_count": 72,
+          "lift": 2004.45
+        }
+      ],
+      "threshold_optimisation": null
+    },
+    "R004": {
+      "rule_id": "R004",
+      "attack_samples": 1089,
+      "top_tactics": {
+        "Defense Evasion": 1089
+      },
+      "top_discriminative_patterns": [
+        {
+          "pattern": "sshd failed",
+          "attack_count": 511,
+          "lift": 13702.78
+        },
+        {
+          "pattern": "failed password",
+          "attack_count": 511,
+          "lift": 13702.78
+        },
+        {
+          "pattern": "failed logon",
+          "attack_count": 172,
+          "lift": 4612.29
+        },
+        {
+          "pattern": "apr get",
+          "attack_count": 129,
+          "lift": 3459.22
+        },
+        {
+          "pattern": "cef microsoft",
+          "attack_count": 115,
+          "lift": 3083.8
+        },
+        {
+          "pattern": "microsoft windows",
+          "attack_count": 115,
+          "lift": 3083.8
+        },
+        {
+          "pattern": "windows security",
+          "attack_count": 115,
+          "lift": 3083.8
+        },
+        {
+          "pattern": "src dhost",
+          "attack_count": 115,
+          "lift": 3083.8
+        },
+        {
+          "pattern": "cs1label process",
+          "attack_count": 115,
+          "lift": 3083.8
+        },
+        {
+          "pattern": "process cs1",
+          "attack_count": 115,
+          "lift": 3083.8
+        },
+        {
+          "pattern": "security failed",
+          "attack_count": 86,
+          "lift": 2306.14
+        },
+        {
+          "pattern": "logon start",
+          "attack_count": 86,
+          "lift": 2306.14
+        },
+        {
+          "pattern": "cs1 msg",
+          "attack_count": 86,
+          "lift": 2306.14
+        },
+        {
+          "pattern": "msg failed",
+          "attack_count": 86,
+          "lift": 2306.14
+        },
+        {
+          "pattern": "mitre_technique t1048",
+          "attack_count": 77,
+          "lift": 2064.8
+        }
+      ],
+      "threshold_optimisation": null
+    },
+    "R005": {
+      "rule_id": "R005",
+      "attack_samples": 2712,
+      "top_tactics": {
+        "Defense Evasion": 226,
+        "Collection": 226,
+        "Impact": 226
+      },
+      "top_discriminative_patterns": [
+        {
+          "pattern": "failed logon",
+          "attack_count": 3666,
+          "lift": 24719.96
+        },
+        {
+          "pattern": "cef microsoft",
+          "attack_count": 2712,
+          "lift": 18287.11
+        },
+        {
+          "pattern": "microsoft windows",
+          "attack_count": 2712,
+          "lift": 18287.11
+        },
+        {
+          "pattern": "windows security",
+          "attack_count": 2712,
+          "lift": 18287.11
+        },
+        {
+          "pattern": "src dhost",
+          "attack_count": 2712,
+          "lift": 18287.11
+        },
+        {
+          "pattern": "cs1label process",
+          "attack_count": 2712,
+          "lift": 18287.11
+        },
+        {
+          "pattern": "process cs1",
+          "attack_count": 2712,
+          "lift": 18287.11
+        },
+        {
+          "pattern": "security failed",
+          "attack_count": 1833,
+          "lift": 12359.98
+        },
+        {
+          "pattern": "logon start",
+          "attack_count": 1833,
+          "lift": 12359.98
+        },
+        {
+          "pattern": "cs1 msg",
+          "attack_count": 1833,
+          "lift": 12359.98
+        },
+        {
+          "pattern": "msg failed",
+          "attack_count": 1833,
+          "lift": 12359.98
+        },
+        {
+          "pattern": "user account",
+          "attack_count": 1640,
+          "lift": 11058.58
+        },
+        {
+          "pattern": "account created",
+          "attack_count": 1640,
+          "lift": 11058.58
+        },
+        {
+          "pattern": "security user",
+          "attack_count": 820,
+          "lift": 5529.29
+        },
+        {
+          "pattern": "created start",
+          "attack_count": 820,
+          "lift": 5529.29
+        }
+      ],
+      "threshold_optimisation": null
+    },
+    "R006": {
+      "rule_id": "R006",
+      "attack_samples": 705,
+      "top_tactics": {
+        "Privilege Escalation": 705
+      },
+      "top_discriminative_patterns": [
+        {
+          "pattern": "sshd failed",
+          "attack_count": 333,
+          "lift": 13644.29
+        },
+        {
+          "pattern": "failed password",
+          "attack_count": 333,
+          "lift": 13644.29
+        },
+        {
+          "pattern": "failed logon",
+          "attack_count": 128,
+          "lift": 5244.65
+        },
+        {
+          "pattern": "cef microsoft",
+          "attack_count": 89,
+          "lift": 3646.67
+        },
+        {
+          "pattern": "microsoft windows",
+          "attack_count": 89,
+          "lift": 3646.67
+        },
+        {
+          "pattern": "windows security",
+          "attack_count": 89,
+          "lift": 3646.67
+        },
+        {
+          "pattern": "src dhost",
+          "attack_count": 89,
+          "lift": 3646.67
+        },
+        {
+          "pattern": "cs1label process",
+          "attack_count": 89,
+          "lift": 3646.67
+        },
+        {
+          "pattern": "process cs1",
+          "attack_count": 89,
+          "lift": 3646.67
+        },
+        {
+          "pattern": "apr get",
+          "attack_count": 83,
+          "lift": 3400.83
+        },
+        {
+          "pattern": "security failed",
+          "attack_count": 64,
+          "lift": 2622.33
+        },
+        {
+          "pattern": "logon start",
+          "attack_count": 64,
+          "lift": 2622.33
+        },
+        {
+          "pattern": "cs1 msg",
+          "attack_count": 64,
+          "lift": 2622.33
+        },
+        {
+          "pattern": "msg failed",
+          "attack_count": 64,
+          "lift": 2622.33
+        },
+        {
+          "pattern": "user account",
+          "attack_count": 46,
+          "lift": 1884.8
+        }
+      ],
+      "threshold_optimisation": null
+    },
+    "R007": {
+      "rule_id": "R007",
+      "attack_samples": 699,
+      "top_tactics": {
+        "Privilege Escalation": 699
+      },
+      "top_discriminative_patterns": [
+        {
+          "pattern": "sshd failed",
+          "attack_count": 332,
+          "lift": 14244.46
+        },
+        {
+          "pattern": "failed password",
+          "attack_count": 332,
+          "lift": 14244.46
+        },
+        {
+          "pattern": "apr get",
+          "attack_count": 97,
+          "lift": 4161.78
+        },
+        {
+          "pattern": "failed logon",
+          "attack_count": 86,
+          "lift": 3689.83
+        },
+        {
+          "pattern": "cef microsoft",
+          "attack_count": 69,
+          "lift": 2960.44
+        },
+        {
+          "pattern": "microsoft windows",
+          "attack_count": 69,
+          "lift": 2960.44
+        },
+        {
+          "pattern": "windows security",
+          "attack_count": 69,
+          "lift": 2960.44
+        },
+        {
+          "pattern": "src dhost",
+          "attack_count": 69,
+          "lift": 2960.44
+        },
+        {
+          "pattern": "cs1label process",
+          "attack_count": 69,
+          "lift": 2960.44
+        },
+        {
+          "pattern": "process cs1",
+          "attack_count": 69,
+          "lift": 2960.44
+        },
+        {
+          "pattern": "mitre_technique t1048",
+          "attack_count": 49,
+          "lift": 2102.34
+        },
+        {
+          "pattern": "get etc",
+          "attack_count": 46,
+          "lift": 1973.63
+        },
+        {
+          "pattern": "user account",
+          "attack_count": 44,
+          "lift": 1887.82
+        },
+        {
+          "pattern": "account created",
+          "attack_count": 44,
+          "lift": 1887.82
+        },
+        {
+          "pattern": "security failed",
+          "attack_count": 43,
+          "lift": 1844.91
+        }
+      ],
+      "threshold_optimisation": null
+    },
+    "R008": {
+      "rule_id": "R008",
+      "attack_samples": 666,
+      "top_tactics": {
+        "Privilege Escalation": 666
+      },
+      "top_discriminative_patterns": [
+        {
+          "pattern": "sshd failed",
+          "attack_count": 304,
+          "lift": 12977.47
+        },
+        {
+          "pattern": "failed password",
+          "attack_count": 304,
+          "lift": 12977.47
+        },
+        {
+          "pattern": "failed logon",
+          "attack_count": 100,
+          "lift": 4268.9
+        },
+        {
+          "pattern": "cef microsoft",
+          "attack_count": 68,
+          "lift": 2902.86
+        },
+        {
+          "pattern": "microsoft windows",
+          "attack_count": 68,
+          "lift": 2902.86
+        },
+        {
+          "pattern": "windows security",
+          "attack_count": 68,
+          "lift": 2902.86
+        },
+        {
+          "pattern": "src dhost",
+          "attack_count": 68,
+          "lift": 2902.86
+        },
+        {
+          "pattern": "cs1label process",
+          "attack_count": 68,
+          "lift": 2902.86
+        },
+        {
+          "pattern": "process cs1",
+          "attack_count": 68,
+          "lift": 2902.86
+        },
+        {
+          "pattern": "apr get",
+          "attack_count": 66,
+          "lift": 2817.48
+        },
+        {
+          "pattern": "mitre_technique t1048",
+          "attack_count": 57,
+          "lift": 2433.28
+        },
+        {
+          "pattern": "security failed",
+          "attack_count": 50,
+          "lift": 2134.45
+        },
+        {
+          "pattern": "logon start",
+          "attack_count": 50,
+          "lift": 2134.45
+        },
+        {
+          "pattern": "cs1 msg",
+          "attack_count": 50,
+          "lift": 2134.45
+        },
+        {
+          "pattern": "msg failed",
+          "attack_count": 50,
+          "lift": 2134.45
+        }
+      ],
+      "threshold_optimisation": {
+        "threshold": 20,
+        "f1": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "current_threshold": 20,
+        "param": "min_404s"
+      }
+    },
+    "R010": {
+      "rule_id": "R010",
+      "attack_samples": 3534,
+      "top_tactics": {
+        "Defense Evasion": 295,
+        "Collection": 295,
+        "Impact": 295
+      },
+      "top_discriminative_patterns": [
+        {
+          "pattern": "apr get",
+          "attack_count": 2925,
+          "lift": 31502.54
+        },
+        {
+          "pattern": "get etc",
+          "attack_count": 1186,
+          "lift": 12773.34
+        },
+        {
+          "pattern": "comment text",
+          "attack_count": 1169,
+          "lift": 12590.25
+        },
+        {
+          "pattern": "etc passwd",
+          "attack_count": 905,
+          "lift": 9746.94
+        },
+        {
+          "pattern": "mozilla windows",
+          "attack_count": 899,
+          "lift": 9682.32
+        },
+        {
+          "pattern": "windows win64",
+          "attack_count": 899,
+          "lift": 9682.32
+        },
+        {
+          "pattern": "win64 x64",
+          "attack_count": 899,
+          "lift": 9682.32
+        },
+        {
+          "pattern": "x64 applewebkit",
+          "attack_count": 899,
+          "lift": 9682.32
+        },
+        {
+          "pattern": "applewebkit chrome",
+          "attack_count": 899,
+          "lift": 9682.32
+        },
+        {
+          "pattern": "mozilla macintosh",
+          "attack_count": 892,
+          "lift": 9606.93
+        },
+        {
+          "pattern": "macintosh intel",
+          "attack_count": 892,
+          "lift": 9606.93
+        },
+        {
+          "pattern": "intel mac",
+          "attack_count": 892,
+          "lift": 9606.93
+        },
+        {
+          "pattern": "mac safari",
+          "attack_count": 892,
+          "lift": 9606.93
+        },
+        {
+          "pattern": "mozilla x11",
+          "attack_count": 862,
+          "lift": 9283.83
+        },
+        {
+          "pattern": "x11 linux",
+          "attack_count": 862,
+          "lift": 9283.83
+        }
+      ],
+      "threshold_optimisation": null
+    },
+    "R011": {
+      "rule_id": "R011",
+      "attack_samples": 1046,
+      "top_tactics": {
+        "Initial Access": 1046
+      },
+      "top_discriminative_patterns": [
+        {
+          "pattern": "sshd failed",
+          "attack_count": 475,
+          "lift": 13102.16
+        },
+        {
+          "pattern": "failed password",
+          "attack_count": 475,
+          "lift": 13102.16
+        },
+        {
+          "pattern": "failed logon",
+          "attack_count": 162,
+          "lift": 4468.52
+        },
+        {
+          "pattern": "apr get",
+          "attack_count": 130,
+          "lift": 3585.85
+        },
+        {
+          "pattern": "cef microsoft",
+          "attack_count": 123,
+          "lift": 3392.77
+        },
+        {
+          "pattern": "microsoft windows",
+          "attack_count": 123,
+          "lift": 3392.77
+        },
+        {
+          "pattern": "windows security",
+          "attack_count": 123,
+          "lift": 3392.77
+        },
+        {
+          "pattern": "src dhost",
+          "attack_count": 123,
+          "lift": 3392.77
+        },
+        {
+          "pattern": "cs1label process",
+          "attack_count": 123,
+          "lift": 3392.77
+        },
+        {
+          "pattern": "process cs1",
+          "attack_count": 123,
+          "lift": 3392.77
+        },
+        {
+          "pattern": "security failed",
+          "attack_count": 81,
+          "lift": 2234.26
+        },
+        {
+          "pattern": "logon start",
+          "attack_count": 81,
+          "lift": 2234.26
+        },
+        {
+          "pattern": "cs1 msg",
+          "attack_count": 81,
+          "lift": 2234.26
+        },
+        {
+          "pattern": "msg failed",
+          "attack_count": 81,
+          "lift": 2234.26
+        },
+        {
+          "pattern": "mitre_technique t1048",
+          "attack_count": 79,
+          "lift": 2179.1
+        }
+      ],
+      "threshold_optimisation": null
+    },
+    "R012": {
+      "rule_id": "R012",
+      "attack_samples": 1024,
+      "top_tactics": {
+        "Initial Access": 1024
+      },
+      "top_discriminative_patterns": [
+        {
+          "pattern": "sshd failed",
+          "attack_count": 494,
+          "lift": 14160.91
+        },
+        {
+          "pattern": "failed password",
+          "attack_count": 494,
+          "lift": 14160.91
+        },
+        {
+          "pattern": "failed logon",
+          "attack_count": 136,
+          "lift": 3898.55
+        },
+        {
+          "pattern": "apr get",
+          "attack_count": 113,
+          "lift": 3239.24
+        },
+        {
+          "pattern": "cef microsoft",
+          "attack_count": 103,
+          "lift": 2952.58
+        },
+        {
+          "pattern": "microsoft windows",
+          "attack_count": 103,
+          "lift": 2952.58
+        },
+        {
+          "pattern": "windows security",
+          "attack_count": 103,
+          "lift": 2952.58
+        },
+        {
+          "pattern": "src dhost",
+          "attack_count": 103,
+          "lift": 2952.58
+        },
+        {
+          "pattern": "cs1label process",
+          "attack_count": 103,
+          "lift": 2952.58
+        },
+        {
+          "pattern": "process cs1",
+          "attack_count": 103,
+          "lift": 2952.58
+        },
+        {
+          "pattern": "mitre_technique t1048",
+          "attack_count": 71,
+          "lift": 2035.27
+        },
+        {
+          "pattern": "security failed",
+          "attack_count": 68,
+          "lift": 1949.28
+        },
+        {
+          "pattern": "logon start",
+          "attack_count": 68,
+          "lift": 1949.28
+        },
+        {
+          "pattern": "cs1 msg",
+          "attack_count": 68,
+          "lift": 1949.28
+        },
+        {
+          "pattern": "msg failed",
+          "attack_count": 68,
+          "lift": 1949.28
+        }
+      ],
+      "threshold_optimisation": null
+    },
+    "R013": {
+      "rule_id": "R013",
+      "attack_samples": 1064,
+      "top_tactics": {
+        "Execution": 1064
+      },
+      "top_discriminative_patterns": [
+        {
+          "pattern": "sshd failed",
+          "attack_count": 492,
+          "lift": 13377.95
+        },
+        {
+          "pattern": "failed password",
+          "attack_count": 492,
+          "lift": 13377.95
+        },
+        {
+          "pattern": "failed logon",
+          "attack_count": 166,
+          "lift": 4513.7
+        },
+        {
+          "pattern": "apr get",
+          "attack_count": 144,
+          "lift": 3915.5
+        },
+        {
+          "pattern": "cef microsoft",
+          "attack_count": 116,
+          "lift": 3154.15
+        },
+        {
+          "pattern": "microsoft windows",
+          "attack_count": 116,
+          "lift": 3154.15
+        },
+        {
+          "pattern": "windows security",
+          "attack_count": 116,
+          "lift": 3154.15
+        },
+        {
+          "pattern": "src dhost",
+          "attack_count": 116,
+          "lift": 3154.15
+        },
+        {
+          "pattern": "cs1label process",
+          "attack_count": 116,
+          "lift": 3154.15
+        },
+        {
+          "pattern": "process cs1",
+          "attack_count": 116,
+          "lift": 3154.15
+        },
+        {
+          "pattern": "mitre_technique t1048",
+          "attack_count": 83,
+          "lift": 2256.85
+        },
+        {
+          "pattern": "security failed",
+          "attack_count": 83,
+          "lift": 2256.85
+        },
+        {
+          "pattern": "logon start",
+          "attack_count": 83,
+          "lift": 2256.85
+        },
+        {
+          "pattern": "cs1 msg",
+          "attack_count": 83,
+          "lift": 2256.85
+        },
+        {
+          "pattern": "msg failed",
+          "attack_count": 83,
+          "lift": 2256.85
+        }
+      ],
+      "threshold_optimisation": null
+    },
+    "R014": {
+      "rule_id": "R014",
+      "attack_samples": 1005,
+      "top_tactics": {
+        "Execution": 1005
+      },
+      "top_discriminative_patterns": [
+        {
+          "pattern": "sshd failed",
+          "attack_count": 477,
+          "lift": 13893.49
+        },
+        {
+          "pattern": "failed password",
+          "attack_count": 477,
+          "lift": 13893.49
+        },
+        {
+          "pattern": "failed logon",
+          "attack_count": 132,
+          "lift": 3844.74
+        },
+        {
+          "pattern": "apr get",
+          "attack_count": 114,
+          "lift": 3320.46
+        },
+        {
+          "pattern": "cef microsoft",
+          "attack_count": 110,
+          "lift": 3203.95
+        },
+        {
+          "pattern": "microsoft windows",
+          "attack_count": 110,
+          "lift": 3203.95
+        },
+        {
+          "pattern": "windows security",
+          "attack_count": 110,
+          "lift": 3203.95
+        },
+        {
+          "pattern": "src dhost",
+          "attack_count": 110,
+          "lift": 3203.95
+        },
+        {
+          "pattern": "cs1label process",
+          "attack_count": 110,
+          "lift": 3203.95
+        },
+        {
+          "pattern": "process cs1",
+          "attack_count": 110,
+          "lift": 3203.95
+        },
+        {
+          "pattern": "user account",
+          "attack_count": 84,
+          "lift": 2446.65
+        },
+        {
+          "pattern": "account created",
+          "attack_count": 84,
+          "lift": 2446.65
+        },
+        {
+          "pattern": "mitre_technique t1048",
+          "attack_count": 67,
+          "lift": 1951.5
+        },
+        {
+          "pattern": "security failed",
+          "attack_count": 66,
+          "lift": 1922.37
+        },
+        {
+          "pattern": "logon start",
+          "attack_count": 66,
+          "lift": 1922.37
+        }
+      ],
+      "threshold_optimisation": null
+    },
+    "R015": {
+      "rule_id": "R015",
+      "attack_samples": 3514,
+      "top_tactics": {
+        "Command and Control": 293,
+        "Persistence": 293,
+        "Exfiltration": 293
+      },
+      "top_discriminative_patterns": [
+        {
+          "pattern": "attack_type c2_communication",
+          "attack_count": 1019,
+          "lift": 6302.51
+        },
+        {
+          "pattern": "action deny",
+          "attack_count": 871,
+          "lift": 5387.13
+        },
+        {
+          "pattern": "deny bytes_sent",
+          "attack_count": 871,
+          "lift": 5387.13
+        },
+        {
+          "pattern": "attack_type inbound_probe",
+          "attack_count": 871,
+          "lift": 5387.13
+        },
+        {
+          "pattern": "attack_type port_scan",
+          "attack_count": 827,
+          "lift": 5114.99
+        },
+        {
+          "pattern": "attack_type data_exfiltration",
+          "attack_count": 797,
+          "lift": 20.71
+        },
+        {
+          "pattern": "label malicious",
+          "attack_count": 3514,
+          "lift": 16.63
+        },
+        {
+          "pattern": "malicious attack_type",
+          "attack_count": 3514,
+          "lift": 16.63
+        },
+        {
+          "pattern": "t22 src_ip",
+          "attack_count": 164,
+          "lift": 3.86
+        },
+        {
+          "pattern": "t16 src_ip",
+          "attack_count": 158,
+          "lift": 3.83
+        },
+        {
+          "pattern": "t00 src_ip",
+          "attack_count": 156,
+          "lift": 3.73
+        },
+        {
+          "pattern": "t04 src_ip",
+          "attack_count": 161,
+          "lift": 3.7
+        },
+        {
+          "pattern": "t10 src_ip",
+          "attack_count": 174,
+          "lift": 3.69
+        },
+        {
+          "pattern": "t01 src_ip",
+          "attack_count": 156,
+          "lift": 3.65
+        },
+        {
+          "pattern": "t03 src_ip",
+          "attack_count": 156,
+          "lift": 3.65
+        }
+      ],
+      "threshold_optimisation": null
+    },
+    "R016": {
+      "rule_id": "R016",
+      "attack_samples": 669,
+      "top_tactics": {
+        "Command and Control": 669
+      },
+      "top_discriminative_patterns": [
+        {
+          "pattern": "sshd failed",
+          "attack_count": 304,
+          "lift": 13242.45
+        },
+        {
+          "pattern": "failed password",
+          "attack_count": 304,
+          "lift": 13242.45
+        },
+        {
+          "pattern": "failed logon",
+          "attack_count": 118,
+          "lift": 5140.16
+        },
+        {
+          "pattern": "cef microsoft",
+          "attack_count": 87,
+          "lift": 3789.78
+        },
+        {
+          "pattern": "microsoft windows",
+          "attack_count": 87,
+          "lift": 3789.78
+        },
+        {
+          "pattern": "windows security",
+          "attack_count": 87,
+          "lift": 3789.78
+        },
+        {
+          "pattern": "src dhost",
+          "attack_count": 87,
+          "lift": 3789.78
+        },
+        {
+          "pattern": "cs1label process",
+          "attack_count": 87,
+          "lift": 3789.78
+        },
+        {
+          "pattern": "process cs1",
+          "attack_count": 87,
+          "lift": 3789.78
+        },
+        {
+          "pattern": "apr get",
+          "attack_count": 82,
+          "lift": 3571.98
+        },
+        {
+          "pattern": "security failed",
+          "attack_count": 59,
+          "lift": 2570.08
+        },
+        {
+          "pattern": "logon start",
+          "attack_count": 59,
+          "lift": 2570.08
+        },
+        {
+          "pattern": "cs1 msg",
+          "attack_count": 59,
+          "lift": 2570.08
+        },
+        {
+          "pattern": "msg failed",
+          "attack_count": 59,
+          "lift": 2570.08
+        },
+        {
+          "pattern": "user account",
+          "attack_count": 54,
+          "lift": 2352.28
+        }
+      ],
+      "threshold_optimisation": null
+    },
+    "R017": {
+      "rule_id": "R017",
+      "attack_samples": 698,
+      "top_tactics": {
+        "Command and Control": 698
+      },
+      "top_discriminative_patterns": [
+        {
+          "pattern": "sshd failed",
+          "attack_count": 337,
+          "lift": 14163.65
+        },
+        {
+          "pattern": "failed password",
+          "attack_count": 337,
+          "lift": 14163.65
+        },
+        {
+          "pattern": "apr get",
+          "attack_count": 85,
+          "lift": 3572.43
+        },
+        {
+          "pattern": "failed logon",
+          "attack_count": 82,
+          "lift": 3446.35
+        },
+        {
+          "pattern": "cef microsoft",
+          "attack_count": 73,
+          "lift": 3068.09
+        },
+        {
+          "pattern": "microsoft windows",
+          "attack_count": 73,
+          "lift": 3068.09
+        },
+        {
+          "pattern": "windows security",
+          "attack_count": 73,
+          "lift": 3068.09
+        },
+        {
+          "pattern": "src dhost",
+          "attack_count": 73,
+          "lift": 3068.09
+        },
+        {
+          "pattern": "cs1label process",
+          "attack_count": 73,
+          "lift": 3068.09
+        },
+        {
+          "pattern": "process cs1",
+          "attack_count": 73,
+          "lift": 3068.09
+        },
+        {
+          "pattern": "user account",
+          "attack_count": 60,
+          "lift": 2521.72
+        },
+        {
+          "pattern": "account created",
+          "attack_count": 60,
+          "lift": 2521.72
+        },
+        {
+          "pattern": "mitre_technique t1048",
+          "attack_count": 51,
+          "lift": 2143.46
+        },
+        {
+          "pattern": "security failed",
+          "attack_count": 41,
+          "lift": 1723.17
+        },
+        {
+          "pattern": "logon start",
+          "attack_count": 41,
+          "lift": 1723.17
+        }
+      ],
+      "threshold_optimisation": null
+    },
+    "R018": {
+      "rule_id": "R018",
+      "attack_samples": 702,
+      "top_tactics": {
+        "Command and Control": 702
+      },
+      "top_discriminative_patterns": [
+        {
+          "pattern": "sshd failed",
+          "attack_count": 328,
+          "lift": 13429.93
+        },
+        {
+          "pattern": "failed password",
+          "attack_count": 328,
+          "lift": 13429.93
+        },
+        {
+          "pattern": "failed logon",
+          "attack_count": 98,
+          "lift": 4012.6
+        },
+        {
+          "pattern": "apr get",
+          "attack_count": 75,
+          "lift": 3070.87
+        },
+        {
+          "pattern": "mitre_technique t1048",
+          "attack_count": 66,
+          "lift": 2702.36
+        },
+        {
+          "pattern": "cef microsoft",
+          "attack_count": 66,
+          "lift": 2702.36
+        },
+        {
+          "pattern": "microsoft windows",
+          "attack_count": 66,
+          "lift": 2702.36
+        },
+        {
+          "pattern": "windows security",
+          "attack_count": 66,
+          "lift": 2702.36
+        },
+        {
+          "pattern": "src dhost",
+          "attack_count": 66,
+          "lift": 2702.36
+        },
+        {
+          "pattern": "cs1label process",
+          "attack_count": 66,
+          "lift": 2702.36
+        },
+        {
+          "pattern": "process cs1",
+          "attack_count": 66,
+          "lift": 2702.36
+        },
+        {
+          "pattern": "security failed",
+          "attack_count": 49,
+          "lift": 2006.3
+        },
+        {
+          "pattern": "logon start",
+          "attack_count": 49,
+          "lift": 2006.3
+        },
+        {
+          "pattern": "cs1 msg",
+          "attack_count": 49,
+          "lift": 2006.3
+        },
+        {
+          "pattern": "msg failed",
+          "attack_count": 49,
+          "lift": 2006.3
+        }
+      ],
+      "threshold_optimisation": null
+    },
+    "R019": {
+      "rule_id": "R019",
+      "attack_samples": 980,
+      "top_tactics": {
+        "Defense Evasion": 980
+      },
+      "top_discriminative_patterns": [
+        {
+          "pattern": "sshd failed",
+          "attack_count": 457,
+          "lift": 13549.28
+        },
+        {
+          "pattern": "failed password",
+          "attack_count": 457,
+          "lift": 13549.28
+        },
+        {
+          "pattern": "failed logon",
+          "attack_count": 156,
+          "lift": 4625.14
+        },
+        {
+          "pattern": "cef microsoft",
+          "attack_count": 111,
+          "lift": 3290.96
+        },
+        {
+          "pattern": "microsoft windows",
+          "attack_count": 111,
+          "lift": 3290.96
+        },
+        {
+          "pattern": "windows security",
+          "attack_count": 111,
+          "lift": 3290.96
+        },
+        {
+          "pattern": "src dhost",
+          "attack_count": 111,
+          "lift": 3290.96
+        },
+        {
+          "pattern": "cs1label process",
+          "attack_count": 111,
+          "lift": 3290.96
+        },
+        {
+          "pattern": "process cs1",
+          "attack_count": 111,
+          "lift": 3290.96
+        },
+        {
+          "pattern": "apr get",
+          "attack_count": 110,
+          "lift": 3261.31
+        },
+        {
+          "pattern": "security failed",
+          "attack_count": 78,
+          "lift": 2312.57
+        },
+        {
+          "pattern": "logon start",
+          "attack_count": 78,
+          "lift": 2312.57
+        },
+        {
+          "pattern": "cs1 msg",
+          "attack_count": 78,
+          "lift": 2312.57
+        },
+        {
+          "pattern": "msg failed",
+          "attack_count": 78,
+          "lift": 2312.57
+        },
+        {
+          "pattern": "mitre_technique t1048",
+          "attack_count": 73,
+          "lift": 2164.33
+        }
+      ],
+      "threshold_optimisation": null
+    },
+    "R020": {
+      "rule_id": "R020",
+      "attack_samples": 1646,
+      "top_tactics": {
+        "Credential Access": 138,
+        "Initial Access": 138,
+        "Privilege Escalation": 137
+      },
+      "top_discriminative_patterns": [
+        {
+          "pattern": "eventsource sts.amazonaws.com",
+          "attack_count": 922,
+          "lift": 8116.16
+        },
+        {
+          "pattern": "sts.amazonaws.com eventname",
+          "attack_count": 922,
+          "lift": 8116.16
+        },
+        {
+          "pattern": "eventname assumerole",
+          "attack_count": 922,
+          "lift": 8116.16
+        },
+        {
+          "pattern": "assumerole useridentity",
+          "attack_count": 922,
+          "lift": 8116.16
+        },
+        {
+          "pattern": "username root",
+          "attack_count": 611,
+          "lift": 5378.5
+        },
+        {
+          "pattern": "root principalid",
+          "attack_count": 611,
+          "lift": 5378.5
+        },
+        {
+          "pattern": "eventname createaccesskey",
+          "attack_count": 209,
+          "lift": 1839.78
+        },
+        {
+          "pattern": "createaccesskey useridentity",
+          "attack_count": 209,
+          "lift": 1839.78
+        },
+        {
+          "pattern": "mitre_technique t1098.001",
+          "attack_count": 209,
+          "lift": 1839.78
+        },
+        {
+          "pattern": "attack_type persistence",
+          "attack_count": 230,
+          "lift": 9.97
+        },
+        {
+          "pattern": "persistence mitre_technique",
+          "attack_count": 230,
+          "lift": 9.97
+        },
+        {
+          "pattern": "principalid aidayxyc3r8b11larlhf",
+          "attack_count": 1,
+          "lift": 8.8
+        },
+        {
+          "pattern": "aidayxyc3r8b11larlhf sourceipaddress",
+          "attack_count": 1,
+          "lift": 8.8
+        },
+        {
+          "pattern": "principalid aidau20c3392741aykmp",
+          "attack_count": 1,
+          "lift": 8.8
+        },
+        {
+          "pattern": "aidau20c3392741aykmp sourceipaddress",
+          "attack_count": 1,
+          "lift": 8.8
+        }
+      ],
+      "threshold_optimisation": {
+        "threshold": 8,
+        "f1": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "current_threshold": 8,
+        "param": "min_failures"
+      }
+    },
+    "R021": {
+      "rule_id": "R021",
+      "attack_samples": 663,
+      "top_tactics": {
+        "Persistence": 663
+      },
+      "top_discriminative_patterns": [
+        {
+          "pattern": "sshd failed",
+          "attack_count": 320,
+          "lift": 14073.4
+        },
+        {
+          "pattern": "failed password",
+          "attack_count": 320,
+          "lift": 14073.4
+        },
+        {
+          "pattern": "failed logon",
+          "attack_count": 102,
+          "lift": 4485.9
+        },
+        {
+          "pattern": "cef microsoft",
+          "attack_count": 72,
+          "lift": 3166.52
+        },
+        {
+          "pattern": "microsoft windows",
+          "attack_count": 72,
+          "lift": 3166.52
+        },
+        {
+          "pattern": "windows security",
+          "attack_count": 72,
+          "lift": 3166.52
+        },
+        {
+          "pattern": "src dhost",
+          "attack_count": 72,
+          "lift": 3166.52
+        },
+        {
+          "pattern": "cs1label process",
+          "attack_count": 72,
+          "lift": 3166.52
+        },
+        {
+          "pattern": "process cs1",
+          "attack_count": 72,
+          "lift": 3166.52
+        },
+        {
+          "pattern": "apr get",
+          "attack_count": 67,
+          "lift": 2946.62
+        },
+        {
+          "pattern": "security failed",
+          "attack_count": 51,
+          "lift": 2242.95
+        },
+        {
+          "pattern": "logon start",
+          "attack_count": 51,
+          "lift": 2242.95
+        },
+        {
+          "pattern": "cs1 msg",
+          "attack_count": 51,
+          "lift": 2242.95
+        },
+        {
+          "pattern": "msg failed",
+          "attack_count": 51,
+          "lift": 2242.95
+        },
+        {
+          "pattern": "mitre_technique t1048",
+          "attack_count": 47,
+          "lift": 2067.03
+        }
+      ],
+      "threshold_optimisation": null
+    },
+    "R022": {
+      "rule_id": "R022",
+      "attack_samples": 715,
+      "top_tactics": {
+        "Persistence": 715
+      },
+      "top_discriminative_patterns": [
+        {
+          "pattern": "sshd failed",
+          "attack_count": 332,
+          "lift": 13404.31
+        },
+        {
+          "pattern": "failed password",
+          "attack_count": 332,
+          "lift": 13404.31
+        },
+        {
+          "pattern": "failed logon",
+          "attack_count": 122,
+          "lift": 4925.68
+        },
+        {
+          "pattern": "cef microsoft",
+          "attack_count": 85,
+          "lift": 3431.83
+        },
+        {
+          "pattern": "microsoft windows",
+          "attack_count": 85,
+          "lift": 3431.83
+        },
+        {
+          "pattern": "windows security",
+          "attack_count": 85,
+          "lift": 3431.83
+        },
+        {
+          "pattern": "src dhost",
+          "attack_count": 85,
+          "lift": 3431.83
+        },
+        {
+          "pattern": "cs1label process",
+          "attack_count": 85,
+          "lift": 3431.83
+        },
+        {
+          "pattern": "process cs1",
+          "attack_count": 85,
+          "lift": 3431.83
+        },
+        {
+          "pattern": "apr get",
+          "attack_count": 82,
+          "lift": 3310.7
+        },
+        {
+          "pattern": "security failed",
+          "attack_count": 61,
+          "lift": 2462.84
+        },
+        {
+          "pattern": "logon start",
+          "attack_count": 61,
+          "lift": 2462.84
+        },
+        {
+          "pattern": "cs1 msg",
+          "attack_count": 61,
+          "lift": 2462.84
+        },
+        {
+          "pattern": "msg failed",
+          "attack_count": 61,
+          "lift": 2462.84
+        },
+        {
+          "pattern": "mitre_technique t1048",
+          "attack_count": 49,
+          "lift": 1978.35
+        }
+      ],
+      "threshold_optimisation": null
+    },
+    "R023": {
+      "rule_id": "R023",
+      "attack_samples": 691,
+      "top_tactics": {
+        "Persistence": 691
+      },
+      "top_discriminative_patterns": [
+        {
+          "pattern": "sshd failed",
+          "attack_count": 317,
+          "lift": 13265.36
+        },
+        {
+          "pattern": "failed password",
+          "attack_count": 317,
+          "lift": 13265.36
+        },
+        {
+          "pattern": "failed logon",
+          "attack_count": 86,
+          "lift": 3598.81
+        },
+        {
+          "pattern": "apr get",
+          "attack_count": 82,
+          "lift": 3431.42
+        },
+        {
+          "pattern": "cef microsoft",
+          "attack_count": 69,
+          "lift": 2887.41
+        },
+        {
+          "pattern": "microsoft windows",
+          "attack_count": 69,
+          "lift": 2887.41
+        },
+        {
+          "pattern": "windows security",
+          "attack_count": 69,
+          "lift": 2887.41
+        },
+        {
+          "pattern": "src dhost",
+          "attack_count": 69,
+          "lift": 2887.41
+        },
+        {
+          "pattern": "cs1label process",
+          "attack_count": 69,
+          "lift": 2887.41
+        },
+        {
+          "pattern": "process cs1",
+          "attack_count": 69,
+          "lift": 2887.41
+        },
+        {
+          "pattern": "mitre_technique t1048",
+          "attack_count": 54,
+          "lift": 2259.71
+        },
+        {
+          "pattern": "user account",
+          "attack_count": 48,
+          "lift": 2008.64
+        },
+        {
+          "pattern": "account created",
+          "attack_count": 48,
+          "lift": 2008.64
+        },
+        {
+          "pattern": "security failed",
+          "attack_count": 43,
+          "lift": 1799.4
+        },
+        {
+          "pattern": "logon start",
+          "attack_count": 43,
+          "lift": 1799.4
+        }
+      ],
+      "threshold_optimisation": null
+    },
+    "R024": {
+      "rule_id": "R024",
+      "attack_samples": 1053,
+      "top_tactics": {
+        "Collection": 1053
+      },
+      "top_discriminative_patterns": [
+        {
+          "pattern": "sshd failed",
+          "attack_count": 504,
+          "lift": 14160.42
+        },
+        {
+          "pattern": "failed password",
+          "attack_count": 504,
+          "lift": 14160.42
+        },
+        {
+          "pattern": "failed logon",
+          "attack_count": 162,
+          "lift": 4551.56
+        },
+        {
+          "pattern": "apr get",
+          "attack_count": 134,
+          "lift": 3764.87
+        },
+        {
+          "pattern": "cef microsoft",
+          "attack_count": 114,
+          "lift": 3202.95
+        },
+        {
+          "pattern": "microsoft windows",
+          "attack_count": 114,
+          "lift": 3202.95
+        },
+        {
+          "pattern": "windows security",
+          "attack_count": 114,
+          "lift": 3202.95
+        },
+        {
+          "pattern": "src dhost",
+          "attack_count": 114,
+          "lift": 3202.95
+        },
+        {
+          "pattern": "cs1label process",
+          "attack_count": 114,
+          "lift": 3202.95
+        },
+        {
+          "pattern": "process cs1",
+          "attack_count": 114,
+          "lift": 3202.95
+        },
+        {
+          "pattern": "security failed",
+          "attack_count": 81,
+          "lift": 2275.78
+        },
+        {
+          "pattern": "logon start",
+          "attack_count": 81,
+          "lift": 2275.78
+        },
+        {
+          "pattern": "cs1 msg",
+          "attack_count": 81,
+          "lift": 2275.78
+        },
+        {
+          "pattern": "msg failed",
+          "attack_count": 81,
+          "lift": 2275.78
+        },
+        {
+          "pattern": "mitre_technique t1048",
+          "attack_count": 79,
+          "lift": 2219.59
+        }
+      ],
+      "threshold_optimisation": null
+    },
+    "R025": {
+      "rule_id": "R025",
+      "attack_samples": 1801,
+      "top_tactics": {
+        "Privilege Escalation": 151,
+        "Command and Control": 150,
+        "Persistence": 150
+      },
+      "top_discriminative_patterns": [
+        {
+          "pattern": "mitre_technique t1048",
+          "attack_count": 1801,
+          "lift": 17387.25
+        },
+        {
+          "pattern": "severity high",
+          "attack_count": 1109,
+          "lift": 10706.53
+        },
+        {
+          "pattern": "high destination",
+          "attack_count": 1109,
+          "lift": 10706.53
+        },
+        {
+          "pattern": "action mass_download",
+          "attack_count": 692,
+          "lift": 6680.72
+        },
+        {
+          "pattern": "mass_download resource",
+          "attack_count": 692,
+          "lift": 6680.72
+        },
+        {
+          "pattern": "severity critical",
+          "attack_count": 692,
+          "lift": 6680.72
+        },
+        {
+          "pattern": "critical destination",
+          "attack_count": 692,
+          "lift": 6680.72
+        },
+        {
+          "pattern": "action email_external",
+          "attack_count": 598,
+          "lift": 5773.22
+        },
+        {
+          "pattern": "email_external resource",
+          "attack_count": 598,
+          "lift": 5773.22
+        },
+        {
+          "pattern": "action usb_transfer",
+          "attack_count": 511,
+          "lift": 4933.31
+        },
+        {
+          "pattern": "usb_transfer resource",
+          "attack_count": 511,
+          "lift": 4933.31
+        },
+        {
+          "pattern": "destination usb",
+          "attack_count": 511,
+          "lift": 4933.31
+        },
+        {
+          "pattern": "usb label",
+          "attack_count": 511,
+          "lift": 4933.31
+        },
+        {
+          "pattern": "destination yahoo.com",
+          "attack_count": 169,
+          "lift": 1631.56
+        },
+        {
+          "pattern": "yahoo.com label",
+          "attack_count": 169,
+          "lift": 1631.56
+        }
+      ],
+      "threshold_optimisation": null
+    },
+    "R026": {
+      "rule_id": "R026",
+      "attack_samples": 1010,
+      "top_tactics": {
+        "Exfiltration": 1010
+      },
+      "top_discriminative_patterns": [
+        {
+          "pattern": "sshd failed",
+          "attack_count": 471,
+          "lift": 13455.01
+        },
+        {
+          "pattern": "failed password",
+          "attack_count": 471,
+          "lift": 13455.01
+        },
+        {
+          "pattern": "failed logon",
+          "attack_count": 154,
+          "lift": 4399.3
+        },
+        {
+          "pattern": "cef microsoft",
+          "attack_count": 109,
+          "lift": 3113.79
+        },
+        {
+          "pattern": "microsoft windows",
+          "attack_count": 109,
+          "lift": 3113.79
+        },
+        {
+          "pattern": "windows security",
+          "attack_count": 109,
+          "lift": 3113.79
+        },
+        {
+          "pattern": "src dhost",
+          "attack_count": 109,
+          "lift": 3113.79
+        },
+        {
+          "pattern": "cs1label process",
+          "attack_count": 109,
+          "lift": 3113.79
+        },
+        {
+          "pattern": "process cs1",
+          "attack_count": 109,
+          "lift": 3113.79
+        },
+        {
+          "pattern": "apr get",
+          "attack_count": 109,
+          "lift": 3113.79
+        },
+        {
+          "pattern": "mitre_technique t1048",
+          "attack_count": 80,
+          "lift": 2285.35
+        },
+        {
+          "pattern": "security failed",
+          "attack_count": 77,
+          "lift": 2199.65
+        },
+        {
+          "pattern": "logon start",
+          "attack_count": 77,
+          "lift": 2199.65
+        },
+        {
+          "pattern": "cs1 msg",
+          "attack_count": 77,
+          "lift": 2199.65
+        },
+        {
+          "pattern": "msg failed",
+          "attack_count": 77,
+          "lift": 2199.65
+        }
+      ],
+      "threshold_optimisation": null
+    },
+    "R027": {
+      "rule_id": "R027",
+      "attack_samples": 1059,
+      "top_tactics": {
+        "Exfiltration": 1059
+      },
+      "top_discriminative_patterns": [
+        {
+          "pattern": "sshd failed",
+          "attack_count": 498,
+          "lift": 13802.26
+        },
+        {
+          "pattern": "failed password",
+          "attack_count": 498,
+          "lift": 13802.26
+        },
+        {
+          "pattern": "failed logon",
+          "attack_count": 152,
+          "lift": 4212.74
+        },
+        {
+          "pattern": "apr get",
+          "attack_count": 132,
+          "lift": 3658.43
+        },
+        {
+          "pattern": "cef microsoft",
+          "attack_count": 117,
+          "lift": 3242.7
+        },
+        {
+          "pattern": "microsoft windows",
+          "attack_count": 117,
+          "lift": 3242.7
+        },
+        {
+          "pattern": "windows security",
+          "attack_count": 117,
+          "lift": 3242.7
+        },
+        {
+          "pattern": "src dhost",
+          "attack_count": 117,
+          "lift": 3242.7
+        },
+        {
+          "pattern": "cs1label process",
+          "attack_count": 117,
+          "lift": 3242.7
+        },
+        {
+          "pattern": "process cs1",
+          "attack_count": 117,
+          "lift": 3242.7
+        },
+        {
+          "pattern": "user account",
+          "attack_count": 82,
+          "lift": 2272.66
+        },
+        {
+          "pattern": "account created",
+          "attack_count": 82,
+          "lift": 2272.66
+        },
+        {
+          "pattern": "security failed",
+          "attack_count": 76,
+          "lift": 2106.37
+        },
+        {
+          "pattern": "logon start",
+          "attack_count": 76,
+          "lift": 2106.37
+        },
+        {
+          "pattern": "cs1 msg",
+          "attack_count": 76,
+          "lift": 2106.37
+        }
+      ],
+      "threshold_optimisation": null
+    },
+    "R028": {
+      "rule_id": "R028",
+      "attack_samples": 0,
+      "top_tactics": {},
+      "top_discriminative_patterns": [],
+      "threshold_optimisation": null
+    },
+    "R030": {
+      "rule_id": "R030",
+      "attack_samples": 1056,
+      "top_tactics": {
+        "Discovery": 1056
+      },
+      "top_discriminative_patterns": [
+        {
+          "pattern": "sshd failed",
+          "attack_count": 498,
+          "lift": 13672.59
+        },
+        {
+          "pattern": "failed password",
+          "attack_count": 498,
+          "lift": 13672.59
+        },
+        {
+          "pattern": "failed logon",
+          "attack_count": 142,
+          "lift": 3898.61
+        },
+        {
+          "pattern": "cef microsoft",
+          "attack_count": 126,
+          "lift": 3459.33
+        },
+        {
+          "pattern": "microsoft windows",
+          "attack_count": 126,
+          "lift": 3459.33
+        },
+        {
+          "pattern": "windows security",
+          "attack_count": 126,
+          "lift": 3459.33
+        },
+        {
+          "pattern": "src dhost",
+          "attack_count": 126,
+          "lift": 3459.33
+        },
+        {
+          "pattern": "cs1label process",
+          "attack_count": 126,
+          "lift": 3459.33
+        },
+        {
+          "pattern": "process cs1",
+          "attack_count": 126,
+          "lift": 3459.33
+        },
+        {
+          "pattern": "apr get",
+          "attack_count": 123,
+          "lift": 3376.96
+        },
+        {
+          "pattern": "user account",
+          "attack_count": 100,
+          "lift": 2745.5
+        },
+        {
+          "pattern": "account created",
+          "attack_count": 100,
+          "lift": 2745.5
+        },
+        {
+          "pattern": "mitre_technique t1048",
+          "attack_count": 72,
+          "lift": 1976.76
+        },
+        {
+          "pattern": "security failed",
+          "attack_count": 71,
+          "lift": 1949.3
+        },
+        {
+          "pattern": "logon start",
+          "attack_count": 71,
+          "lift": 1949.3
+        }
+      ],
+      "threshold_optimisation": null
+    },
+    "R031": {
+      "rule_id": "R031",
+      "attack_samples": 1013,
+      "top_tactics": {
+        "Discovery": 1013
+      },
+      "top_discriminative_patterns": [
+        {
+          "pattern": "sshd failed",
+          "attack_count": 471,
+          "lift": 13522.78
+        },
+        {
+          "pattern": "failed password",
+          "attack_count": 471,
+          "lift": 13522.78
+        },
+        {
+          "pattern": "failed logon",
+          "attack_count": 130,
+          "lift": 3732.4
+        },
+        {
+          "pattern": "apr get",
+          "attack_count": 126,
+          "lift": 3617.56
+        },
+        {
+          "pattern": "cef microsoft",
+          "attack_count": 100,
+          "lift": 2871.08
+        },
+        {
+          "pattern": "microsoft windows",
+          "attack_count": 100,
+          "lift": 2871.08
+        },
+        {
+          "pattern": "windows security",
+          "attack_count": 100,
+          "lift": 2871.08
+        },
+        {
+          "pattern": "src dhost",
+          "attack_count": 100,
+          "lift": 2871.08
+        },
+        {
+          "pattern": "cs1label process",
+          "attack_count": 100,
+          "lift": 2871.08
+        },
+        {
+          "pattern": "process cs1",
+          "attack_count": 100,
+          "lift": 2871.08
+        },
+        {
+          "pattern": "mitre_technique t1048",
+          "attack_count": 78,
+          "lift": 2239.44
+        },
+        {
+          "pattern": "user account",
+          "attack_count": 68,
+          "lift": 1952.33
+        },
+        {
+          "pattern": "account created",
+          "attack_count": 68,
+          "lift": 1952.33
+        },
+        {
+          "pattern": "security failed",
+          "attack_count": 65,
+          "lift": 1866.2
+        },
+        {
+          "pattern": "logon start",
+          "attack_count": 65,
+          "lift": 1866.2
+        }
+      ],
+      "threshold_optimisation": null
+    },
+    "R032": {
+      "rule_id": "R032",
+      "attack_samples": 1031,
+      "top_tactics": {
+        "Lateral Movement": 1031
+      },
+      "top_discriminative_patterns": [
+        {
+          "pattern": "sshd failed",
+          "attack_count": 481,
+          "lift": 13420.95
+        },
+        {
+          "pattern": "failed password",
+          "attack_count": 481,
+          "lift": 13420.95
+        },
+        {
+          "pattern": "failed logon",
+          "attack_count": 156,
+          "lift": 4352.74
+        },
+        {
+          "pattern": "cef microsoft",
+          "attack_count": 124,
+          "lift": 3459.87
+        },
+        {
+          "pattern": "microsoft windows",
+          "attack_count": 124,
+          "lift": 3459.87
+        },
+        {
+          "pattern": "windows security",
+          "attack_count": 124,
+          "lift": 3459.87
+        },
+        {
+          "pattern": "src dhost",
+          "attack_count": 124,
+          "lift": 3459.87
+        },
+        {
+          "pattern": "cs1label process",
+          "attack_count": 124,
+          "lift": 3459.87
+        },
+        {
+          "pattern": "process cs1",
+          "attack_count": 124,
+          "lift": 3459.87
+        },
+        {
+          "pattern": "apr get",
+          "attack_count": 114,
+          "lift": 3180.85
+        },
+        {
+          "pattern": "user account",
+          "attack_count": 84,
+          "lift": 2343.78
+        },
+        {
+          "pattern": "account created",
+          "attack_count": 84,
+          "lift": 2343.78
+        },
+        {
+          "pattern": "security failed",
+          "attack_count": 78,
+          "lift": 2176.37
+        },
+        {
+          "pattern": "logon start",
+          "attack_count": 78,
+          "lift": 2176.37
+        },
+        {
+          "pattern": "cs1 msg",
+          "attack_count": 78,
+          "lift": 2176.37
+        }
+      ],
+      "threshold_optimisation": null
+    },
+    "R033": {
+      "rule_id": "R033",
+      "attack_samples": 1038,
+      "top_tactics": {
+        "Lateral Movement": 1038
+      },
+      "top_discriminative_patterns": [
+        {
+          "pattern": "sshd failed",
+          "attack_count": 488,
+          "lift": 13729.74
+        },
+        {
+          "pattern": "failed password",
+          "attack_count": 488,
+          "lift": 13729.74
+        },
+        {
+          "pattern": "failed logon",
+          "attack_count": 138,
+          "lift": 3882.59
+        },
+        {
+          "pattern": "apr get",
+          "attack_count": 118,
+          "lift": 3319.9
+        },
+        {
+          "pattern": "cef microsoft",
+          "attack_count": 102,
+          "lift": 2869.74
+        },
+        {
+          "pattern": "microsoft windows",
+          "attack_count": 102,
+          "lift": 2869.74
+        },
+        {
+          "pattern": "windows security",
+          "attack_count": 102,
+          "lift": 2869.74
+        },
+        {
+          "pattern": "src dhost",
+          "attack_count": 102,
+          "lift": 2869.74
+        },
+        {
+          "pattern": "cs1label process",
+          "attack_count": 102,
+          "lift": 2869.74
+        },
+        {
+          "pattern": "process cs1",
+          "attack_count": 102,
+          "lift": 2869.74
+        },
+        {
+          "pattern": "mitre_technique t1048",
+          "attack_count": 73,
+          "lift": 2053.83
+        },
+        {
+          "pattern": "security failed",
+          "attack_count": 69,
+          "lift": 1941.29
+        },
+        {
+          "pattern": "logon start",
+          "attack_count": 69,
+          "lift": 1941.29
+        },
+        {
+          "pattern": "cs1 msg",
+          "attack_count": 69,
+          "lift": 1941.29
+        },
+        {
+          "pattern": "msg failed",
+          "attack_count": 69,
+          "lift": 1941.29
+        }
+      ],
+      "threshold_optimisation": null
+    },
+    "R034": {
+      "rule_id": "R034",
+      "attack_samples": 1016,
+      "top_tactics": {
+        "Collection": 1016
+      },
+      "top_discriminative_patterns": [
+        {
+          "pattern": "sshd failed",
+          "attack_count": 464,
+          "lift": 13053.45
+        },
+        {
+          "pattern": "failed password",
+          "attack_count": 464,
+          "lift": 13053.45
+        },
+        {
+          "pattern": "failed logon",
+          "attack_count": 158,
+          "lift": 4444.92
+        },
+        {
+          "pattern": "apr get",
+          "attack_count": 113,
+          "lift": 3178.96
+        },
+        {
+          "pattern": "cef microsoft",
+          "attack_count": 112,
+          "lift": 3150.83
+        },
+        {
+          "pattern": "microsoft windows",
+          "attack_count": 112,
+          "lift": 3150.83
+        },
+        {
+          "pattern": "windows security",
+          "attack_count": 112,
+          "lift": 3150.83
+        },
+        {
+          "pattern": "src dhost",
+          "attack_count": 112,
+          "lift": 3150.83
+        },
+        {
+          "pattern": "cs1label process",
+          "attack_count": 112,
+          "lift": 3150.83
+        },
+        {
+          "pattern": "process cs1",
+          "attack_count": 112,
+          "lift": 3150.83
+        },
+        {
+          "pattern": "security failed",
+          "attack_count": 79,
+          "lift": 2222.46
+        },
+        {
+          "pattern": "logon start",
+          "attack_count": 79,
+          "lift": 2222.46
+        },
+        {
+          "pattern": "cs1 msg",
+          "attack_count": 79,
+          "lift": 2222.46
+        },
+        {
+          "pattern": "msg failed",
+          "attack_count": 79,
+          "lift": 2222.46
+        },
+        {
+          "pattern": "mitre_technique t1048",
+          "attack_count": 71,
+          "lift": 1997.4
+        }
+      ],
+      "threshold_optimisation": null
+    },
+    "R035": {
+      "rule_id": "R035",
+      "attack_samples": 1036,
+      "top_tactics": {
+        "Impact": 1036
+      },
+      "top_discriminative_patterns": [
+        {
+          "pattern": "sshd failed",
+          "attack_count": 498,
+          "lift": 14238.02
+        },
+        {
+          "pattern": "failed password",
+          "attack_count": 498,
+          "lift": 14238.02
+        },
+        {
+          "pattern": "failed logon",
+          "attack_count": 150,
+          "lift": 4288.56
+        },
+        {
+          "pattern": "apr get",
+          "attack_count": 127,
+          "lift": 3630.98
+        },
+        {
+          "pattern": "cef microsoft",
+          "attack_count": 108,
+          "lift": 3087.76
+        },
+        {
+          "pattern": "microsoft windows",
+          "attack_count": 108,
+          "lift": 3087.76
+        },
+        {
+          "pattern": "windows security",
+          "attack_count": 108,
+          "lift": 3087.76
+        },
+        {
+          "pattern": "src dhost",
+          "attack_count": 108,
+          "lift": 3087.76
+        },
+        {
+          "pattern": "cs1label process",
+          "attack_count": 108,
+          "lift": 3087.76
+        },
+        {
+          "pattern": "process cs1",
+          "attack_count": 108,
+          "lift": 3087.76
+        },
+        {
+          "pattern": "security failed",
+          "attack_count": 75,
+          "lift": 2144.28
+        },
+        {
+          "pattern": "logon start",
+          "attack_count": 75,
+          "lift": 2144.28
+        },
+        {
+          "pattern": "cs1 msg",
+          "attack_count": 75,
+          "lift": 2144.28
+        },
+        {
+          "pattern": "msg failed",
+          "attack_count": 75,
+          "lift": 2144.28
+        },
+        {
+          "pattern": "mitre_technique t1048",
+          "attack_count": 71,
+          "lift": 2029.92
+        }
+      ],
+      "threshold_optimisation": null
+    },
+    "R043": {
+      "rule_id": "R043",
+      "attack_samples": 1033,
+      "top_tactics": {
+        "Impact": 1033
+      },
+      "top_discriminative_patterns": [
+        {
+          "pattern": "sshd failed",
+          "attack_count": 470,
+          "lift": 13037.66
+        },
+        {
+          "pattern": "failed password",
+          "attack_count": 470,
+          "lift": 13037.66
+        },
+        {
+          "pattern": "failed logon",
+          "attack_count": 168,
+          "lift": 4660.27
+        },
+        {
+          "pattern": "apr get",
+          "attack_count": 123,
+          "lift": 3411.98
+        },
+        {
+          "pattern": "cef microsoft",
+          "attack_count": 118,
+          "lift": 3273.29
+        },
+        {
+          "pattern": "microsoft windows",
+          "attack_count": 118,
+          "lift": 3273.29
+        },
+        {
+          "pattern": "windows security",
+          "attack_count": 118,
+          "lift": 3273.29
+        },
+        {
+          "pattern": "src dhost",
+          "attack_count": 118,
+          "lift": 3273.29
+        },
+        {
+          "pattern": "cs1label process",
+          "attack_count": 118,
+          "lift": 3273.29
+        },
+        {
+          "pattern": "process cs1",
+          "attack_count": 118,
+          "lift": 3273.29
+        },
+        {
+          "pattern": "security failed",
+          "attack_count": 84,
+          "lift": 2330.14
+        },
+        {
+          "pattern": "logon start",
+          "attack_count": 84,
+          "lift": 2330.14
+        },
+        {
+          "pattern": "cs1 msg",
+          "attack_count": 84,
+          "lift": 2330.14
+        },
+        {
+          "pattern": "msg failed",
+          "attack_count": 84,
+          "lift": 2330.14
+        },
+        {
+          "pattern": "mitre_technique t1048",
+          "attack_count": 79,
+          "lift": 2191.44
+        }
+      ],
+      "threshold_optimisation": null
+    }
+  },
+  "uncovered_attack_patterns": [],
+  "format_coverage": {
+    "json": {
+      "total": 23000,
+      "attacks": 6961,
+      "benign": 16039,
+      "attack_ratio": 0.303,
+      "rules_seen": {
+        "R015": 3514,
+        "R025": 1801,
+        "R020": 1646,
+        "R003": 308,
+        "R004": 307
+      }
+    },
+    "waf": {
+      "total": 15000,
+      "attacks": 3534,
+      "benign": 11466,
+      "attack_ratio": 0.236,
+      "rules_seen": {
+        "R010": 3534,
+        "R013": 164,
+        "R024": 159,
+        "R027": 157,
+        "R004": 156
+      }
+    },
+    "generic": {
+      "total": 2963,
+      "attacks": 0,
+      "benign": 2963,
+      "attack_ratio": 0.0,
+      "rules_seen": {}
+    },
+    "csv": {
+      "total": 41,
+      "attacks": 0,
+      "benign": 41,
+      "attack_ratio": 0.0,
+      "rules_seen": {}
+    },
+    "syslog": {
+      "total": 27651,
+      "attacks": 14336,
+      "benign": 13315,
+      "attack_ratio": 0.518,
+      "rules_seen": {
+        "R001": 11624,
+        "R005": 2712,
+        "R004": 626,
+        "R030": 624,
+        "R024": 618
+      }
+    }
+  }
+}

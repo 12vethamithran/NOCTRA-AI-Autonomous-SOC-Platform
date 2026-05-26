@@ -20,6 +20,7 @@ Phase 2+ will add: /alerts, /investigate, /verdict, /threatintel,
 from __future__ import annotations
 
 import logging
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -40,7 +41,9 @@ from routers import assets as assets_router
 from routers import hunt as hunt_router
 from routers import graph as graph_router
 from routers import agent as agent_router
+from routers import admin as admin_router
 from session.store import session_store
+from engine.retrain_scheduler import start_scheduler, stop_scheduler
 
 # -----------------------------------------------------------------------------
 # Logging
@@ -70,11 +73,18 @@ async def lifespan(app: FastAPI):
         settings.virustotal_ready,
     )
     session_store.start_sweeper()
+
+    # ML self-upgrade scheduler (daily at 03:00 UTC by default)
+    retrain_hours = int(os.environ.get("RETRAIN_SCHEDULE_HOURS", "24"))
+    retrain_hour  = int(os.environ.get("RETRAIN_SCHEDULE_HOUR_UTC", "3"))
+    start_scheduler(interval_hours=retrain_hours, target_hour_utc=retrain_hour)
+
     try:
         yield
     finally:
-        log.info("Shutting down — stopping session sweeper")
+        log.info("Shutting down — stopping session sweeper and retrain scheduler")
         session_store.stop_sweeper()
+        stop_scheduler()
 
 
 # -----------------------------------------------------------------------------
@@ -118,6 +128,7 @@ app.include_router(assets_router.router)
 app.include_router(hunt_router.router)
 app.include_router(graph_router.router)
 app.include_router(agent_router.router)
+app.include_router(admin_router.router)
 
 
 # -----------------------------------------------------------------------------

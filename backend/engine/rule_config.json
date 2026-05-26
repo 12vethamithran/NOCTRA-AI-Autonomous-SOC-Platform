@@ -1,0 +1,260 @@
+{
+  "_comment": "Auto-managed by corpus_analyser.py. Human-editable. Loaded at backend startup and hot-reloaded when the file changes. All thresholds can be tuned without touching rules.py.",
+  "_version": 5,
+  "_last_updated": "2026-05-26T09:17:02.510372+00:00",
+  "_updated_by": "rule_synthesiser",
+  "R001": {
+    "description": "Brute Force \u2014 failed logins from same IP in sliding window",
+    "min_failures": 3,
+    "window_seconds": 60,
+    "mitre_technique": "T1110",
+    "mitre_tactic": "Credential Access"
+  },
+  "R002": {
+    "description": "Port Scan \u2014 distinct destination ports from same IP",
+    "min_distinct_ports": 5,
+    "window_seconds": 30,
+    "mitre_technique": "T1046",
+    "mitre_tactic": "Discovery"
+  },
+  "R003": {
+    "description": "Privilege Escalation \u2014 normal user \u2192 admin within window",
+    "window_minutes": 10,
+    "mitre_technique": "T1078",
+    "mitre_tactic": "Privilege Escalation"
+  },
+  "R004": {
+    "description": "Lateral Movement \u2014 same user auths on N+ hosts in window",
+    "min_hosts": 3,
+    "window_minutes": 5,
+    "mitre_technique": "T1021",
+    "mitre_tactic": "Lateral Movement"
+  },
+  "R005": {
+    "description": "Data Exfiltration \u2014 outbound bytes to external IP",
+    "single_session_threshold_mb": 100,
+    "cumulative_threshold_mb": 250,
+    "critical_threshold_gb": 1,
+    "mitre_technique": "T1041",
+    "mitre_tactic": "Exfiltration"
+  },
+  "R006": {
+    "description": "Suspicious Login Time \u2014 auth in off-hours window",
+    "off_hours_start": 0,
+    "off_hours_end": 5,
+    "mitre_technique": "T1078",
+    "mitre_tactic": "Defense Evasion"
+  },
+  "R007": {
+    "description": "New Admin Account \u2014 account created with admin privileges",
+    "mitre_technique": "T1136",
+    "mitre_tactic": "Persistence"
+  },
+  "R008": {
+    "description": "Web Fuzzing \u2014 repeated 404s from same IP in burst window",
+    "min_404s": 20,
+    "window_minutes": 5,
+    "mitre_technique": "T1595",
+    "mitre_tactic": "Reconnaissance"
+  },
+  "R010": {
+    "description": "Multi-Service Attack \u2014 failures across 3+ distinct services",
+    "min_services": 3,
+    "min_events": 6,
+    "mitre_technique": "T1110.003",
+    "mitre_tactic": "Credential Access"
+  },
+  "R014": {
+    "description": "DNS Tunneling \u2014 high query volume with long payloads",
+    "min_queries": 50,
+    "min_avg_raw_length": 60,
+    "mitre_technique": "T1071.004",
+    "mitre_tactic": "Command and Control"
+  },
+  "R016": {
+    "description": "Account Lockout Storm \u2014 many distinct accounts locked from same source",
+    "min_locked_users": 5,
+    "mitre_technique": "T1110.004",
+    "mitre_tactic": "Credential Access"
+  },
+  "R020": {
+    "description": "RDP Brute Force \u2014 failed RDP logons from same source",
+    "min_failures": 8,
+    "mitre_technique": "T1021.001",
+    "mitre_tactic": "Lateral Movement"
+  },
+  "R021": {
+    "description": "C2 Beaconing \u2014 regular interval egress to external destination",
+    "min_connections": 6,
+    "min_interval_seconds": 30,
+    "max_interval_seconds": 3600,
+    "max_cv": 0.3,
+    "mitre_technique": "T1071.001",
+    "mitre_tactic": "Command and Control"
+  },
+  "R023": {
+    "description": "Mass File Encryption / Ransomware \u2014 ransom extension writes",
+    "min_ransom_files": 30,
+    "mitre_technique": "T1486",
+    "mitre_tactic": "Impact"
+  },
+  "R033": {
+    "description": "Kerberoasting \u2014 weak TGS encryption requests for same principal",
+    "min_tgs_requests": 5,
+    "mitre_technique": "T1558.003",
+    "mitre_tactic": "Credential Access"
+  },
+  "R039": {
+    "description": "AWS S3 Anomalous Volume \u2014 single principal excessive S3 calls",
+    "min_api_calls": 100,
+    "mitre_technique": "T1530",
+    "mitre_tactic": "Collection"
+  },
+  "R040": {
+    "description": "SharePoint Mass Download \u2014 single user downloads many files",
+    "min_downloads": 25,
+    "mitre_technique": "T1213.002",
+    "mitre_tactic": "Collection"
+  },
+  "R042": {
+    "description": "AWS Cloud Reconnaissance \u2014 Describe/List API enumeration",
+    "min_api_calls": 15,
+    "min_distinct_verbs": 5,
+    "mitre_technique": "T1580",
+    "mitre_tactic": "Discovery"
+  },
+  "R043": {
+    "description": "IDOR Enumeration \u2014 sequential numeric resource ID access",
+    "min_distinct_ids": 3,
+    "min_consecutive_run": 3,
+    "window_seconds": 60,
+    "mitre_technique": "T1083",
+    "mitre_tactic": "Discovery"
+  },
+  "_raw_pattern_rules": {
+    "_comment": "Rules that fire on raw string patterns. Patterns loaded by rules.py at startup.",
+    "R011": {
+      "description": "Suspicious PowerShell",
+      "patterns": [
+        "-enc",
+        "-encodedcommand",
+        "iex (",
+        "downloadstring(",
+        "downloadfile(",
+        "downloaddata(",
+        "amsiscanbuffer",
+        "amsi.dll",
+        "frombase64string",
+        "-nop -w hidden",
+        "start-bitstransfer",
+        "invoke-shellcode",
+        "set-mppreference.*disablerealtimemonitoring"
+      ]
+    },
+    "R012": {
+      "description": "Process Injection",
+      "patterns": [
+        "createremotethread",
+        "writeprocessmemory",
+        "ntmapviewofsection",
+        "queueuserapc",
+        "setwindowshookex",
+        "reflective dll"
+      ]
+    },
+    "R013": {
+      "description": "LSASS / Credential Dumping",
+      "patterns": [
+        "lsass.exe",
+        "lsass.dmp",
+        "minidumpwritedump",
+        "procdump -ma lsass",
+        "comsvcs.dll, minidump",
+        "sekurlsa::logonpasswords",
+        "mimikatz"
+      ]
+    },
+    "R015": {
+      "description": "Cleartext Credentials",
+      "patterns": [
+        "password=",
+        "passwd=",
+        "pwd=",
+        "api_key=",
+        "apikey=",
+        "secret=",
+        "token=",
+        "authorization: basic "
+      ]
+    },
+    "R017": {
+      "description": "Suspicious Persistence",
+      "patterns": [
+        "sc.exe create",
+        "new-service",
+        "schtasks /create",
+        "at \\\\",
+        "crontab -e",
+        "/etc/cron.d/",
+        "systemctl enable",
+        "hklm\\software\\microsoft\\windows\\currentversion\\run"
+      ]
+    },
+    "R018": {
+      "description": "Event Log Cleared",
+      "patterns": [
+        "eventid: 1102",
+        "eventid:1102",
+        "event log was cleared",
+        "wevtutil cl ",
+        "clear-eventlog",
+        "audit log was cleared"
+      ]
+    },
+    "R019": {
+      "description": "Security Tool Tampering",
+      "patterns": [
+        "set-mppreference -disablerealtimemonitoring",
+        "stop-service windefend",
+        "sc stop windefend",
+        "add-mppreference -exclusionpath",
+        "tamper protection"
+      ]
+    },
+    "R024": {
+      "description": "SQL Injection",
+      "patterns": [
+        "' or '1'='1",
+        "' or 1=1--",
+        "union select",
+        "union all select",
+        "'+or+",
+        "1=1--",
+        "union+select",
+        "union%20select",
+        "sleep(",
+        "benchmark(",
+        "information_schema.tables",
+        "xp_cmdshell",
+        "load_file("
+      ]
+    },
+    "R025": {
+      "description": "Web Shell / Recon Tools",
+      "patterns": [
+        "cmd.aspx",
+        "cmd.jsp",
+        "shell.php",
+        "webshell.php",
+        "c99.php",
+        "r57.php",
+        "?cmd=",
+        "user-agent: sqlmap",
+        "user-agent: nikto",
+        "user-agent: nmap",
+        "user-agent: masscan",
+        "user-agent: gobuster"
+      ]
+    }
+  }
+}

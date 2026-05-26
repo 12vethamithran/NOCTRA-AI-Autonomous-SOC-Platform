@@ -1,0 +1,96 @@
+{
+  "generated_at": "2026-05-26T09:17:02.511313+00:00",
+  "corpus_summary": {
+    "total_records": 68655,
+    "attack_records": 24831,
+    "benign_records": 43824,
+    "rules_with_samples": 33,
+    "uncovered_attack_records": 0,
+    "tactic_distribution": {
+      "Credential Access": 2070,
+      "Initial Access": 2070,
+      "Privilege Escalation": 2070,
+      "Command and Control": 2069,
+      "Persistence": 2069,
+      "Exfiltration": 2069,
+      "Execution": 2069,
+      "Discovery": 2069,
+      "Lateral Movement": 2069,
+      "Defense Evasion": 2069,
+      "Collection": 2069,
+      "Impact": 2069
+    }
+  },
+  "changes_made": 1,
+  "changes": [
+    {
+      "type": "threshold_patch",
+      "rule_id": "R002",
+      "param": "min_distinct_ports",
+      "old_value": 10,
+      "new_value": 5,
+      "corpus_f1": 0.1245
+    }
+  ],
+  "format_coverage": {
+    "json": {
+      "total": 23000,
+      "attacks": 6961,
+      "benign": 16039,
+      "attack_ratio": 0.303,
+      "rules_seen": {
+        "R015": 3514,
+        "R025": 1801,
+        "R020": 1646,
+        "R003": 308,
+        "R004": 307
+      }
+    },
+    "waf": {
+      "total": 15000,
+      "attacks": 3534,
+      "benign": 11466,
+      "attack_ratio": 0.236,
+      "rules_seen": {
+        "R010": 3534,
+        "R013": 164,
+        "R024": 159,
+        "R027": 157,
+        "R004": 156
+      }
+    },
+    "generic": {
+      "total": 2963,
+      "attacks": 0,
+      "benign": 2963,
+      "attack_ratio": 0.0,
+      "rules_seen": {}
+    },
+    "csv": {
+      "total": 41,
+      "attacks": 0,
+      "benign": 41,
+      "attack_ratio": 0.0,
+      "rules_seen": {}
+    },
+    "syslog": {
+      "total": 27651,
+      "attacks": 14336,
+      "benign": 13315,
+      "attack_ratio": 0.518,
+      "rules_seen": {
+        "R001": 11624,
+        "R005": 2712,
+        "R004": 626,
+        "R030": 624,
+        "R024": 618
+      }
+    }
+  },
+  "guards_used": {
+    "min_f1_improvement": 0.02,
+    "min_lift_pattern": 30.0,
+    "min_lift_new_rule": 50.0,
+    "min_attack_count": 5
+  }
+}

