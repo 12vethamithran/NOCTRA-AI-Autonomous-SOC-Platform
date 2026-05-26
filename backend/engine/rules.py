@@ -66,7 +66,7 @@ def _safe_ts(df: pd.DataFrame) -> pd.DataFrame:
 # ---------------------------------------------------------------------------
 def rule_r001_brute_force(df: pd.DataFrame) -> List[Alert]:
     """
-    >5 FAILED login events from the same source_ip within any 60-second window.
+    >=3 FAILED login events from the same source_ip within any 60-second window.
     """
     alerts: List[Alert] = []
     work = _safe_ts(df)
@@ -96,7 +96,7 @@ def rule_r001_brute_force(df: pd.DataFrame) -> List[Alert]:
         for t in times:
             counts.append(((times >= (t - window)) & (times <= t)).sum())
         group = group.assign(_window_count=counts)
-        spike = group[group["_window_count"] > 5]
+        spike = group[group["_window_count"] >= 3]
         if spike.empty:
             continue
         # Build a single alert per IP keyed on the worst window.
@@ -2251,13 +2251,13 @@ def rule_r043_idor_enumeration(df: pd.DataFrame) -> List[Alert]:
                 best = max(best, run)
             else:
                 run = 1
-        if best < 5:
+        if best < 3:
             continue
         # Sliding-window volume check.
         times = grp["timestamp"]
         for t in times:
             burst = grp[(grp["timestamp"] >= t - window) & (grp["timestamp"] <= t)]
-            if burst["_id"].nunique() >= 5:
+            if burst["_id"].nunique() >= 3:
                 ts = t.to_pydatetime()
                 alerts.append(Alert(
                     alert_id=_new_alert_id(),
