@@ -1,0 +1,15 @@
+# Cloned external datasets — too large / contain nested .git dirs
+# Re-fetch locally with: python phase2_fetch.py
+raw/evtx/deepbluecli/
+raw/evtx/evtx-attack-samples/
+raw/evtx/evtx-baseline/
+raw/evtx/security-datasets/
+raw/json_cloud/azure-sentinel/
+raw/json_cloud/elastic-detection-rules/
+raw/multi_format/otrf-compound/
+raw/syslog/loghub/
+raw/waf_web/elastic-examples/
+
+# Large downloaded datasets — re-fetch with phase2_fetch.py
+raw/csv_netflow/KDDTrain+.txt
+raw/csv_netflow/KDDTest+.txt
