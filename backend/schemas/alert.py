@@ -38,7 +38,7 @@ class Alert(BaseModel):
     description: str = Field(..., description="Human-readable summary of what fired")
 
     # Context
-    timestamp: datetime = Field(..., description="When the suspicious activity occurred")
+    timestamp: Optional[datetime] = Field(None, description="When the suspicious activity occurred")
     source_ip: Optional[str] = None
     dest_ip: Optional[str] = None
     user: Optional[str] = None

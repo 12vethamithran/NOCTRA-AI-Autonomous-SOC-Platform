@@ -275,8 +275,8 @@ async def _run_pipeline(filename: str, content: bytes) -> IngestResponse:
     if alerts:
         try:
             await score_alerts(alerts)
-        except Exception:  # noqa: BLE001
-            log.exception("AI scoring crashed; alerts kept without scores")
+        except Exception as exc:  # noqa: BLE001
+            log.exception("AI scoring crashed (%s); alerts kept without scores", exc)
 
     # --- 5b. Feature 3 — SHAP feature attribution ---------------------------
     alerts_dicts = [a.model_dump(mode="json") for a in alerts]

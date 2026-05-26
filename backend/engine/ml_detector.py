@@ -122,8 +122,8 @@ def ml_scan(df: pd.DataFrame) -> List:
         return []
 
     rows = df["raw"].fillna("").astype(str).tolist()
-    detected_fmt = df.get("format", pd.Series(["generic"] * len(df))).fillna("generic").tolist() \
-        if hasattr(df, "get") else ["generic"] * len(df)
+    detected_fmt = df["format"].fillna("generic").tolist() \
+        if "format" in df.columns else ["generic"] * len(df)
 
     try:
         import numpy as np

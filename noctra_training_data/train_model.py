@@ -16,7 +16,8 @@ from pathlib import Path
 from collections import Counter
 
 import numpy as np
-from sklearn.pipeline import Pipeline
+from sklearn.pipeline import Pipeline, FeatureUnion
+from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.preprocessing import MaxAbsScaler
 from sklearn.linear_model import LogisticRegression
@@ -88,7 +89,15 @@ with open(CORPUS, encoding="utf-8") as fh:
 
 print(f"  Loaded {len(raws):,} records ({sum(labels):,} attacks, {len(labels)-sum(labels):,} benign)")
 
-# ── Feature matrix ─────────────────────────────────────────────────────────
+y = np.array(labels, dtype=np.int32)
+
+# ── Dense hand-crafted + format features (no leakage risk — purely stateless) ──
+X_dense = np.array(
+    [h + f for h, f in zip(hand_feats, fmt_feats)], dtype=np.float32
+)
+
+# ── Feature matrix for final model (TF-IDF fitted on full corpus — intentional
+#    for the saved production bundle; CV below uses a Pipeline to avoid leakage) ──
 print("  Building TF-IDF features …")
 tfidf = TfidfVectorizer(
     max_features=500,
@@ -98,14 +107,11 @@ tfidf = TfidfVectorizer(
     sublinear_tf=True,
 )
 X_tfidf = tfidf.fit_transform(raws)
-X_hand  = csr_matrix(np.array(hand_feats, dtype=np.float32))
-X_fmt   = csr_matrix(np.array(fmt_feats, dtype=np.float32))
-X       = hstack([X_tfidf, X_hand, X_fmt])
-y       = np.array(labels, dtype=np.int32)
+X       = hstack([X_tfidf, csr_matrix(X_dense)])
 
 print(f"  Feature matrix: {X.shape[0]:,} × {X.shape[1]} ")
 
-# ── Train XGBoost ───────────────────────────────────────────────────────────
+# ── Train XGBoost (production model) ────────────────────────────────────────
 print("  Training XGBoost …")
 scale_pos_weight = (y == 0).sum() / max((y == 1).sum(), 1)
 
@@ -124,10 +130,57 @@ clf = xgb.XGBClassifier(
 )
 clf.fit(X, y)
 
-# ── Cross-val AUC ───────────────────────────────────────────────────────────
-print("  Cross-validating (5-fold AUC) …")
+# ── Cross-val AUC — use Pipeline so TF-IDF is re-fitted inside each fold ────
+# This avoids the leakage where the TF-IDF vocabulary seen the holdout set.
+print("  Cross-validating (5-fold AUC, Pipeline-safe) …")
+
+class _DenseAppender(BaseEstimator, TransformerMixin):
+    """Append pre-computed dense features to TF-IDF sparse output per fold."""
+    def __init__(self, dense): self.dense = dense
+    def fit(self, idx, y=None): return self
+    def transform(self, idx):
+        return csr_matrix(self.dense[idx])
+
+# CV pipeline operates on row indices so we can attach dense features per fold
+row_idx = np.arange(len(raws))
+
+cv_tfidf = TfidfVectorizer(
+    max_features=500, analyzer="word",
+    token_pattern=r"[A-Za-z0-9_\-\.]{2,}",
+    ngram_range=(1, 2), sublinear_tf=True,
+)
+cv_clf = xgb.XGBClassifier(
+    n_estimators=300, max_depth=6, learning_rate=0.1,
+    subsample=0.8, colsample_bytree=0.8,
+    scale_pos_weight=scale_pos_weight,
+    use_label_encoder=False, eval_metric="logloss",
+    random_state=42, n_jobs=1, verbosity=0,
+)
+raws_arr = np.array(raws, dtype=object)
+
+cv_auc_scores = []
 cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
-auc_scores = cross_val_score(clf, X, y, cv=cv, scoring="roc_auc", n_jobs=1)
+for train_idx, test_idx in cv.split(row_idx, y):
+    cv_tfidf_fold = TfidfVectorizer(
+        max_features=500, analyzer="word",
+        token_pattern=r"[A-Za-z0-9_\-\.]{2,}",
+        ngram_range=(1, 2), sublinear_tf=True,
+    )
+    X_tr = hstack([cv_tfidf_fold.fit_transform(raws_arr[train_idx]), csr_matrix(X_dense[train_idx])])
+    X_te = hstack([cv_tfidf_fold.transform(raws_arr[test_idx]),      csr_matrix(X_dense[test_idx])])
+    fold_clf = xgb.XGBClassifier(
+        n_estimators=300, max_depth=6, learning_rate=0.1,
+        subsample=0.8, colsample_bytree=0.8,
+        scale_pos_weight=scale_pos_weight,
+        use_label_encoder=False, eval_metric="logloss",
+        random_state=42, n_jobs=1, verbosity=0,
+    )
+    fold_clf.fit(X_tr, y[train_idx])
+    from sklearn.metrics import roc_auc_score
+    probs = fold_clf.predict_proba(X_te)[:, 1]
+    cv_auc_scores.append(roc_auc_score(y[test_idx], probs))
+
+auc_scores = np.array(cv_auc_scores)
 print(f"  AUC: {auc_scores.mean():.4f} ± {auc_scores.std():.4f}")
 
 # Full-set report
