@@ -1,17 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
   <defs>
-    <linearGradient id="fnstroke" x1="6" y1="6" x2="58" y2="58" gradientUnits="userSpaceOnUse">
-      <stop offset="0"   stop-color="#ff4d6d"/>
-      <stop offset=".55" stop-color="#e11d48"/>
-      <stop offset="1"   stop-color="#7f1d1d"/>
+    <linearGradient id="r" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff3355"/>
+      <stop offset="100%" stop-color="#cc0022"/>
     </linearGradient>
   </defs>
-  <g transform="rotate(45 32 32)">
-    <rect x="9" y="9" width="46" height="46" rx="6"
-          fill="#0a0608" stroke="url(#fnstroke)" stroke-width="3"/>
-  </g>
-  <path d="M22 19 V45" stroke="url(#fnstroke)" stroke-width="6" stroke-linecap="square"/>
-  <path d="M42 19 V45" stroke="url(#fnstroke)" stroke-width="6" stroke-linecap="square"/>
-  <path d="M22 19 L42 45" stroke="#ff4d6d" stroke-width="5.5" stroke-linecap="square"/>
-  <circle cx="48" cy="14" r="2" fill="#ff4d6d"/>
+  <path d="M32 4 L54 13 L54 34 C54 46 44 55 32 59 C20 55 10 46 10 34 L10 13 Z"
+        fill="#0c0307" stroke="url(#r)" stroke-width="2.5" stroke-linejoin="round"/>
+  <line x1="21" y1="21" x2="21" y2="43" stroke="url(#r)" stroke-width="4" stroke-linecap="round"/>
+  <line x1="43" y1="21" x2="43" y2="43" stroke="url(#r)" stroke-width="4" stroke-linecap="round"/>
+  <line x1="21" y1="21" x2="43" y2="43" stroke="url(#r)" stroke-width="3.2" stroke-linecap="round"/>
 </svg>

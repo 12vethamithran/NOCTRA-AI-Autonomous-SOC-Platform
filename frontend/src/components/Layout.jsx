@@ -155,12 +155,6 @@ export default function Layout() {
             <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'currentColor', boxShadow: '0 0 8px currentColor' }} />
             <span className="hidden sm:inline">{h.text.toUpperCase()}</span>
           </span>
-          <span className="hidden sm:flex items-center gap-2 shrink-0">
-            <span className="topbar-brand">N<span className="o">O</span>CTRA</span>
-            <span className="topbar-sep">/</span>
-            <span className="text-[10px] tracking-[0.22em] uppercase font-semibold" style={{ color: 'var(--text-3)' }}>Autonomous&nbsp;SOC</span>
-            <span className="topbar-chip topbar-chip-accent">v3.2</span>
-          </span>
           <span className="topbar-chip topbar-chip-dot"
             style={{ color: threatColor.fg, background: threatColor.bg, borderColor: threatColor.bd }}>
             THREAT: {threatLevel}
@@ -205,7 +199,11 @@ export default function Layout() {
           {/* Logo + wordmark */}
           <NavLink to="/" className="brandmark shrink-0 group" aria-label="NOCTRA — home">
             <div className="brandmark-icon">
-              <img src="/noctra-logo.svg" alt="" width={36} height={36} className="select-none" draggable="false" />
+              <img src="/noctra-logo.png.webp" alt="" width={36} height={36}
+                className="select-none"
+                draggable="false"
+                style={{ mixBlendMode: 'screen', display: 'block' }}
+                onError={e => { e.currentTarget.src = '/noctra-logo.svg' }} />
             </div>
             <div className="brandmark-text hidden sm:flex">
               <span className="brandmark-name">
@@ -321,7 +319,7 @@ export default function Layout() {
         <div className="max-w-7xl mx-auto px-4 py-2.5 flex items-center justify-between text-xs" style={{ color: 'var(--text-4)' }}>
           <span className="flex items-center gap-2">
             <span className="dot-live" />
-            NOCTRA AI · Storageless · Session data lives only in RAM
+            Storageless · Session data lives only in RAM
           </span>
           <span className="hidden sm:flex items-center gap-2">
             <kbd>⌘K</kbd> palette · <kbd>?</kbd> shortcuts

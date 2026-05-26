@@ -1613,100 +1613,70 @@ input[type="checkbox"] {
 .brandmark {
   display: inline-flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   text-decoration: none;
   position: relative;
 }
 
 .brandmark-icon {
   position: relative;
-  width: 38px;
-  height: 38px;
+  width: 34px;
+  height: 34px;
   display: grid;
   place-items: center;
-  border-radius: 11px;
-  background:
-    radial-gradient(ellipse at 30% 25%, rgba(244,63,94,0.22), transparent 60%),
-    linear-gradient(140deg, #15050a 0%, #08020a 100%);
-  border: 1px solid rgba(225, 29, 72, 0.28);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 100, 130, 0.18),
-    inset 0 -2px 6px rgba(0, 0, 0, 0.6),
-    0 4px 16px rgba(225, 29, 72, 0.18);
-  transition: transform .25s var(--ease), box-shadow .25s var(--ease), border-color .25s var(--ease);
-}
-.brandmark-icon::after {
-  /* Slow scan-line sweep */
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: linear-gradient(180deg, transparent 40%, rgba(255,77,109,0.15) 50%, transparent 60%);
-  mix-blend-mode: screen;
-  opacity: 0;
-  pointer-events: none;
-  animation: brandmark-scan 4.8s ease-in-out infinite;
-}
-@keyframes brandmark-scan {
-  0%, 100% { opacity: 0; transform: translateY(-30%); }
-  50%      { opacity: 1; transform: translateY(30%);  }
+  transition: opacity .2s var(--ease), transform .2s var(--ease);
 }
 .brandmark:hover .brandmark-icon {
-  transform: scale(1.06) rotate(-2deg);
-  border-color: rgba(244, 63, 94, 0.55);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 100, 130, 0.22),
-    inset 0 -2px 6px rgba(0, 0, 0, 0.6),
-    0 8px 28px rgba(225, 29, 72, 0.40);
+  opacity: 0.85;
+  transform: scale(1.04);
 }
 
 .brandmark-text {
   flex-direction: column;
   align-items: flex-start;
   line-height: 1;
-  gap: 4px;
+  gap: 3px;
 }
 
 .brandmark-name {
   font-family: 'Inter', system-ui, sans-serif;
-  font-weight: 800;
-  font-size: 16px;
-  letter-spacing: 0.14em;
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: 0.10em;
   color: var(--text-1);
   line-height: 1;
   white-space: nowrap;
 }
 .brandmark-o { color: inherit; }
-/* AI as a quiet inline color accent — no box, no border, no badge. */
 .brandmark-ai {
-  margin-left: 0.5em;
-  font-weight: 700;
-  font-size: 0.78em;
-  letter-spacing: 0.2em;
+  margin-left: 0.25em;
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: 0.10em;
   color: var(--accent);
 }
 
 .brandmark-sub {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: 9.5px;
-  font-weight: 700;
-  letter-spacing: 0.26em;
+  gap: 5px;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.24em;
   text-transform: uppercase;
-  color: var(--text-3);
+  color: var(--text-4);
   line-height: 1;
 }
 .brandmark-sub-dot {
-  width: 5px; height: 5px; border-radius: 50%;
+  width: 4px; height: 4px; border-radius: 50%;
   background: var(--accent);
-  box-shadow: 0 0 6px rgba(225, 29, 72, 0.8);
+  box-shadow: 0 0 5px rgba(225, 29, 72, 0.75);
   animation: blink 2.4s ease-in-out infinite;
 }
 .brandmark-sub-sep { color: var(--border-3); font-weight: 400; }
 .brandmark-version {
   font-family: ui-monospace, monospace;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  color: var(--text-4);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--text-5);
 }
