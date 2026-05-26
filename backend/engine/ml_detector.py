@@ -38,9 +38,11 @@ def _load_model():
         return
     try:
         import joblib
-        _bundle = joblib.load(_MODEL_PATH)
+        loaded = joblib.load(_MODEL_PATH)
+        _bundle = loaded  # only set after full successful load
         log.info("ML detector loaded from %s", _MODEL_PATH)
     except Exception as exc:
+        _bundle = None   # ensure partial load doesn't block retries
         _load_error = str(exc)
         log.warning("ML detector unavailable: %s", exc)
 

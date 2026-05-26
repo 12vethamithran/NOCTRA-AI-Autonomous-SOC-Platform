@@ -28,3 +28,9 @@ python-dotenv==1.0.1          # loads API keys from .env
 scikit-learn==1.5.2           # IsolationForest (UEBA), RandomForest (SHAP)
 shap==0.46.0                  # TreeExplainer for feature attribution
 networkx==3.3                 # Entity relationship graphs
+
+# --- ML detection pipeline (Phase ML-upgrade) ---
+xgboost==2.1.1                # XGBoost classifier (ml_detector.py)
+joblib==1.4.2                 # Model serialisation (ml_detector.pkl)
+scipy==1.14.0                 # sparse matrix for TF-IDF + hand-features (ml_detector.py)
+numpy==1.26.4                 # numerical arrays for ML features

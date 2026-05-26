@@ -123,6 +123,12 @@
     "mitre_technique": "T1580",
     "mitre_tactic": "Discovery"
   },
+  "R041": {
+    "description": "Geo Anomaly \u2014 sign-in from unexpected country",
+    "allowed_countries": ["in", "india"],
+    "mitre_technique": "T1078",
+    "mitre_tactic": "Initial Access"
+  },
   "R043": {
     "description": "IDOR Enumeration \u2014 sequential numeric resource ID access",
     "min_distinct_ids": 3,

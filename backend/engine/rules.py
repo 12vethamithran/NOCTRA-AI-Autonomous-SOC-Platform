@@ -502,10 +502,13 @@ def rule_r007_new_admin(df: pd.DataFrame) -> List[Alert]:
         "global administrator|privileged role|role\\.displayname|attachuserpolicy|administrators",
         na=False, regex=True,
     )
-    creations = df[et_mask | (et_mask & raw_mask)]
+    # Primary filter: event-type matches account creation AND raw mentions a privileged role.
+    # Fallback: event-type match alone (catches logs where raw field is sparse).
+    # Bug fix: was `et_mask | (et_mask & raw_mask)` which reduces to just `et_mask`
+    # by Boolean absorption — raw_mask was silently ignored. Fixed to two-stage filter.
+    creations = df[et_mask & raw_mask]
     if creations.empty:
-        # Fall back: any account-creation event whose raw mentions admin/global-admin role
-        creations = df[et_mask & raw_mask] if not et_mask.empty else df.iloc[0:0]
+        creations = df[et_mask]  # broader fallback — user/raw filter below narrows it
     if creations.empty:
         return alerts
     user_l = creations["user"].astype(str).str.lower() if "user" in creations.columns else pd.Series("", index=creations.index)
@@ -1274,8 +1277,12 @@ def rule_r025_web_shell(df: pd.DataFrame) -> List[Alert]:
     hits = _raw_contains(df, _raw_patterns("R025") or [
         "cmd.aspx", "cmd.jsp", "shell.php", "webshell.php",
         "c99.php", "r57.php", "/wp-admin/shell", "?cmd=",
+        # W3C/IIS header-style logs:
         "user-agent: sqlmap", "user-agent: nikto", "user-agent: nmap",
         "user-agent: masscan", "user-agent: gobuster",
+        # Apache CLF combined-log format (UA is bare quoted string, no header prefix):
+        "\"sqlmap/", "\"nikto/", "\"masscan/", "\"gobuster/", "\"nmap scripting",
+        "\"zgrab/", "\"nuclei/", "\"dirbuster/",
     ])
     if hits.empty:
         return alerts
@@ -2142,9 +2149,6 @@ def rule_r040_sharepoint_exfil(df: pd.DataFrame) -> List[Alert]:
 # R041 — Entra sign-in from unexpected country (T1078 / Initial Access)
 # NorthBay employees are in IN — anything else is worth surfacing.
 # ---------------------------------------------------------------------------
-_ALLOWED_COUNTRIES = {"in", "india", ""}
-
-
 def rule_r041_geo_anomaly(df: pd.DataFrame) -> List[Alert]:
     alerts: List[Alert] = []
     if df.empty:
@@ -2156,9 +2160,12 @@ def rule_r041_geo_anomaly(df: pd.DataFrame) -> List[Alert]:
             break
     if cc_col is None:
         return alerts
+    # Load allowed countries from config (falls back to "in" if not set).
+    allowed_raw = _cfg("R041", "allowed_countries", ["in", "india"])
+    allowed_countries = {c.lower() for c in allowed_raw} | {""}
     work = df[df[cc_col].notna()].copy()
     work["_cc"] = work[cc_col].astype(str).str.lower()
-    odd = work[~work["_cc"].isin(_ALLOWED_COUNTRIES)]
+    odd = work[~work["_cc"].isin(allowed_countries)]
     if odd.empty:
         return alerts
     user_col = "userprincipalname" if "userprincipalname" in odd.columns else "user"
