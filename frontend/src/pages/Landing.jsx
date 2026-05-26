@@ -446,121 +446,158 @@ export default function Landing() {
         </Card>
       </section>
 
+      {/* ─── LIVE TERMINAL (moved here — right after MITRE) ───────────── */}
+      <section id="terminal" className="section-frame-tight space-y-8">
+        <Reveal>
+          <span className="eyebrow-display">LIVE SIMULATION</span>
+        </Reveal>
+        <Reveal delay={80}>
+          <DisplayHeading as="h2" size="md" className="mt-6">
+            WATCH A BRUTE-FORCE
+            <DisplayHeading.Muted>BECOME AN INCIDENT.</DisplayHeading.Muted>
+          </DisplayHeading>
+        </Reveal>
+        <Reveal delay={160}>
+          <p className="text-sm max-w-2xl" style={{ color: 'var(--text-3)', lineHeight: 1.6 }}>
+            The engine detects, enriches, correlates and escalates — in real time.
+            This simulation replays a multi-signal brute-force → impossible-travel kill chain.
+          </p>
+        </Reveal>
+        <Reveal delay={240}>
+          <LiveDemoConsole />
+        </Reveal>
+      </section>
+
       {/* ─── L1 vs L2 ─────────────────────────────────────────────────── */}
       <section id="tiers" className="section-frame-tight space-y-10">
-        <SectionHeader
-          variant="display-sm"
-          eyebrow="ANALYST TIERS"
-          title={<>ONE DASHBOARD.<DisplayHeading.Muted>TWO LENSES.</DisplayHeading.Muted></>}
-          level={2}
-        />
+        <Reveal>
+          <SectionHeader
+            variant="display-sm"
+            eyebrow="ANALYST TIERS"
+            title={<>ONE DASHBOARD.<DisplayHeading.Muted>TWO LENSES.</DisplayHeading.Muted></>}
+            level={2}
+          />
+        </Reveal>
         <div className="grid md:grid-cols-2 gap-3">
-          <Card variant="elevated" padding="lg">
-            <div className="flex items-center gap-2 mb-2">
-              <StatusPill tone="accent">L1</StatusPill>
-              <h3 className="font-semibold" style={{ color: 'var(--text-1)' }}>Triage analyst</h3>
-            </div>
-            <p className="text-sm" style={{ color: 'var(--text-2)', lineHeight: 1.55 }}>
-              Queue-driven and concise. Built for a shift: rank, click, decide, export handover.
-              Bulk verdicts, AI auto-apply on high-confidence alerts, keyboard shortcuts for
-              every action. Optimised for clearing volume without losing context.
-            </p>
-            <ul className="text-sm mt-3 space-y-1.5" style={{ color: 'var(--text-2)' }}>
-              <li className="flex items-center gap-2"><ChevronRight size={12} style={{ color: 'var(--accent)' }} /> Severity-ranked queue with AI recommendation</li>
-              <li className="flex items-center gap-2"><ChevronRight size={12} style={{ color: 'var(--accent)' }} /> One-key TP/FP, bulk select, drawer-first detail</li>
-              <li className="flex items-center gap-2"><ChevronRight size={12} style={{ color: 'var(--accent)' }} /> Shift handover PDF in one click</li>
-            </ul>
-          </Card>
-          <Card variant="elevated" padding="lg">
-            <div className="flex items-center gap-2 mb-2">
-              <StatusPill tone="info">L2</StatusPill>
-              <h3 className="font-semibold" style={{ color: 'var(--text-1)' }}>Hunt analyst</h3>
-            </div>
-            <p className="text-sm" style={{ color: 'var(--text-2)', lineHeight: 1.55 }}>
-              Forensic and dense. Composite threat score, kill-chain reconstruction, top entities,
-              hypothesis-driven hunts, and the AI agent as a senior-analyst sidekick. The exported
-              report becomes a full incident dossier.
-            </p>
-            <ul className="text-sm mt-3 space-y-1.5" style={{ color: 'var(--text-2)' }}>
-              <li className="flex items-center gap-2"><ChevronRight size={12} style={{ color: 'var(--accent)' }} /> Attack-chain graph + timeline reconstruction</li>
-              <li className="flex items-center gap-2"><ChevronRight size={12} style={{ color: 'var(--accent)' }} /> Hypothesis-driven hunting with typed DSL</li>
-              <li className="flex items-center gap-2"><ChevronRight size={12} style={{ color: 'var(--accent)' }} /> L2 forensic dossier PDF with full evidence</li>
-            </ul>
-          </Card>
+          <Reveal delay={80}>
+            <Card variant="elevated" padding="lg">
+              <div className="flex items-center gap-2 mb-2">
+                <StatusPill tone="accent">L1</StatusPill>
+                <h3 className="font-semibold" style={{ color: 'var(--text-1)' }}>Triage analyst</h3>
+              </div>
+              <p className="text-sm" style={{ color: 'var(--text-2)', lineHeight: 1.55 }}>
+                Queue-driven and concise. Built for a shift: rank, click, decide, export handover.
+                Bulk verdicts, AI auto-apply on high-confidence alerts, keyboard shortcuts for
+                every action. Optimised for clearing volume without losing context.
+              </p>
+              <ul className="text-sm mt-3 space-y-1.5" style={{ color: 'var(--text-2)' }}>
+                <li className="flex items-center gap-2"><ChevronRight size={12} style={{ color: 'var(--accent)' }} /> Severity-ranked queue with AI recommendation</li>
+                <li className="flex items-center gap-2"><ChevronRight size={12} style={{ color: 'var(--accent)' }} /> One-key TP/FP, bulk select, drawer-first detail</li>
+                <li className="flex items-center gap-2"><ChevronRight size={12} style={{ color: 'var(--accent)' }} /> Shift handover PDF in one click</li>
+              </ul>
+            </Card>
+          </Reveal>
+          <Reveal delay={160}>
+            <Card variant="elevated" padding="lg">
+              <div className="flex items-center gap-2 mb-2">
+                <StatusPill tone="info">L2</StatusPill>
+                <h3 className="font-semibold" style={{ color: 'var(--text-1)' }}>Hunt analyst</h3>
+              </div>
+              <p className="text-sm" style={{ color: 'var(--text-2)', lineHeight: 1.55 }}>
+                Forensic and dense. Composite threat score, kill-chain reconstruction, top entities,
+                hypothesis-driven hunts, and the AI agent as a senior-analyst sidekick. The exported
+                report becomes a full incident dossier.
+              </p>
+              <ul className="text-sm mt-3 space-y-1.5" style={{ color: 'var(--text-2)' }}>
+                <li className="flex items-center gap-2"><ChevronRight size={12} style={{ color: 'var(--accent)' }} /> Attack-chain graph + timeline reconstruction</li>
+                <li className="flex items-center gap-2"><ChevronRight size={12} style={{ color: 'var(--accent)' }} /> Hypothesis-driven hunting with typed DSL</li>
+                <li className="flex items-center gap-2"><ChevronRight size={12} style={{ color: 'var(--accent)' }} /> L2 forensic dossier PDF with full evidence</li>
+              </ul>
+            </Card>
+          </Reveal>
         </div>
       </section>
 
       {/* ─── ENGINE ───────────────────────────────────────────────────── */}
       <section id="engine" className="section-frame-tight space-y-10">
-        <SectionHeader
-          variant="display-sm"
-          eyebrow="DETECTION ENGINE"
-          title={<>THREE SIGNALS.<DisplayHeading.Muted>ONE VERDICT.</DisplayHeading.Muted></>}
-          hint="The score that lands on an analyst's desk is the agreement of three independent inputs. Disagreement is what makes the dedup + chain stages worth running."
-          level={2}
-        />
+        <Reveal>
+          <SectionHeader
+            variant="display-sm"
+            eyebrow="DETECTION ENGINE"
+            title={<>THREE SIGNALS.<DisplayHeading.Muted>ONE VERDICT.</DisplayHeading.Muted></>}
+            hint="The score that lands on an analyst's desk is the agreement of three independent inputs."
+            level={2}
+          />
+        </Reveal>
         <div className="grid md:grid-cols-3 gap-3">
           {[
             { i: ShieldAlert, t: 'Deterministic rules', d: '42 rule functions grouping events by attacker context (IP, user, device) and emitting one alert per group with sliding-window thresholds.' },
             { i: Activity,    t: 'Behavioral anomaly',  d: 'IsolationForest UEBA model on per-user and per-IP features. Flags σ-deviation from baseline. Scored even if no rule fires.' },
             { i: Sparkles,    t: 'AI re-scoring',       d: 'Gemini classifier blended 70/30 with the deterministic heuristic. Returns a TP probability and structured rationale.' },
-          ].map(({ i: Icon, t, d }) => (
-            <Card key={t} variant="elevated" padding="lg" className="lift">
-              <Icon size={18} style={{ color: 'var(--accent)' }} className="mb-3" />
-              <p className="font-semibold mb-1.5" style={{ color: 'var(--text-1)' }}>{t}</p>
-              <p className="text-sm" style={{ color: 'var(--text-2)', lineHeight: 1.55 }}>{d}</p>
-            </Card>
+          ].map(({ i: Icon, t, d }, idx) => (
+            <Reveal key={t} delay={idx * 80}>
+              <Card variant="elevated" padding="lg" className="lift">
+                <Icon size={18} style={{ color: 'var(--accent)' }} className="mb-3" />
+                <p className="font-semibold mb-1.5" style={{ color: 'var(--text-1)' }}>{t}</p>
+                <p className="text-sm" style={{ color: 'var(--text-2)', lineHeight: 1.55 }}>{d}</p>
+              </Card>
+            </Reveal>
           ))}
         </div>
       </section>
 
       {/* ─── DEMO STRIP ───────────────────────────────────────────────── */}
-      <section id="demo">
-        <Card variant="elevated" padding="lg" className="overflow-hidden">
-          <div className="flex flex-wrap gap-6 items-center justify-between">
-            <div className="space-y-2 min-w-0 flex-1">
-              <p className="ent-section-eyebrow">Live demo</p>
-              <h3 className="text-xl font-semibold" style={{ color: 'var(--text-1)' }}>
-                A synthetic kill-chain in one click
-              </h3>
-              <p className="text-sm" style={{ color: 'var(--text-2)' }}>
-                Runs the same pipeline against a multi-stage attack scenario: brute force → privilege
-                escalation → lateral movement → exfiltration. Useful for evaluating before you upload
-                production logs.
-              </p>
+      <Reveal>
+        <section id="demo">
+          <Card variant="elevated" padding="lg" className="overflow-hidden">
+            <div className="flex flex-wrap gap-6 items-center justify-between">
+              <div className="space-y-2 min-w-0 flex-1">
+                <p className="ent-section-eyebrow">Live demo</p>
+                <h3 className="text-xl font-semibold" style={{ color: 'var(--text-1)' }}>
+                  A synthetic kill-chain in one click
+                </h3>
+                <p className="text-sm" style={{ color: 'var(--text-2)' }}>
+                  Runs the same pipeline against a multi-stage attack scenario: brute force → privilege
+                  escalation → lateral movement → exfiltration.
+                </p>
+              </div>
+              <button
+                onClick={() => navigate('/upload')}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-md font-semibold text-sm transition-colors"
+                style={{ background: 'var(--accent)', color: '#fff', boxShadow: 'var(--elev-2)' }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--accent-hover)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'var(--accent)')}
+              >
+                Run demo scenario <ArrowRight size={14} />
+              </button>
             </div>
-            <button
-              onClick={() => navigate('/upload')}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-md font-semibold text-sm transition-colors"
-              style={{ background: 'var(--accent)', color: '#fff', boxShadow: 'var(--elev-2)' }}
-              onMouseEnter={e => (e.currentTarget.style.background = 'var(--accent-hover)')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'var(--accent)')}
-            >
-              Run demo scenario <ArrowRight size={14} />
-            </button>
-          </div>
-        </Card>
-      </section>
+          </Card>
+        </section>
+      </Reveal>
 
       {/* ─── SECURITY ─────────────────────────────────────────────────── */}
       <section id="security" className="section-frame-tight space-y-10">
-        <SectionHeader
-          variant="display-sm"
-          eyebrow="SECURITY"
-          title={<>STORAGELESS.<DisplayHeading.Muted>INSPECTABLE.</DisplayHeading.Muted></>}
-          level={2}
-        />
+        <Reveal>
+          <SectionHeader
+            variant="display-sm"
+            eyebrow="SECURITY"
+            title={<>STORAGELESS.<DisplayHeading.Muted>INSPECTABLE.</DisplayHeading.Muted></>}
+            level={2}
+          />
+        </Reveal>
         <div className="grid md:grid-cols-3 gap-3">
           {[
-            { i: Lock,       t: 'Zero persistence', d: 'Files are parsed in memory. Sessions evict after 30 min idle. No DB, no disk writes, nothing to subpoena.' },
-            { i: ShieldCheck,t: 'Boundary minimal', d: 'Only the alert envelope (rule, technique, timestamps, optional IPs/users) crosses the boundary to the AI classifier — never raw lines.' },
-            { i: Workflow,   t: 'Every decision auditable', d: 'Each alert carries its rule ID, MITRE technique, evidence indices, and rationale. Verdicts log to the session in the same shape.' },
-          ].map(({ i: Icon, t, d }) => (
-            <Card key={t} padding="lg" className="lift">
-              <Icon size={16} style={{ color: 'var(--accent)' }} className="mb-3" />
-              <p className="font-semibold text-sm mb-1.5" style={{ color: 'var(--text-1)' }}>{t}</p>
-              <p className="text-xs" style={{ color: 'var(--text-3)', lineHeight: 1.55 }}>{d}</p>
-            </Card>
+            { i: Lock,        t: 'Zero persistence',        d: 'Files are parsed in memory. Sessions evict after 30 min idle. No DB, no disk writes, nothing to subpoena.' },
+            { i: ShieldCheck, t: 'Boundary minimal',        d: 'Only the alert envelope (rule, technique, timestamps, optional IPs/users) crosses the boundary to the AI classifier — never raw lines.' },
+            { i: Workflow,    t: 'Every decision auditable', d: 'Each alert carries its rule ID, MITRE technique, evidence indices, and rationale. Verdicts log to the session in the same shape.' },
+          ].map(({ i: Icon, t, d }, idx) => (
+            <Reveal key={t} delay={idx * 80}>
+              <Card padding="lg" className="lift">
+                <Icon size={16} style={{ color: 'var(--accent)' }} className="mb-3" />
+                <p className="font-semibold text-sm mb-1.5" style={{ color: 'var(--text-1)' }}>{t}</p>
+                <p className="text-xs" style={{ color: 'var(--text-3)', lineHeight: 1.55 }}>{d}</p>
+              </Card>
+            </Reveal>
           ))}
         </div>
       </section>
@@ -628,28 +665,6 @@ export default function Landing() {
             )
           })}
         </Card>
-      </section>
-
-      {/* ─── LIVE TERMINAL ────────────────────────────────────────────── */}
-      <section id="terminal" className="section-frame-tight space-y-8">
-        <Reveal>
-          <span className="eyebrow-display">LIVE SIMULATION</span>
-        </Reveal>
-        <Reveal delay={80}>
-          <DisplayHeading as="h2" size="md" className="mt-6">
-            WATCH A BRUTE-FORCE
-            <DisplayHeading.Muted>BECOME AN INCIDENT.</DisplayHeading.Muted>
-          </DisplayHeading>
-        </Reveal>
-        <Reveal delay={160}>
-          <p className="text-sm max-w-2xl" style={{ color: 'var(--text-3)', lineHeight: 1.6 }}>
-            The engine detects, enriches, correlates and escalates — in real time.
-            This simulation replays a multi-signal brute-force → impossible-travel kill chain.
-          </p>
-        </Reveal>
-        <Reveal delay={240}>
-          <LiveDemoConsole />
-        </Reveal>
       </section>
 
       {/* ─── CTA ──────────────────────────────────────────────────────── */}

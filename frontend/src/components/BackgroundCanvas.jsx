@@ -59,6 +59,7 @@ export default function BackgroundCanvas() {
   const mouseRef  = useRef({ x: null, y: null })
 
   useEffect(() => {
+    try {
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')
@@ -387,6 +388,7 @@ export default function BackgroundCanvas() {
       window.removeEventListener('mousemove',  onMouseMove)
       window.removeEventListener('mouseleave', onMouseLeave)
     }
+    } catch (_) { /* canvas not supported in this environment */ }
   }, [])
 
   return (
