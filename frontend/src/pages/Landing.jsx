@@ -406,67 +406,61 @@ export default function Landing() {
         </Reveal>
         <Reveal delay={160}>
           <p className="mt-6 max-w-2xl text-sm" style={{ color: 'var(--text-3)', lineHeight: 1.6 }}>
-            A second detection pass runs <em>after</em> all 43 deterministic rules — catching attack patterns that regex rules miss.
-            The model is retrained automatically each night from a growing labeled corpus, so detection improves without code changes.
+            A second detection pass runs <em>after</em> all 43 deterministic rules — catching attack patterns that
+            regex rules miss. Trained on 68k labeled records across six log formats, retrained automatically every
+            night so detection improves without a single code change.
           </p>
         </Reveal>
+
+        {/* Stat strip — same card style as ENGINE section */}
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-12">
           {[
-            {
-              icon: Database, label: 'Training corpus',
-              stat: '68,655', sub: 'labeled log records across 6 formats',
-              color: '#60a5fa',
-            },
-            {
-              icon: BarChart2, label: 'Feature vector',
-              stat: '519', sub: '500 TF-IDF + 12 hand-crafted + 7 format one-hots',
-              color: '#34d399',
-            },
-            {
-              icon: TrendingUp, label: 'Model AUC',
-              stat: '1.00', sub: 'on held-out test split · XGBoost classifier',
-              color: '#a78bfa',
-            },
-            {
-              icon: RotateCcw, label: 'Self-upgrade cycle',
-              stat: 'Nightly', sub: '5-phase pipeline · POST /admin/retrain on demand',
-              color: '#fb923c',
-            },
-          ].map(({ icon: Icon, label, stat, sub, color }) => (
-            <Reveal key={label} delay={80}>
-              <Card variant="elevated" padding="lg" className="lift text-center">
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center mx-auto mb-3"
-                  style={{ background: `${color}18`, color }}>
-                  <Icon size={18} />
+            { icon: Database,   label: 'Training corpus',  stat: '68,655',  sub: 'labeled log records · 6 formats' },
+            { icon: BarChart2,  label: 'Feature vector',   stat: '519',     sub: '500 TF-IDF + 12 hand-crafted + 7 format' },
+            { icon: TrendingUp, label: 'Model AUC',        stat: '1.00',    sub: 'held-out test split · XGBoost classifier' },
+            { icon: RotateCcw,  label: 'Upgrade cadence',  stat: 'Nightly', sub: '5-phase pipeline · POST /admin/retrain' },
+          ].map(({ icon: Icon, label, stat, sub }, idx) => (
+            <Reveal key={label} delay={idx * 60}>
+              <Card variant="elevated" padding="lg" className="lift">
+                <div className="w-9 h-9 rounded-md flex items-center justify-center mb-3"
+                  style={{ background: 'var(--accent-dim)', color: 'var(--accent)' }}>
+                  <Icon size={16} />
                 </div>
                 <p className="ent-section-eyebrow">{label}</p>
-                <p className="font-bold tabular mt-1.5" style={{ fontSize: 'var(--fs-xl)', color: 'var(--text-1)' }}>{stat}</p>
-                <p className="text-xs mt-1" style={{ color: 'var(--text-3)', lineHeight: 1.5 }}>{sub}</p>
+                <p className="font-bold tabular mt-1.5 leading-none"
+                  style={{ fontSize: 'var(--fs-2xl)', color: 'var(--text-1)' }}>{stat}</p>
+                <p className="text-xs mt-1.5" style={{ color: 'var(--text-3)', lineHeight: 1.5 }}>{sub}</p>
               </Card>
             </Reveal>
           ))}
         </div>
 
-        {/* Pipeline phases */}
+        {/* Self-upgrade phase strip — same feature-numbered style as PIPELINE */}
         <Reveal delay={120}>
-          <div className="mt-10 grid sm:grid-cols-5 gap-2">
-            {[
-              { n: 'P1', label: 'Corpus Analyse', body: 'F1-optimise thresholds + mine discriminative bigrams per rule' },
-              { n: 'P2', label: 'Rule Synthesise', body: 'Patch rule_config.json — only ΔF1 ≥ 0.02 changes applied' },
-              { n: 'P3', label: 'Parser Extract',  body: 'Expand field aliases + format signals from real log corpus' },
-              { n: 'P4', label: 'Model Retrain',  body: 'Rebuild XGBoost pkl — hot-swapped without restart' },
-              { n: '✓',  label: 'Hot-reload',     body: 'Engine picks up new thresholds, aliases, and model immediately' },
-            ].map((p, i) => (
-              <div key={p.n} className="rounded-lg p-3 text-center"
-                style={{ background: 'var(--surface-2)', border: '1px solid var(--border-2)' }}>
-                <span className="text-xs font-bold tabular px-1.5 py-0.5 rounded"
-                  style={{ background: 'rgba(59,130,246,0.12)', color: '#60a5fa' }}>{p.n}</span>
-                <p className="text-xs font-semibold mt-2" style={{ color: 'var(--text-1)' }}>{p.label}</p>
-                <p className="text-[10.5px] mt-1" style={{ color: 'var(--text-3)', lineHeight: 1.45 }}>{p.body}</p>
-              </div>
-            ))}
-          </div>
+          <p className="ent-section-eyebrow mt-12 mb-5">5-phase self-upgrade cycle</p>
         </Reveal>
+        <div className="grid sm:grid-cols-5 gap-3">
+          {[
+            { n: '01', label: 'Corpus Analyse',  body: 'F1-grid-search thresholds + mine discriminative bigrams per rule' },
+            { n: '02', label: 'Rule Synthesise', body: 'Patch rule_config.json — only ΔF1 ≥ 0.02 changes applied' },
+            { n: '03', label: 'Parser Extract',  body: 'Expand field aliases + format-detection signals from corpus' },
+            { n: '04', label: 'Model Retrain',   body: 'Rebuild XGBoost pkl — hot-swapped into engine without restart' },
+            { n: '✓',  label: 'Hot-reload',      body: 'Engine picks up new thresholds, aliases, and model on next call' },
+          ].map((p, i) => (
+            <Reveal key={p.n} delay={i * 50}>
+              <div className="feature-numbered h-full">
+                <Eyebrow num={p.n === '✓' ? '✓' : parseInt(p.n, 10)} />
+                <h3 className="font-bold uppercase tracking-tight mt-4"
+                  style={{ fontSize: '13px', color: 'var(--text-1)', letterSpacing: '0.02em' }}>
+                  {p.label}
+                </h3>
+                <p className="text-xs mt-2" style={{ color: 'var(--text-3)', lineHeight: 1.55 }}>
+                  {p.body}
+                </p>
+              </div>
+            </Reveal>
+          ))}
+        </div>
       </section>
 
       {/* Original sections continue below — wrapped to preserve max-width. */}
