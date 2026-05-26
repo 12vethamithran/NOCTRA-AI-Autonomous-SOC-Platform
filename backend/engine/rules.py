@@ -74,7 +74,8 @@ def rule_r001_brute_force(df: pd.DataFrame) -> List[Alert]:
         return alerts
 
     failed = work[
-        (work["event_type"].astype(str).str.lower().str.contains("login|auth|logon", na=False))
+        (work["event_type"].astype(str).str.lower().str.contains(
+            "login|auth|logon|sshd|ssh|pam|krb|ntlm|ldap", na=False))
         & (work["status"].astype(str).str.upper() == "FAILED")
         & (work["source_ip"].notna())
     ].copy()
@@ -1185,6 +1186,8 @@ def rule_r024_sql_injection(df: pd.DataFrame) -> List[Alert]:
     alerts: List[Alert] = []
     hits = _raw_contains(df, [
         "' or '1'='1", "' or 1=1--", "union select", "union all select",
+        # URL-encoded variants (+ = space, %20 = space)
+        "'+or+", "1=1--", "union+select", "union%20select",
         "sleep(", "benchmark(", "information_schema.tables",
         "xp_cmdshell", "convert(int,", "load_file(",
     ])
@@ -1511,7 +1514,11 @@ def rule_r030_cloud_admin_grant(df: pd.DataFrame) -> List[Alert]:
         return alerts
     raw_l = df["raw"].astype(str).str.lower()
     et_l = df["event_type"].astype(str).str.lower() if "event_type" in df.columns else pd.Series("", index=df.index)
-    is_role_grant = et_l.str.contains("add member to role|attachuserpolicy|addusertogroup|4732", na=False, regex=True)
+    is_role_grant = (
+        et_l.str.contains("add member to role|attachuserpolicy|addusertogroup|4732", na=False, regex=True)
+        # AWS CloudTrail: eventName is in raw even if eventtype alias wins over eventname
+        | raw_l.str.contains("attachuserpolicy|addusertogroup|createpolicy", na=False, regex=True)
+    )
     is_priv = raw_l.str.contains(
         "global administrator|administratoraccess|domain admins|enterprise admins|"
         "privileged role administrator|62e90394-69f5-4237-9190-012177145e10",
@@ -2183,6 +2190,103 @@ def rule_r042_aws_recon(df: pd.DataFrame) -> List[Alert]:
 
 
 # ---------------------------------------------------------------------------
+# R043 — IDOR / Sequential Resource Enumeration (T1083 / Discovery)
+# Same IP or session accessing incrementing numeric resource IDs in rapid
+# succession — classic IDOR enumeration pattern.
+# ---------------------------------------------------------------------------
+def rule_r043_idor_enumeration(df: pd.DataFrame) -> List[Alert]:
+    """
+    Detect sequential ID enumeration: same source IP making many requests
+    to URLs whose terminal path segment is an incrementing integer, within
+    a short window (60s). Fires on ≥5 distinct consecutive IDs.
+    """
+    alerts: List[Alert] = []
+    work = _safe_ts(df)
+    if work.empty or "raw" not in work.columns:
+        return alerts
+
+    import re as _re
+    _ID_TAIL = _re.compile(r'/(\d{2,10})(?:[/?#]|$)')
+
+    # Only look at HTTP GET rows if event_type is available; otherwise all rows.
+    if "event_type" in work.columns:
+        http = work[work["event_type"].astype(str).str.lower().str.contains("http|get|api", na=False)].copy()
+    else:
+        http = work.copy()
+    if http.empty:
+        return alerts
+
+    # Extract the URL column (prefer dedicated url/path field, fall back to raw).
+    if "url" in http.columns:
+        url_series = http["url"].astype(str)
+    else:
+        url_series = http["raw"].astype(str)
+
+    http = http.assign(_url=url_series)
+    http["_id"] = http["_url"].apply(lambda u: int(m.group(1)) if (m := _ID_TAIL.search(u)) else None)
+    http = http[http["_id"].notna()].copy()
+    if http.empty:
+        return alerts
+    http["_id"] = http["_id"].astype(int)
+
+    # Extract path prefix (everything up to the last numeric segment).
+    http["_prefix"] = http["_url"].apply(
+        lambda u: _ID_TAIL.sub("/<ID>", u) if _ID_TAIL.search(u) else u
+    )
+
+    window = timedelta(seconds=60)
+    for (src_ip, prefix), grp in http.groupby([http["source_ip"].fillna("unknown"), http["_prefix"]]):
+        if src_ip == "unknown":
+            continue
+        grp = grp.sort_values("timestamp")
+        if len(grp) < 5:
+            continue
+        ids = sorted(grp["_id"].unique())
+        # Check for consecutive run of ≥5.
+        run = 1
+        best = 1
+        for i in range(1, len(ids)):
+            if ids[i] - ids[i - 1] <= 2:  # allow gaps of 1
+                run += 1
+                best = max(best, run)
+            else:
+                run = 1
+        if best < 5:
+            continue
+        # Sliding-window volume check.
+        times = grp["timestamp"]
+        for t in times:
+            burst = grp[(grp["timestamp"] >= t - window) & (grp["timestamp"] <= t)]
+            if burst["_id"].nunique() >= 5:
+                ts = t.to_pydatetime()
+                alerts.append(Alert(
+                    alert_id=_new_alert_id(),
+                    rule_id="R043",
+                    rule_name="IDOR / Sequential Resource Enumeration",
+                    severity=AlertSeverity.HIGH,
+                    description=(
+                        f"{src_ip} accessed {burst['_id'].nunique()} sequential IDs "
+                        f"under '{prefix}' in 60s (IDs {ids[0]}–{ids[-1]})"
+                    ),
+                    timestamp=ts,
+                    source_ip=str(src_ip),
+                    user=str(grp["user"].dropna().iloc[0]) if "user" in grp.columns and grp["user"].dropna().size else None,
+                    event_count=len(burst),
+                    mitre_technique="T1083",
+                    mitre_tactic="Discovery",
+                    tp_probability=0.88,
+                    related_log_indices=list(burst.index),
+                    extra={
+                        "endpoint_pattern": str(prefix),
+                        "id_range": f"{ids[0]}–{ids[-1]}",
+                        "distinct_ids": burst["_id"].nunique(),
+                    },
+                ))
+                break  # one alert per (src_ip, prefix)
+    return alerts
+
+
+# ---------------------------------------------------------------------------
 # Dispatcher
 # ---------------------------------------------------------------------------
 ALL_RULES: list[Callable[[pd.DataFrame], List[Alert]]] = [
@@ -2228,6 +2332,7 @@ ALL_RULES: list[Callable[[pd.DataFrame], List[Alert]]] = [
     rule_r040_sharepoint_exfil,
     rule_r041_geo_anomaly,
     rule_r042_aws_recon,
+    rule_r043_idor_enumeration,
 ]
 
 
@@ -2408,6 +2513,10 @@ _RULE_REASONING: Dict[str, Dict[str, str]] = {
              "validates": "eventName starts with Describe/List, AWS source, distinct-verb threshold.",
              "action": "Capture the principal's recent actions, validate the role's least-privilege, and watch for follow-on creates.",
              "fp_note": "AWS Config / Cloud Custodian inventory scan."},
+    "R043": {"why": "An attacker enumerating an IDOR vulnerability walks sequential resource IDs (e.g. /invoices/9001, /9002…) to access records belonging to other users.",
+             "validates": "≥5 distinct consecutive numeric IDs accessed by one IP under the same endpoint pattern within 60s.",
+             "action": "Check whether the accessed records belong to other user accounts. Revoke the session and audit the endpoint for missing authorization checks.",
+             "fp_note": "Legitimate batch-export or admin tooling that iterates known IDs — verify user_id matches the accessed resource ownership."},
 }
 
 
