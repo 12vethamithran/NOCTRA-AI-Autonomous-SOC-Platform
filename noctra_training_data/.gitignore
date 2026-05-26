@@ -13,3 +13,8 @@ raw/waf_web/elastic-examples/
 # Large downloaded datasets — re-fetch with phase2_fetch.py
 raw/csv_netflow/KDDTrain+.txt
 raw/csv_netflow/KDDTest+.txt
+
+# Generated normalized corpus — re-build with phase4_normalize.py
+normalized/raw_normalized.ndjson
+normalized/synthetic_normalized.ndjson
+normalized/training_corpus.ndjson
