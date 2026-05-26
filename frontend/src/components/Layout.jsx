@@ -199,11 +199,11 @@ export default function Layout() {
           {/* Logo + wordmark */}
           <NavLink to="/" className="brandmark shrink-0 group" aria-label="NOCTRA — home">
             <div className="brandmark-icon">
-              <img src="/noctra-logo.png.webp" alt="" width={36} height={36}
+              <img src="/noctra-logo.png.webp" alt="" width={44} height={44}
                 className="select-none"
                 draggable="false"
-                style={{ mixBlendMode: 'screen', display: 'block' }}
-                onError={e => { e.currentTarget.src = '/noctra-logo.svg' }} />
+                style={{ display: 'block', borderRadius: '10px', objectFit: 'contain' }}
+                onError={e => { e.currentTarget.style.display = 'none' }} />
             </div>
             <div className="brandmark-text hidden sm:flex">
               <span className="brandmark-name">
