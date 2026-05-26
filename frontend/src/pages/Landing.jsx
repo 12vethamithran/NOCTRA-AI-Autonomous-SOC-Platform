@@ -1,13 +1,13 @@
 /**
  * Landing — Overview page.
  *
- * Enterprise rewrite (v3.2): dense, restrained, semantic. Drops the auto-
- * rotating capability tabs, floating ToC bling, count-up animations and
- * mixed-glow CTAs in favour of a Bloomberg/Linear/Splunk hybrid surface:
- *   • Above-the-fold telemetry — engine health, rule count, MITRE coverage.
- *   • A grid of capability cards rather than a single rotating panel.
- *   • A clean 9-stage pipeline (matches backend after the dedup pass).
- *   • A MITRE coverage matrix in real data, not faux dashboards.
+ * Enterprise rewrite (v4.0): dense, restrained, semantic.
+ *   • Above-the-fold telemetry — engine health, rule count (43), MITRE coverage.
+ *   • A grid of capability cards (4 surfaces).
+ *   • A 10-stage pipeline (+ XGBoost ML scan stage).
+ *   • Four detection signals: rules + ML + UEBA + AI.
+ *   • A MITRE coverage matrix in real data (43 rules, 12 tactics).
+ *   • Self-upgrade cycle FAQ entry.
  *   • A focused FAQ.
  *
  * All navigation paths and the SessionCtx flow are unchanged from v3.1.
@@ -37,7 +37,7 @@ import {
 // `prefix`) render statically. Format string lets us reuse the same loop
 // for "42", "<50ms" and "0".
 const HERO_METRICS = [
-  { k: 'detection_rules',  n: 42, fmt: v => v.toString(),       l: 'Detection rules', s: 'R001 → R042 across MITRE ATT&CK' },
+  { k: 'detection_rules',  n: 43, fmt: v => v.toString(),       l: 'Detection rules', s: 'R001 → R043 + XGBoost ML detector' },
   { k: 'mitre_tactics',    n: 12, fmt: v => v.toString(),       l: 'MITRE tactics',   s: 'Initial Access → Impact' },
   { k: 'detection_p50',    n: 50, fmt: v => `<${v}ms`,          l: 'Rule eval p50',   s: 'on a 100k-row log file' },
   { k: 'bytes_persisted',  n: 0,  fmt: () => '0',               l: 'Bytes persisted', s: 'storageless by design' },
@@ -81,15 +81,16 @@ const CAPABILITIES = [
 ]
 
 const PIPELINE = [
-  { n: '01', icon: Database,     label: 'Ingest',    body: 'Auto-detect format. CSV / JSON / syslog / EVTX / Apache / logfmt.' },
-  { n: '02', icon: Cpu,          label: 'Normalize', body: '40+ aliases collapse cloud variants into canonical fields.' },
-  { n: '03', icon: ShieldAlert,  label: 'Detect',    body: '42 rules + UEBA anomaly model + cross-event correlation.' },
-  { n: '04', icon: Sparkles,     label: 'Score',     body: 'AI per-alert TP probability with SHAP feature attribution.' },
-  { n: '05', icon: Globe,        label: 'Enrich',    body: 'IP reputation, geo, ASN, hash lookup, MITRE mapping.' },
-  { n: '06', icon: GitBranch,    label: 'Chain',     body: 'Correlate alerts into kill-chain narratives.' },
-  { n: '07', icon: Layers,       label: 'Dedup',     body: 'Collapse identical alerts across rules and uploads.' },
-  { n: '08', icon: Eye,          label: 'Triage',    body: 'L1 queue with drawer, playbook, AI suggestion, keyboard nav.' },
-  { n: '09', icon: FileBarChart, label: 'Report',    body: 'L1 shift handover or L2 forensic dossier · PDF export.' },
+  { n: '01', icon: Database,       label: 'Ingest',     body: 'Auto-detect format. CSV / JSON / syslog / EVTX / Apache / logfmt. Corpus-learned format signals applied.' },
+  { n: '02', icon: Cpu,            label: 'Normalize',  body: '95+ aliases (corpus-learned) collapse cloud variants into canonical fields.' },
+  { n: '03', icon: ShieldAlert,    label: 'Detect',     body: '43 deterministic rules + UEBA anomaly model + cross-event correlation. Thresholds hot-reloaded from rule_config.json.' },
+  { n: '04', icon: TerminalSquare, label: 'ML Scan',    body: 'XGBoost detector (68k training records, 519 features) catches attacks rule regexes miss. ≥ 70% confidence fires an ML-* alert.' },
+  { n: '05', icon: Sparkles,       label: 'Score',      body: 'AI per-alert TP probability with SHAP feature attribution.' },
+  { n: '06', icon: Globe,          label: 'Enrich',     body: 'IP reputation, geo, ASN, hash lookup, MITRE mapping.' },
+  { n: '07', icon: GitBranch,      label: 'Chain',      body: 'Correlate alerts into kill-chain narratives.' },
+  { n: '08', icon: Layers,         label: 'Dedup',      body: 'Collapse identical alerts across rules and uploads.' },
+  { n: '09', icon: Eye,            label: 'Triage',     body: 'L1 queue with drawer, playbook, AI suggestion, keyboard nav.' },
+  { n: '10', icon: FileBarChart,   label: 'Report',     body: 'L1 shift handover or L2 forensic dossier · PDF export.' },
 ]
 
 const MITRE_TACTICS = [
@@ -99,7 +100,7 @@ const MITRE_TACTICS = [
   { code: 'TA0004', name: 'Privilege Escalation', rules: ['R003'] },
   { code: 'TA0005', name: 'Defense Evasion',      rules: ['R012','R018','R019','R031','R035','R036','R037','R038'] },
   { code: 'TA0006', name: 'Credential Access',    rules: ['R001','R010','R013','R015','R016','R033'] },
-  { code: 'TA0007', name: 'Discovery',            rules: ['R002','R042'] },
+  { code: 'TA0007', name: 'Discovery',            rules: ['R002','R042','R043'] },
   { code: 'TA0008', name: 'Lateral Movement',     rules: ['R004','R020'] },
   { code: 'TA0009', name: 'Collection',           rules: ['R039','R040'] },
   { code: 'TA0011', name: 'Command & Control',    rules: ['R014','R021','R026','R028'] },
@@ -111,7 +112,8 @@ const FAQS = [
   { q: 'Where does the AI scoring come from?',          a: 'Each alert is sent to a Gemini-backed classifier with the relevant context (rule, MITRE technique, timestamps, source IP behavior). The model returns a 0–1 TP probability plus a short rationale shown in the drawer. When Gemini is unavailable, a deterministic 10-signal heuristic scores instead and always explains itself.' },
   { q: 'Do I have to train it on my data?',             a: 'No. Rules and the AI classifier are pre-tuned. The Learning Insights tab refines per-session weighting based on your TP/FP feedback in real time, but it never persists.' },
   { q: 'What if my log format isn’t listed?',           a: 'The ingest engine attempts heuristic column extraction even for unknown CSVs. JSON and JSONL also work out-of-the-box. For ad-hoc formats the Rule Builder lets you define custom field maps.' },
-  { q: 'How is detection accuracy >90%?',               a: 'Three layers combine: (1) deterministic rules with tight thresholds and pre-set confidence floors, (2) behavioral anomaly scoring per user/host, (3) AI re-scoring against MITRE context. Cross-signal alerts converge above 90% TP probability.' },
+  { q: 'How is detection accuracy >90%?',               a: 'Four layers combine: (1) 43 deterministic rules with tight thresholds and pre-set confidence floors, (2) XGBoost ML detector trained on 68k labeled records, (3) behavioral anomaly scoring per user/host, (4) AI re-scoring against MITRE context. Cross-signal alerts converge above 90% TP probability.' },
+  { q: 'Does the engine get smarter over time?',        a: 'Yes — a 5-phase self-upgrade pipeline (corpus analyse → rule synthesise → parser extraction → model retrain) runs nightly and can be triggered on demand via POST /admin/retrain. Each cycle re-optimises detection thresholds for maximum F1, expands field aliases from real log data, and retrains the XGBoost model. Only statistically meaningful improvements (ΔF1 ≥ 0.02) are applied.' },
   { q: 'Is my data sent anywhere?',                     a: 'Only the alert envelope (rule, technique, timestamps, optional anonymised IP/user) is sent to the AI classifier — never raw log lines. Files stay in memory. Clear the session and the data is gone.' },
   { q: 'Can I bring my own detection rules?',           a: 'Yes — the Rule Builder ships with four templates (brute force, lateral movement, data exfiltration, privilege escalation). You can compose multi-condition filters, assign severity, and map a MITRE technique. Custom rules run alongside built-ins.' },
   { q: 'How does the L1 vs L2 split work?',             a: 'The dashboard ships two role lenses. L1 is queue-driven and concise — built for shift work. L2 is forensic and dense — composite threat score, kill-chain reconstruction, top entities, hypothesis-driven hunts. The role switch also changes the exported report template.' },
@@ -352,13 +354,13 @@ export default function Landing() {
         </Reveal>
         <Reveal delay={80}>
           <DisplayHeading as="h2" size="md" className="mt-6">
-            NINE STAGES.
+            TEN STAGES.
             <DisplayHeading.Muted>ZERO BLACK BOXES.</DisplayHeading.Muted>
           </DisplayHeading>
         </Reveal>
         <Reveal delay={160}>
           <p className="mt-6 max-w-2xl text-sm" style={{ color: 'var(--text-3)', lineHeight: 1.6 }}>
-            Ingest → normalize → detect → score → enrich → chain → dedup → triage → report. Every stage is observable, every score is explained.
+            Ingest → normalize → detect → ML scan → score → enrich → chain → dedup → triage → report. Every stage is observable, every score is explained. Plus a background self-upgrade cycle that retrains rules and the ML model nightly.
           </p>
         </Reveal>
 
@@ -389,7 +391,7 @@ export default function Landing() {
           variant="display-sm"
           eyebrow="ATT&CK COVERAGE"
           title="MAPPED TO MITRE."
-          hint="42 rules across 12 tactics. Each row lists the rule IDs that fire under that tactic. Drilldown lives in the Dashboard → MITRE Coverage tab."
+          hint="43 rules across 12 tactics. Each row lists the rule IDs that fire under that tactic. Drilldown lives in the Dashboard → MITRE Coverage tab."
           level={2}
           right={
             <button onClick={() => navigate('/dashboard')}
@@ -524,14 +526,15 @@ export default function Landing() {
           <SectionHeader
             variant="display-sm"
             eyebrow="DETECTION ENGINE"
-            title={<>THREE SIGNALS.<DisplayHeading.Muted>ONE VERDICT.</DisplayHeading.Muted></>}
-            hint="The score that lands on an analyst's desk is the agreement of three independent inputs."
+            title={<>FOUR SIGNALS.<DisplayHeading.Muted>ONE VERDICT.</DisplayHeading.Muted></>}
+            hint="The score that lands on an analyst's desk is the agreement of four independent inputs."
             level={2}
           />
         </Reveal>
-        <div className="grid md:grid-cols-3 gap-3">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-3">
           {[
-            { i: ShieldAlert, t: 'Deterministic rules', d: '42 rule functions grouping events by attacker context (IP, user, device) and emitting one alert per group with sliding-window thresholds.' },
+            { i: ShieldAlert, t: 'Deterministic rules', d: '43 rule functions grouping events by attacker context (IP, user, device) and emitting one alert per group with sliding-window thresholds. Hot-reloadable via rule_config.json.' },
+            { i: Cpu,         t: 'XGBoost ML detector', d: 'Trained on 68k labeled records. 519-feature vector (TF-IDF + hand-crafted + format). Fires on rows ≥ 70% confidence that rules missed. Retrained nightly.' },
             { i: Activity,    t: 'Behavioral anomaly',  d: 'IsolationForest UEBA model on per-user and per-IP features. Flags σ-deviation from baseline. Scored even if no rule fires.' },
             { i: Sparkles,    t: 'AI re-scoring',       d: 'Gemini classifier blended 70/30 with the deterministic heuristic. Returns a TP probability and structured rationale.' },
           ].map(({ i: Icon, t, d }, idx) => (

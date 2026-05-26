@@ -1,0 +1,25 @@
+May 26 10:00:00 dc-01 sudo[6467]: session opened for user carlos
+May 26 10:02:50 workstation-01 cron[5643]: session opened for user carlos
+May 26 10:06:39 workstation-01 cron[8808]: session opened for user carlos
+May 26 10:08:58 dc-01 cron[7092]: session opened for user bob
+May 26 10:12:56 workstation-07 sudo[3643]: session opened for user carlos
+May 26 10:15:43 dc-01 sudo[9824]: session opened for user bob
+May 26 10:18:00 workstation-07 sshd[5478]: session opened for user carlos
+May 26 10:20:13 workstation-01 cron[8118]: session opened for user bob
+May 26 10:23:06 workstation-07 sudo[8875]: session opened for user carlos
+May 26 10:26:07 dc-01 sshd[5149]: session opened for user alice
+May 26 10:29:18 dc-01 cron[2030]: session opened for user carlos
+May 26 10:33:47 workstation-01 cron[4180]: session opened for user carlos
+May 26 10:38:13 workstation-01 sshd[1257]: session opened for user alice
+May 26 10:40:15 workstation-07 sshd[7961]: session opened for user carlos
+May 26 10:43:01 dc-01 sudo[6791]: session opened for user carlos
+May 26 10:46:07 workstation-07 sudo[590]: session opened for user alice
+May 26 10:50:55 workstation-01 sudo[3381]: session opened for user bob
+May 26 10:55:20 dc-01 systemd[1322]: session opened for user carlos
+May 26 10:58:42 workstation-01 systemd[2684]: session opened for user alice
+May 26 11:03:07 workstation-07 cron[7751]: session opened for user carlos
+May 26 11:23:20 workstation-07 sudo[4421]: alice : TTY=pts/1 ; USER=root ; COMMAND=/bin/bash
+May 26 11:23:28 workstation-07 kernel[0]: comsvcs.dll, minidump lsass.exe C:\Windows\Temp\lsass.dmp
+May 26 11:23:31 workstation-07 security[9999]: mimikatz executed — sekurlsa::logonpasswords
+May 26 11:23:37 workstation-07 cmd[5001]: schtasks /create /tn WindowsDefenderUpdate /tr C:\tmp\backdoor.exe /sc onlogon
+May 26 11:23:41 dc-01 EventLog[612]: EventID: 1102  The audit log was cleared.  Subject Account Name: alice

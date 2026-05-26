@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-26T09:11:40.587444+00:00",
+  "generated_at": "2026-05-26T09:31:37.557094+00:00",
   "corpus_summary": {
     "total_records": 68655,
     "attack_records": 24831,
@@ -204,7 +204,7 @@
         "f1": 0.1245,
         "precision": 0.1025,
         "recall": 0.1585,
-        "current_threshold": 10,
+        "current_threshold": 5,
         "param": "min_distinct_ports"
       }
     },
@@ -2877,6 +2877,13 @@
   },
   "uncovered_attack_patterns": [],
   "format_coverage": {
+    "csv": {
+      "total": 41,
+      "attacks": 0,
+      "benign": 41,
+      "attack_ratio": 0.0,
+      "rules_seen": {}
+    },
     "json": {
       "total": 23000,
       "attacks": 6961,
@@ -2890,30 +2897,10 @@
         "R004": 307
       }
     },
-    "waf": {
-      "total": 15000,
-      "attacks": 3534,
-      "benign": 11466,
-      "attack_ratio": 0.236,
-      "rules_seen": {
-        "R010": 3534,
-        "R013": 164,
-        "R024": 159,
-        "R027": 157,
-        "R004": 156
-      }
-    },
     "generic": {
       "total": 2963,
       "attacks": 0,
       "benign": 2963,
-      "attack_ratio": 0.0,
-      "rules_seen": {}
-    },
-    "csv": {
-      "total": 41,
-      "attacks": 0,
-      "benign": 41,
       "attack_ratio": 0.0,
       "rules_seen": {}
     },
@@ -2928,6 +2915,19 @@
         "R004": 626,
         "R030": 624,
         "R024": 618
+      }
+    },
+    "waf": {
+      "total": 15000,
+      "attacks": 3534,
+      "benign": 11466,
+      "attack_ratio": 0.236,
+      "rules_seen": {
+        "R010": 3534,
+        "R013": 164,
+        "R024": 159,
+        "R027": 157,
+        "R004": 156
       }
     }
   }

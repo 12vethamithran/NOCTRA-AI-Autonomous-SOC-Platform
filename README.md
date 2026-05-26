@@ -2,9 +2,9 @@
 
 > **Drop a log file. Get ranked incidents, AI-explained verdicts, MITRE-mapped attack chains, and a forensic PDF report — in minutes.**
 
-**NOCTRA AI** is an open-source, browser-based Security Operations Center powered by Google Gemini AI. It ingests raw log files (CSV, JSON, syslog, EVTX, Windows Event, Apache, logfmt), runs **42 detection rules** spanning the full MITRE ATT&CK kill-chain plus a behavioral anomaly engine (UEBA), scores every alert with an explainable AI probability, **collapses duplicate alerts before they ever reach the analyst**, maps threats to MITRE techniques, and generates forensic PDF reports — all without storing a single byte to disk. Built for SOC analysts, blue teams, and cybersecurity learners who need enterprise-grade threat detection without enterprise-grade setup time.
+**NOCTRA AI** is an open-source, browser-based Security Operations Center powered by Google Gemini AI. It ingests raw log files (CSV, JSON, syslog, EVTX, Windows Event, Apache, logfmt), runs **43 detection rules** spanning the full MITRE ATT&CK kill-chain plus an **XGBoost ML detector** and a behavioral anomaly engine (UEBA), scores every alert with an explainable AI probability, **collapses duplicate alerts before they ever reach the analyst**, maps threats to MITRE techniques, and generates forensic PDF reports — all without storing a single byte to disk. A **5-phase ML self-upgrade pipeline** continuously retrains thresholds and field aliases from real corpus data. Built for SOC analysts, blue teams, and cybersecurity learners who need enterprise-grade threat detection without enterprise-grade setup time.
 
-**Storageless · 42 rules across MITRE ATT&CK · Explainable AI · Evidence-bearing alerts · Auto-dedup · L1/L2 dual-mode · Dockerized**
+**Storageless · 43 rules across MITRE ATT&CK · XGBoost ML detector · Self-upgrading engine · Explainable AI · Evidence-bearing alerts · Auto-dedup · L1/L2 dual-mode · Dockerized**
 
 [![Live](https://img.shields.io/badge/Live-Production-brightgreen)](https://noctra-ai-autonomous-soc-platform.vercel.app)
 [![Frontend](https://img.shields.io/badge/Frontend-Vercel-black)](https://noctra-ai-autonomous-soc-platform.vercel.app)
@@ -29,11 +29,11 @@ No signup required. Drop a log file or click **"Run demo scenario"** to see a sy
 1. [What is a SOC?](#1-what-is-a-soc-for-non-cyber-readers)
 2. [What NOCTRA does](#2-what-noctra-does-in-one-paragraph)
 3. [Why NOCTRA vs a normal SOC tool](#3-why-noctra-vs-a-normal-soc-tool)
-4. [The 9-stage detection pipeline](#4-the-9-stage-detection-pipeline)
+4. [The detection pipeline](#4-the-detection-pipeline)
 5. [Inside a detection rule (worked example)](#5-inside-a-detection-rule-worked-example)
 6. [Anatomy of an alert](#6-anatomy-of-an-alert)
-7. [The 42-rule catalogue at a glance](#7-the-42-rule-catalogue-at-a-glance)
-8. [Where AI is integrated](#8-where-ai-is-integrated-5-places)
+7. [The 43-rule catalogue at a glance](#7-the-43-rule-catalogue-at-a-glance)
+8. [Where AI is integrated](#8-where-ai-is-integrated-7-places)
 9. [How the AI attack score is calculated](#9-how-the-ai-attack-score-is-calculated)
 10. [Noise reduction: how NOCTRA stops alert floods](#10-noise-reduction-how-noctra-stops-alert-floods)
 11. [Walkthrough: log file → PDF report](#11-walkthrough-log-file--pdf-report)
@@ -60,7 +60,7 @@ A **SOC** (Security Operations Center) is the team and software inside a company
 
 ## 2. What NOCTRA does, in one paragraph
 
-NOCTRA AI is a browser-based SOC that takes a raw log file (CSV / JSON / syslog / web access / EVTX / Windows Event / Apache / logfmt), runs **42 detection rules covering brute-force → lateral movement → exfiltration → cloud-identity abuse → EDR file-drops + a behavioral anomaly engine (UEBA) + an AI classifier**, **collapses duplicates so one logical event = one alert**, and gives the analyst a **ranked queue of alerts with structured evidence and AI rationale**. The analyst clicks through, the AI suggests verdicts and explains its reasoning, the platform auto-correlates related alerts into **MITRE-mapped attack chains**, and a one-click **PDF incident report** lands at the end. Nothing is stored on disk — all data lives in RAM and is wiped when the session ends.
+NOCTRA AI is a browser-based SOC that takes a raw log file (CSV / JSON / syslog / web access / EVTX / Windows Event / Apache / logfmt), runs **43 detection rules covering brute-force → lateral movement → exfiltration → cloud-identity abuse → EDR file-drops + an XGBoost ML detector + a behavioral anomaly engine (UEBA) + an AI classifier**, **collapses duplicates so one logical event = one alert**, and gives the analyst a **ranked queue of alerts with structured evidence and AI rationale**. Behind the scenes, a **5-phase self-upgrade pipeline** (corpus analyse → rule synthesise → parser extraction → model retrain) continuously improves thresholds, field aliases, and the ML model from labeled corpus data — triggered nightly or on demand via `POST /admin/retrain`. The analyst clicks through, the AI suggests verdicts and explains its reasoning, the platform auto-correlates related alerts into **MITRE-mapped attack chains**, and a one-click **PDF incident report** lands at the end. Nothing is stored on disk — all data lives in RAM and is wiped when the session ends.
 
 ---
 
@@ -82,34 +82,62 @@ NOCTRA AI is a browser-based SOC that takes a raw log file (CSV / JSON / syslog 
 
 ---
 
-## 4. The 9-stage detection pipeline
+## 4. The detection pipeline
+
+### 4a. 9-stage per-session pipeline
 
 ```mermaid
 flowchart LR
     A[01<br/>Ingest] --> B[02<br/>Normalize]
     B --> C[03<br/>Detect]
-    C --> D[04<br/>Score]
-    D --> E[05<br/>Enrich]
-    E --> F[06<br/>Chain]
-    F --> X[07<br/>Dedup]
-    X --> G[08<br/>Triage]
-    G --> H[09<br/>Report]
+    C --> D[04<br/>ML Scan]
+    D --> E[05<br/>Score]
+    E --> F[06<br/>Enrich]
+    F --> G[07<br/>Chain]
+    G --> X[08<br/>Dedup]
+    X --> H[09<br/>Triage]
+    H --> I[10<br/>Report]
 
     classDef stage fill:#1c1c20,stroke:#e11d48,color:#fff
-    class A,B,C,D,E,F,X,G,H stage
+    class A,B,C,D,E,F,G,X,H,I stage
 ```
 
 | # | Stage | What happens |
 |---|-------|-------------|
-| 01 | **Ingest** | Auto-detect format (CSV/TSV, JSON/JSONL, Apache, syslog, Windows Event, logfmt) — any other text log falls back to a generic line parser, so ingestion never fails. |
-| 02 | **Normalize** | Standardise columns to a canonical schema: `timestamp, source_ip, dest_ip, dest_host, user, event_type, status, port, bytes`. Aliases cover camelCase cloud variants (`sourceIPAddress`, `eventName`, `initiatedBy.user.ipAddress`, …). Nested JSON is flattened so rules can read fields like `alert_signature_id` from a Suricata payload. |
-| 03 | **Detect** | Run **42 deterministic rules** (R001–R042) + UEBA anomaly model + cross-event correlation. Rules group events by attacker context (IP, user, device) before deciding to fire — so one logical attack = one alert, not one alert per packet. |
-| 04 | **Score** | AI assigns each alert a 0–1 TP probability with structured rationale + SHAP feature attribution. Heuristic fallback runs if Gemini is unavailable. |
-| 05 | **Enrich** | IP reputation (AbuseIPDB / VirusTotal), geo, ASN, hash → MITRE technique. Lazy — only called when the analyst opens the alert. |
-| 06 | **Chain** | Group related alerts into attack chains. Example: failed-login burst → successful login → privilege escalation → exfiltration = one kill-chain narrative. |
-| 07 | **Dedup** | **Safety net.** Collapse identical alerts across rules and across repeated uploads using `(rule_id, source_ip, user, dest_ip)` keys. Summed `event_count`, earliest timestamp, highest severity, and `rolled_up_count` surfaced in `extra`. |
-| 08 | **Triage** | L1 queue with drawer, playbook, AI suggestion, keyboard nav. |
-| 09 | **Report** | Generate L1 shift handover or L2 forensic dossier as PDF. |
+| 01 | **Ingest** | Auto-detect format (CSV/TSV, JSON/JSONL, Apache, syslog, Windows Event, logfmt) — format-detection signals from `parser_hints.json` (corpus-learned) are also consulted. Any unknown log falls back to a generic line parser, so ingestion never fails. |
+| 02 | **Normalize** | Standardise columns to a canonical schema: `timestamp, source_ip, dest_ip, dest_host, user, event_type, status, port, bytes`. **95+ field aliases** (40 built-in + 55 corpus-learned from `parser_hints.json`) cover camelCase cloud variants. Nested JSON is flattened so rules can read fields like `alert_signature_id` from a Suricata payload. |
+| 03 | **Detect** | Run **43 deterministic rules** (R001–R043) + UEBA IsolationForest + cross-event correlation. Rules group events by attacker context (IP, user, device) — one logical attack = one alert, not one per packet. Thresholds are hot-reloaded from `rule_config.json` (no restart needed). |
+| 04 | **ML Scan** | **XGBoost ML detector** (`ml_detector.py`) scores every row with a 519-feature vector (500 TF-IDF + 12 hand-crafted + 7 format one-hots). Rows ≥ 70% confidence that weren't caught by deterministic rules emit additional `ML-*` alerts. |
+| 05 | **Score** | AI assigns each alert a 0–1 TP probability with structured rationale + SHAP feature attribution. Heuristic fallback runs if Gemini is unavailable. |
+| 06 | **Enrich** | IP reputation (AbuseIPDB / VirusTotal), geo, ASN, hash → MITRE technique. Lazy — only called when the analyst opens the alert. |
+| 07 | **Chain** | Group related alerts into attack chains. Example: failed-login burst → successful login → privilege escalation → exfiltration = one kill-chain narrative. |
+| 08 | **Dedup** | **Safety net.** Collapse identical alerts across rules and repeated uploads using `(rule_id, source_ip, user, dest_ip)` keys. Summed `event_count`, earliest timestamp, highest severity, and `rolled_up_count` surfaced in `extra`. |
+| 09 | **Triage** | L1 queue with drawer, playbook, AI suggestion, keyboard nav. |
+| 10 | **Report** | Generate L1 shift handover or L2 forensic dossier as PDF. |
+
+### 4b. Background ML self-upgrade cycle
+
+A separate 5-phase pipeline runs nightly (UTC 03:00) or on demand via `POST /admin/retrain`:
+
+```mermaid
+flowchart LR
+    P1[Phase 1<br/>corpus_analyser] --> P2[Phase 2<br/>rule_synthesiser]
+    P2 --> P3[Phase 3<br/>parser_pattern_extractor]
+    P3 --> P4[Phase 4<br/>train_model]
+    P4 -->|hot-reload| E[(Engine)]
+
+    classDef ph fill:#1c1c20,stroke:#3b82f6,color:#fff
+    class P1,P2,P3,P4 ph
+```
+
+| Phase | Script | Output |
+|-------|--------|--------|
+| 1 | `corpus_analyser.py` | `rule_insights.json` — F1-optimised thresholds + discriminative bigrams per rule |
+| 2 | `rule_synthesiser.py` | Patches `rule_config.json` — only applies changes that improve F1 by ≥ 0.02 |
+| 3 | `parser_pattern_extractor.py` | `parser_hints.json` — corpus-learned field aliases + format-detection signals |
+| 4 | `train_model.py` | `models/ml_detector.pkl` — retrained XGBoost bundle (`tfidf` + `clf` keys) |
+
+Poll progress: `GET /admin/retrain`. All admin endpoints require `Authorization: Bearer <ADMIN_SECRET>`.
 
 ---
 
@@ -182,31 +210,35 @@ Every alert returned by `POST /ingest` is a JSON object with this shape:
 
 ---
 
-## 7. The 42-rule catalogue at a glance
+## 7. The 43-rule catalogue at a glance
 
 | Family | Rule IDs | Examples | MITRE tactic |
 |--------|----------|----------|--------------|
-| **Credential & Identity** | R001–R003, R006, R007, R020 | Brute force, port scan, privilege escalation, off-hours login, new admin account, RDP brute | Credential Access, Reconnaissance |
-| **Lateral movement & Recon** | R004, R008, R022 | Multi-host auth, web fuzzing (404 burst), impossible travel | Lateral Movement, Discovery |
-| **Exfiltration & C2** | R005, R012–R015, R024 | Large outbound transfer, DNS tunnelling, beaconing, suspicious User-Agent | Exfiltration, Command & Control |
-| **Web & App attacks** | R010, R016–R019 | Multi-service attack, SQLi, XSS, Log4Shell, path traversal | Initial Access, Execution |
-| **Endpoint & EDR** | R011, R025, R031, R032 | Suspicious PowerShell, AMSI bypass, masquerading binary, scripting drops EXE | Execution, Defense Evasion |
-| **IDS / Network** | R023, R026, R027 | Suricata signature hit, port-knocking, internal IP scan | Discovery, Initial Access |
+| **Credential & Identity** | R001, R006, R007, R010, R013, R015, R016, R020, R033 | Brute force, off-hours login, new admin account, multi-service attack, LSASS dump, cleartext creds, account lockout storm, RDP brute, Kerberoasting | Credential Access |
+| **Privilege Escalation** | R003 | Normal user → admin within window | Privilege Escalation |
+| **Lateral Movement & Recon** | R002, R004, R008, R022 | Port scan, multi-host auth, web fuzzing 404 burst, impossible travel | Discovery, Lateral Movement |
+| **Exfiltration & C2** | R005, R014, R021, R026, R027 | Large outbound transfer, DNS tunneling, C2 beaconing, port-knocking, internal scan | Exfiltration, Command & Control |
+| **Web & App Attacks** | R024, R025, R043 | SQL injection, web shell / recon UA, IDOR enumeration (sequential ID access) | Initial Access, Discovery |
+| **Endpoint & EDR** | R011, R012, R017, R018, R019, R023, R031, R032 | Suspicious PowerShell, process injection, suspicious persistence, event log cleared, security tool tampering, ransomware file writes, masquerading, script drops EXE | Execution, Defense Evasion, Impact |
 | **Email & Phishing** | R028, R029 | Suspicious email auth fail, phishing with risky attachment | Initial Access |
-| **Cloud Identity (AWS / Entra / M365)** | R030, R034–R042 | Cloud admin grant, console root login, AWS API without MFA, CloudTrail tampering, OAuth consent grant, Kerberoasting | Persistence, Defense Evasion |
-| **Behavioral (UEBA)** | `UEBA-*` | IsolationForest anomaly per user/IP | Multiple |
+| **Cloud Identity (AWS / Entra / M365)** | R030, R034, R035, R036, R037, R038, R039, R040, R042 | Cloud admin grant, console root login, CloudTrail tampering, OAuth consent grant, AWS API without MFA, S3 anomalous volume, SharePoint mass download, cloud recon | Persistence, Defense Evasion, Collection |
+| **Geo & Behavioral Anomaly** | R041 | Sign-in from unexpected country (configurable baseline via `rule_config.json`) | Initial Access |
+| **Behavioral (UEBA)** | `UEBA-*` | IsolationForest per-user/IP σ-deviation from baseline | Multiple |
+| **ML Detector** | `ML-*` | XGBoost model catches attacks that regex rules miss — 519-feature vector, ≥ 70% confidence threshold | Multiple |
 
 ---
 
-## 8. Where AI is integrated (5 places)
+## 8. Where AI is integrated (7 places)
 
 | # | Where | What the AI does | Fallback if unavailable |
 |---|-------|------------------|------------------------|
 | 1 | **Detect** | IsolationForest UEBA model scores each user/IP for deviation from baseline | Deterministic threshold rules |
-| 2 | **Score** | Gemini classifier returns a 0–1 TP probability + rationale per alert | 10-signal heuristic scorer |
-| 3 | **Triage** | AI generates alert-specific TP/FP reasons + tailored response playbook | Static reason library |
-| 4 | **Investigate** | Autonomous agent produces verdict recommendation, key findings, reasoning steps | Manual investigation tabs |
-| 5 | **Chain** | LLM writes a plain-English kill-chain narrative | Structured chain summary |
+| 2 | **ML Scan** | XGBoost classifier (trained on 68k labeled records) catches attack patterns rule regexes miss — 519 features, ≥ 70% threshold | Rule engine covers most detections |
+| 3 | **Score** | Gemini classifier returns a 0–1 TP probability + rationale per alert | 10-signal heuristic scorer |
+| 4 | **Triage** | AI generates alert-specific TP/FP reasons + tailored response playbook | Static reason library |
+| 5 | **Investigate** | Autonomous agent produces verdict recommendation, key findings, reasoning steps | Manual investigation tabs |
+| 6 | **Chain** | LLM writes a plain-English kill-chain narrative | Structured chain summary |
+| 7 | **Self-Upgrade** | 5-phase pipeline (corpus analyse → rule synthesise → parser extraction → retrain) auto-tunes thresholds and retrains XGBoost nightly | Engine runs on last good config |
 
 ---
 
@@ -252,7 +284,7 @@ After all rules run, the ingest pipeline does one final sweep. Any alerts sharin
 ### Layer 4 — Parser robustness ensures rules actually fire
 The other half of "too many alerts" is "wrong alerts because fields were misparsed". NOCTRA's parser:
 - Re-runs the status heuristic when the column is present-but-empty (a common CSV quirk where `keep_default_na=False` makes empty cells look populated).
-- Carries 40+ field aliases per canonical name — `sourceIPAddress`, `source_ip`, `srcip`, `ClientIp`, `remote_addr`, `caller_ip_address`, `initiatedBy.user.ipAddress` all collapse to `source_ip`.
+- Carries **95+ field aliases** per canonical name (40 built-in + 55 corpus-learned from `parser_hints.json`) — `sourceIPAddress`, `source_ip`, `srcip`, `ClientIp`, `remote_addr`, `caller_ip_address`, `initiatedBy.user.ipAddress`, `hostname`, `destination` and many more all collapse to their canonical counterparts.
 - Flattens nested JSON so Suricata `alert.signature.id` and AWS `userIdentity.arn` end up as flat columns rules can read.
 - Normalises every empty/`"none"`/`"null"` string to Python `None` so `.notna()` checks behave consistently across cloud schemas.
 
@@ -355,6 +387,8 @@ flowchart TB
 | `CORS_ORIGIN` | Your Vercel frontend URL |
 | `SESSION_TTL_MINUTES` | `30` |
 | `MAX_UPLOAD_MB` | `25` |
+| `ADMIN_SECRET` | Bearer token for `POST /admin/retrain` (optional — leave unset to disable auth) |
+| `RETRAIN_SCHEDULE_HOUR_UTC` | UTC hour for nightly retrain (default `3`) |
 
 ---
 
@@ -449,8 +483,8 @@ No — each upload creates an independent session. Within a single session, NOCT
 **Q. A rule didn't fire on a log I expected to trigger it. What do I check?**  
 Three things, in order: (1) Did the parser map your column names correctly? Open the session detail page — if `source_ip` shows empty rows it means your log used a name not yet aliased. (2) Did the rule's threshold/window actually match? Volume rules need the burst inside their window. (3) Did the dedup pass collapse it into another alert? Look for `extra.rolled_up_count > 1` on a neighbouring alert.
 
-**Q. Why "42 rules"? Will there be more?**  
-42 is the current coverage across the MITRE ATT&CK matrix from credential access through cloud persistence and EDR detections (R001–R042). New rules are added as gaps surface in real-world testing — the framework is designed so adding a rule is a single function in [`engine/rules.py`](backend/engine/rules.py).
+**Q. Why "43 rules"? Will there be more?**  
+43 is the current coverage across the MITRE ATT&CK matrix from credential access through cloud persistence, EDR detections, and IDOR enumeration (R001–R043). The ML self-upgrade pipeline (`POST /admin/retrain`) can synthesise new rule candidates from corpus data. Adding a rule manually is a single function in [`engine/rules.py`](backend/engine/rules.py).
 
 **Q. How does NOCTRA tell aggregation from suppression?**  
 Aggregation happens *inside* a rule (group rows that match one rule together). Dedup happens *across* rules at the pipeline end (merge alerts that point at the same actor+target). Both preserve `event_count` so nothing is "lost" — only the per-row noise is.
@@ -460,4 +494,4 @@ CSV / TSV (any delimiter, mixed case headers OK), JSON / JSONL / NDJSON (nested 
 
 ---
 
-<p align="center"><sub><b>NOCTRA AI</b> · Autonomous SOC · v3.1 · 42 rules · Auto-dedup · Storageless by design · MIT License</sub></p>
+<p align="center"><sub><b>NOCTRA AI</b> · Autonomous SOC · v4.0 · 43 rules · XGBoost ML detector · Self-upgrading engine · Auto-dedup · Storageless by design · MIT License</sub></p>
