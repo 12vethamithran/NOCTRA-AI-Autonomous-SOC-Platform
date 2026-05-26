@@ -6,7 +6,7 @@
  *   • A grid of capability cards (4 surfaces).
  *   • A 10-stage pipeline (+ XGBoost ML scan stage).
  *   • Four detection signals: rules + ML + UEBA + AI.
- *   • A MITRE coverage matrix in real data (43 rules, 12 tactics).
+ *   • A MITRE coverage matrix in real data (43 rules, 13 tactics).
  *   • Self-upgrade cycle FAQ entry.
  *   • A focused FAQ.
  *
@@ -472,7 +472,7 @@ export default function Landing() {
           variant="display-sm"
           eyebrow="ATT&CK COVERAGE"
           title="MAPPED TO MITRE."
-          hint="43 rules across 12 tactics. Each row lists the rule IDs that fire under that tactic. Drilldown lives in the Dashboard → MITRE Coverage tab."
+          hint="43 rules across 13 tactics. Each row lists the rule IDs that fire under that tactic. Drilldown lives in the Dashboard → MITRE Coverage tab."
           level={2}
           right={
             <button onClick={() => navigate('/dashboard')}

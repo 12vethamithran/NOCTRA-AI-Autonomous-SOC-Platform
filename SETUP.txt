@@ -22,10 +22,10 @@ Optional API keys (the platform works without them — features degrade graceful
   GEMINI_API_KEY     AI scoring, verdict assist, autonomous agent
                      https://ai.google.dev/
 
-  ABUSEIPDB_KEY      IP reputation lookups
+  ABUSEIPDB_API_KEY  IP reputation lookups
                      https://www.abuseipdb.com/api
 
-  VIRUSTOTAL_KEY     Hash + IP threat intel
+  VIRUSTOTAL_API_KEY Hash + IP threat intel
                      https://www.virustotal.com/gui/my-apikey
 
 
@@ -79,8 +79,8 @@ You should see:
     Create a file at  backend/.env  with:
 
         GEMINI_API_KEY=your_key_here
-        ABUSEIPDB_KEY=your_key_here
-        VIRUSTOTAL_KEY=your_key_here
+        ABUSEIPDB_API_KEY=your_key_here
+        VIRUSTOTAL_API_KEY=your_key_here
 
     Skip this entirely if you just want to demo — the platform falls back
     to a deterministic scorer and disables external lookups gracefully.
@@ -178,7 +178,7 @@ You should see:
       No GEMINI_API_KEY set. Add it to backend/.env and restart the backend.
 
   Threat-intel lookups fail
-      Same — set ABUSEIPDB_KEY / VIRUSTOTAL_KEY in backend/.env.
+      Same — set ABUSEIPDB_API_KEY / VIRUSTOTAL_API_KEY in backend/.env.
 
   Triage queue is empty after upload
       Your file may not match a supported format. Try the demo scenario
@@ -209,5 +209,5 @@ You should see:
   different from a traditional SOC tool.
 
 ================================================================================
-  NOCTRA AI · Autonomous SOC · v3.0 · Storageless by design
+  NOCTRA AI · Autonomous SOC · v4.0 · Storageless by design
 ================================================================================

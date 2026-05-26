@@ -86,7 +86,7 @@ NOCTRA AI is a browser-based SOC that takes a raw log file (CSV / JSON / syslog 
 
 ## 4. The detection pipeline
 
-### 4a. 9-stage per-session pipeline
+### 4a. 10-stage per-session pipeline
 
 ```mermaid
 flowchart LR
@@ -547,7 +547,7 @@ docker compose --env-file .env.prod -f docker-compose.prod.yml up -d
 | **Kill chain** | Conceptual model of an attack's stages: recon → weaponise → deliver → exploit → install → C2 → actions on objectives. |
 | **IOC** | Indicator of Compromise — an IP, domain, hash, or user seen in an attack. |
 | **SHAP** | Technique that explains which features most affected an ML model's score. |
-| **XGBoost** | Gradient-boosted tree ensemble used by the ML detector. 68k training records, 519 features, AUC 1.0 on held-out test split. |
+| **XGBoost** | Gradient-boosted tree ensemble used by the ML detector. 68k training records, 519 features (500 TF-IDF + 12 hand-crafted + 7 format one-hots), ≥70% confidence threshold. |
 | **TF-IDF** | Term Frequency–Inverse Document Frequency — converts raw log text into a numeric vector. Top 500 n-grams form 96% of the ML feature vector. |
 | **Self-upgrade pipeline** | 5-phase background job (corpus_analyser → rule_synthesiser → parser_pattern_extractor → train_model) that tunes detection automatically from labeled log data. Runs nightly or on demand via `POST /admin/retrain`. |
 | **L1 / L2** | Tier-1 (triage & respond) / Tier-2 (hunt & correlate). |
