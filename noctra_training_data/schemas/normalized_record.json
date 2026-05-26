@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "NOCTRA Normalized Log Record",
+  "type": "object",
+  "required": ["timestamp", "source_format", "source_file", "log_type", "action", "label"],
+  "properties": {
+    "timestamp":        { "type": "string", "format": "date-time" },
+    "source_format":    { "type": "string", "enum": ["evtx","syslog","csv","json","waf","zeek","cef","logfmt"] },
+    "source_file":      { "type": "string" },
+    "log_type":         { "type": "string", "enum": ["auth","network","endpoint","cloud","web","dlp","firewall"] },
+    "event_id":         { "type": ["string","null"] },
+    "src_ip":           { "type": ["string","null"] },
+    "dst_ip":           { "type": ["string","null"] },
+    "src_port":         { "type": ["integer","null"] },
+    "dst_port":         { "type": ["integer","null"] },
+    "username":         { "type": ["string","null"] },
+    "hostname":         { "type": ["string","null"] },
+    "process":          { "type": ["string","null"] },
+    "action":           { "type": "string" },
+    "raw":              { "type": "string" },
+    "label":            { "type": "string", "enum": ["benign","malicious","unknown"] },
+    "attack_type":      { "type": ["string","null"] },
+    "mitre_technique":  { "type": ["string","null"] },
+    "confidence":       { "type": "number", "minimum": 0, "maximum": 1 }
+  }
+}

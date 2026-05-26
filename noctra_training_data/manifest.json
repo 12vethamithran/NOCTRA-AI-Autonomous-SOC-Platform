@@ -1,0 +1,10 @@
+{
+  "generated_at": null,
+  "total_records": 0,
+  "labeled_records": 0,
+  "unlabeled_records": 0,
+  "attack_type_distribution": {},
+  "mitre_techniques_covered": [],
+  "log_format_distribution": {},
+  "sources": []
+}
