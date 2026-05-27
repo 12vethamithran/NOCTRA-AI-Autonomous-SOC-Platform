@@ -301,20 +301,20 @@ POST /admin/retrain
 │                                                                 │
 │  Phase 2 → rule_synthesiser.py                                  │
 │    • Reads rule_insights.json                                   │
-│    • Only applies threshold changes where ΔF1 ≥ 0.02           │
+│    • Only applies threshold changes where ΔF1 ≥ 0.02            │
 │    • Guards against generic words as IoC patterns               │
-│    • Patches rule_config.json + writes synthesis_report.json   │
+│    • Patches rule_config.json + writes synthesis_report.json    │
 │                                                                 │
-│  Phase 3 → parser_pattern_extractor.py                         │
+│  Phase 3 → parser_pattern_extractor.py                          │
 │    • Mines field aliases per format (logfmt, json, csv…)        │
-│    • Generates format-detection signals (≥ 85% format purity)  │
+│    • Generates format-detection signals (≥ 85% format purity)   │
 │    • Outputs: backend/engine/parser_hints.json                  │
 │                                                                 │
 │  Phase 4 → train_model.py                                       │
 │    • Rebuilds TF-IDF + XGBoost pipeline on full corpus          │
 │    • Saves backend/models/ml_detector.pkl                       │
 │                                                                 │
-│  Hot-reload → engine picks up new config + model on next call  │
+│  Hot-reload → engine picks up new config + model on next call   │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
