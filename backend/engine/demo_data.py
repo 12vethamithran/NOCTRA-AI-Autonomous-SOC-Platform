@@ -17,7 +17,6 @@ Scenario (single attacker 203.0.113.66 → target 10.0.0.x):
 
 from __future__ import annotations
 
-import io
 from datetime import datetime, timedelta
 
 ATTACKER = "203.0.113.66"

@@ -8,13 +8,11 @@ using pre-built templates or custom filters.
 All field/operator access is whitelisted for security.
 """
 
-import json
 from typing import Any, Dict, List
 
 import pandas as pd
 
 from engine import gemini
-from schemas.alert import Alert, AlertSeverity
 
 # Whitelisted operators (same as DSL)
 HUNT_ALLOWED_OPERATORS = {

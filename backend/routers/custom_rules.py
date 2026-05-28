@@ -12,7 +12,7 @@ from typing import Any, Dict, List
 
 from fastapi import APIRouter, HTTPException
 
-from engine.dsl import compile_rule, run_custom_rules, validate_rule_dsl
+from engine.dsl import run_custom_rules, validate_rule_dsl
 from schemas.alert import Alert
 from session.store import session_store
 

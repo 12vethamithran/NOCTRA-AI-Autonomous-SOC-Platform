@@ -28,7 +28,6 @@ from __future__ import annotations
 import ipaddress
 import json
 import logging
-import os
 import uuid
 from datetime import timedelta
 from pathlib import Path

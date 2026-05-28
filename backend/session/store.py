@@ -26,7 +26,6 @@ That keeps PII/log content from ever persisting.
 from __future__ import annotations
 
 import threading
-import time
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
