@@ -1680,3 +1680,48 @@ input[type="checkbox"] {
   letter-spacing: 0.06em;
   color: var(--text-5);
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   GLOBAL REDUCED-MOTION GUARD
+   The UI leans on a lot of ambient motion (scan-lines, auroras, marquees,
+   hover lift/scale). For users who request reduced motion we kill the
+   *infinite ambient* loops and collapse hover transforms to opacity-only
+   feedback, while leaving short functional transitions (color, fades) intact.
+   ═══════════════════════════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  /* Stop all looping ambient animations. */
+  .scan-line::after,
+  .dropzone-beam::before,
+  .ticker-track,
+  .brand-ai-glow,
+  .aurora-text,
+  .hero-bg::after,
+  .blink,
+  .icon-float,
+  .status-online,
+  .accent-pulse,
+  .critical-row,
+  .red-glow,
+  .pulse-green,
+  .progress-animated,
+  .shimmer,
+  .skel::after,
+  .dot-live,
+  .status-dot::after,
+  .status-shimmer {
+    animation: none !important;
+  }
+
+  /* Hover lifts/zooms shouldn't physically move the page; keep the border /
+     shadow cue but drop the translate+scale transform. */
+  .card:hover,
+  .kpi-card:hover,
+  .section-zoom:hover,
+  .feature-card:hover,
+  .tile-lift:hover,
+  .lift:hover,
+  .lift-strong:hover,
+  .hover-glow:hover {
+    transform: none !important;
+  }
+}

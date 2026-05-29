@@ -769,11 +769,14 @@ export default function Investigation() {
       )}
 
       {/* ── Tab nav (lucide icons, consistent) ── */}
-      <div className="flex items-center gap-0.5 border-b overflow-x-auto" style={{ borderColor: 'var(--border)' }}>
+      <div role="tablist" aria-label="Investigation views"
+        className="flex items-center gap-0.5 border-b overflow-x-auto glass"
+        style={{ borderColor: 'var(--border)', position: 'sticky', top: '84px', zIndex: 30, marginInline: '-2px', paddingInline: '2px' }}>
         {TABS.map(({ key, label, count, icon: I }) => {
           const active = activeTab === key
           return (
             <button key={key} onClick={() => setActiveTab(key)}
+              role="tab" aria-selected={active} aria-label={label}
               className="relative flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-all border-b-2"
               style={{
                 color: active ? '#f87171' : 'var(--text-3)',

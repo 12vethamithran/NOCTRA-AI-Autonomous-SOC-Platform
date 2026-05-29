@@ -205,7 +205,8 @@ function AlertRowImpl({ alert, verdict, onVerdict, selected, onSelect, focused, 
       }}
     >
       <td className="px-3 py-3 w-8" onClick={e => e.stopPropagation()}>
-        <input type="checkbox" checked={selected} onChange={() => onSelect(alert.alert_id)} />
+        <input type="checkbox" checked={selected} onChange={() => onSelect(alert.alert_id)}
+          aria-label={`Select alert ${alert.rule_name}`} />
       </td>
       <td className="px-3 py-3"><SevBadge sev={alert.severity} /></td>
       <td className="px-3 py-3">
@@ -250,16 +251,18 @@ function AlertRowImpl({ alert, verdict, onVerdict, selected, onSelect, focused, 
               </span>
             )}
             <button disabled={submitting} onClick={() => submit('TP')}
+              aria-label="Mark True Positive" title="Mark True Positive (T)"
               className="text-xs px-2 py-1 rounded transition-all disabled:opacity-40 hover-glow"
               style={{ background: 'rgba(225,29,72,0.15)', border: '1px solid rgba(225,29,72,0.3)', color: '#f87171' }}
-              onMouseEnter={e => { e.target.style.background = 'rgba(225,29,72,0.25)' }}
-              onMouseLeave={e => { e.target.style.background = 'rgba(225,29,72,0.15)' }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(225,29,72,0.25)' }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(225,29,72,0.15)' }}
             >TP</button>
             <button disabled={submitting} onClick={() => submit('FP')}
+              aria-label="Mark False Positive" title="Mark False Positive (F)"
               className="text-xs px-2 py-1 rounded transition-all disabled:opacity-40"
               style={{ background: 'rgba(107,114,128,0.15)', border: '1px solid rgba(107,114,128,0.3)', color: '#9ca3af' }}
-              onMouseEnter={e => { e.target.style.background = 'rgba(107,114,128,0.25)' }}
-              onMouseLeave={e => { e.target.style.background = 'rgba(107,114,128,0.15)' }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(107,114,128,0.25)' }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(107,114,128,0.15)' }}
             >FP</button>
           </div>
         )}
@@ -819,14 +822,27 @@ export default function Triage() {
   useEffect(() => {
     const handler = (e) => {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return
+      // '?' opens the global shortcuts panel (handled in Layout) — matches the
+      // contract advertised there.
+      if (e.key === '?') { window.dispatchEvent(new Event('toggle-shortcuts')); return }
       if (e.key === '/') { e.preventDefault(); searchRef.current?.focus(); return }
-      if (e.key === 'j' || e.key === 'J') setFocusIdx(i => Math.min(i+1, displayed.length-1))
-      if (e.key === 'k' || e.key === 'K') setFocusIdx(i => Math.max(i-1, 0))
+      if (e.key === 'j' || e.key === 'J') { e.preventDefault(); setFocusIdx(i => Math.min(i+1, displayed.length-1)) }
+      if (e.key === 'k' || e.key === 'K') { e.preventDefault(); setFocusIdx(i => Math.max(i < 0 ? 0 : i-1, 0)) }
       if (e.key === 'Enter' && focusIdx >= 0) setDrawerAlert(displayed[focusIdx])
+      // Quick verdict on the focused row — the T/F shortcuts the help panel
+      // promises. Only fire on a pending alert so we never silently overwrite
+      // a recorded verdict.
+      const focusedAlert = focusIdx >= 0 ? displayed[focusIdx] : null
+      if (focusedAlert && !verdicts[focusedAlert.alert_id]) {
+        if (e.key === 't' || e.key === 'T') { e.preventDefault(); handleVerdict({ alert_id: focusedAlert.alert_id, decision: 'TP' }) }
+        if (e.key === 'f' || e.key === 'F') { e.preventDefault(); handleVerdict({ alert_id: focusedAlert.alert_id, decision: 'FP' }) }
+      }
+      // 'x' toggles selection on the focused row for fast bulk building.
+      if ((e.key === 'x' || e.key === 'X') && focusedAlert) { e.preventDefault(); toggleSelect(focusedAlert.alert_id) }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [displayed, focusIdx])
+  }, [displayed, focusIdx, verdicts, handleVerdict, toggleSelect])
 
   const inputStyle = {
     background: 'var(--surface)',
@@ -944,7 +960,7 @@ export default function Triage() {
       ) : (
         <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--surface)', border: '1px solid var(--border-2)' }}>
           <table className="w-full text-left">
-            <thead className="border-b" style={{ borderColor: 'var(--border)', background: 'var(--surface-2)' }}>
+            <thead className="border-b" style={{ borderColor: 'var(--border)', background: 'var(--surface-2)', position: 'sticky', top: '84px', zIndex: 20, boxShadow: '0 1px 0 var(--border)' }}>
               <tr className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>
                 <th className="px-3 py-3 w-8"><input type="checkbox" checked={allSelected} onChange={toggleAll} /></th>
                 <SortTh label="Severity"    sortKey="severity"    current={sortCfg} onClick={toggleSort} />
@@ -1000,7 +1016,7 @@ export default function Triage() {
 
       {alerts.length > 0 && (
         <p className="text-xs text-center mt-6" style={{ color: 'var(--text-4)' }}>
-          <kbd>/</kbd> search · <kbd>J</kbd>/<kbd>K</kbd> navigate · <kbd>Enter</kbd> expand · <kbd>?</kbd> shortcuts
+          <kbd>/</kbd> search · <kbd>J</kbd>/<kbd>K</kbd> navigate · <kbd>Enter</kbd> expand · <kbd>T</kbd>/<kbd>F</kbd> verdict · <kbd>X</kbd> select · <kbd>?</kbd> shortcuts
         </p>
       )}
 
