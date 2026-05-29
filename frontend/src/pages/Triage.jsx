@@ -204,40 +204,40 @@ function AlertRowImpl({ alert, verdict, onVerdict, selected, onSelect, focused, 
         transition: 'background .15s var(--ease), box-shadow .15s var(--ease)',
       }}
     >
-      <td className="px-3 py-3 w-8" onClick={e => e.stopPropagation()}>
+      <td className="px-3 py-3 w-8 align-middle" onClick={e => e.stopPropagation()}>
         <input type="checkbox" checked={selected} onChange={() => onSelect(alert.alert_id)}
           aria-label={`Select alert ${alert.rule_name}`} />
       </td>
-      <td className="px-3 py-3"><SevBadge sev={alert.severity} /></td>
-      <td className="px-3 py-3">
+      <td className="px-3 py-3 align-middle whitespace-nowrap"><SevBadge sev={alert.severity} /></td>
+      <td className="px-3 py-3 align-middle">
         <p className="text-sm font-semibold text-white leading-tight">{alert.rule_name}</p>
         <p className="text-xs font-mono mt-0.5" style={{ color: 'var(--text-4)' }}>{alert.rule_id}</p>
       </td>
-      <td className="px-3 py-3 hidden md:table-cell max-w-xs">
+      <td className="px-3 py-3 align-middle hidden md:table-cell max-w-xs">
         <p className="text-xs truncate" style={{ color: 'var(--text-2)' }}>{alert.description}</p>
       </td>
-      <td className="px-3 py-3 hidden lg:table-cell">
+      <td className="px-3 py-3 align-middle hidden lg:table-cell">
         {alert.source_ip
           ? <span className="text-xs font-mono px-2 py-0.5 rounded" style={{ background: 'var(--surface-3)', color: 'var(--text-1)' }}>{alert.source_ip}</span>
           : <span style={{ color: 'var(--text-4)' }}>—</span>}
       </td>
-      <td className="px-3 py-3 hidden xl:table-cell" onClick={e => e.stopPropagation()}>
+      <td className="px-3 py-3 align-middle hidden xl:table-cell" onClick={e => e.stopPropagation()}>
         <span className="text-xs font-mono px-1.5 py-0.5 rounded interactive-tag transition-transform hover:scale-105 inline-block cursor-help"
           data-tip={getMitreTip(alert.mitre_techniques?.[0] || alert.mitre_technique)}
           style={{ background: 'rgba(225,29,72,0.1)', border: '1px solid rgba(225,29,72,0.2)', color: '#f87171' }}>
           {alert.mitre_techniques?.[0] || alert.mitre_technique || '—'}
         </span>
       </td>
-      <td className="px-3 py-3 hidden sm:table-cell">
+      <td className="px-3 py-3 align-middle hidden sm:table-cell">
         <MethodBadges methods={alert.detection_methods || []} />
       </td>
-      <td className="px-3 py-3" onClick={e => e.stopPropagation()}>
+      <td className="px-3 py-3 align-middle" onClick={e => e.stopPropagation()}>
         <ProbBar prob={alert.tp_probability || (alert.ai_score ? alert.ai_score / 100 : null)} alert={alert} />
       </td>
-      <td className="px-3 py-3 hidden sm:table-cell">
+      <td className="px-3 py-3 align-middle hidden sm:table-cell">
         {alertAge(alert.timestamp) && <span className="text-xs" style={{ color: 'var(--text-4)' }}>{alertAge(alert.timestamp)}</span>}
       </td>
-      <td className="px-3 py-3" onClick={e => e.stopPropagation()}>
+      <td className="px-3 py-3 align-middle" onClick={e => e.stopPropagation()}>
         {shownVerdict ? (
           <span className={optimisticVerdict ? 'inline-block verdict-pulse' : ''}>
             <VerdictBadge verdict={shownVerdict.decision} />
@@ -267,7 +267,7 @@ function AlertRowImpl({ alert, verdict, onVerdict, selected, onSelect, focused, 
           </div>
         )}
       </td>
-      <td className="px-3 py-3 text-xs text-right" style={{ color: 'var(--text-4)' }}>
+      <td className="px-3 py-3 align-middle text-xs text-right" style={{ color: 'var(--text-4)' }}>
         <ChevronRight size={14} className="inline-block" />
       </td>
     </tr>
@@ -671,7 +671,7 @@ function SortTh({ label, sortKey, current, onClick, className = '' }) {
   const active = current.key === sortKey
   return (
     <th onClick={() => onClick(sortKey)}
-      className={`px-3 py-3 cursor-pointer select-none transition-colors text-left ${className}`}
+      className={`px-3 py-3 align-middle cursor-pointer select-none transition-colors text-left ${className}`}
       style={{ color: active ? 'var(--accent)' : 'var(--text-3)' }}
     >
       <span className="flex items-center gap-1">
@@ -958,20 +958,20 @@ export default function Triage() {
           </button>
         </div>
       ) : (
-        <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--surface)', border: '1px solid var(--border-2)' }}>
+        <div className="rounded-2xl overflow-clip" style={{ background: 'var(--surface)', border: '1px solid var(--border-2)' }}>
           <table className="w-full text-left">
             <thead className="border-b" style={{ borderColor: 'var(--border)', background: 'var(--surface-2)', position: 'sticky', top: '84px', zIndex: 20, boxShadow: '0 1px 0 var(--border)' }}>
               <tr className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>
-                <th className="px-3 py-3 w-8"><input type="checkbox" checked={allSelected} onChange={toggleAll} /></th>
+                <th className="px-3 py-3 w-8 align-middle"><input type="checkbox" checked={allSelected} onChange={toggleAll} /></th>
                 <SortTh label="Severity"    sortKey="severity"    current={sortCfg} onClick={toggleSort} />
                 <SortTh label="Rule"        sortKey="rule"        current={sortCfg} onClick={toggleSort} />
-                <th className="px-3 py-3 hidden md:table-cell">Description</th>
-                <th className="px-3 py-3 hidden lg:table-cell">Source IP</th>
-                <th className="px-3 py-3 hidden xl:table-cell">MITRE</th>
-                <th className="px-3 py-3 hidden sm:table-cell">Methods</th>
+                <th className="px-3 py-3 align-middle hidden md:table-cell">Description</th>
+                <th className="px-3 py-3 align-middle hidden lg:table-cell">Source IP</th>
+                <th className="px-3 py-3 align-middle hidden xl:table-cell">MITRE</th>
+                <th className="px-3 py-3 align-middle hidden sm:table-cell">Methods</th>
                 <SortTh label="AI Prob"     sortKey="probability" current={sortCfg} onClick={toggleSort} />
                 <SortTh label="Age"         sortKey="age"         current={sortCfg} onClick={toggleSort} className="hidden sm:table-cell" />
-                <th className="px-3 py-3">Verdict</th>
+                <th className="px-3 py-3 align-middle">Verdict</th>
                 <th className="px-3 py-3 w-8" />
               </tr>
             </thead>
