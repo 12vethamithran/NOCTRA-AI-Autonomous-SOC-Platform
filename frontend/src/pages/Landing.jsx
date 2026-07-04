@@ -67,19 +67,18 @@ function HeroMotionPanel({ healthMeta }) {
   ]
 
   const scanLogs = [
-    { ts: '00:01', src: '198.51.100.42', msg: 'auth.failed user=admin' },
-    { ts: '00:03', src: '198.51.100.42', msg: 'auth.failed user=admin' },
-    { ts: '00:07', src: '10.0.0.42', msg: 'auth.success privileged session' },
-    { ts: '00:11', src: 'geo.ip', msg: 'impossible travel signal' },
-    { ts: '00:13', src: 'engine', msg: 'correlating evidence indices' },
-    { ts: '00:16', src: 'ai.score', msg: 'true-positive probability 0.94' },
+    { ts: '12:04:01', src: '198.51.100.42', msg: 'auth.failed user=admin' },
+    { ts: '12:04:03', src: '198.51.100.42', msg: 'auth.failed user=admin' },
+    { ts: '12:04:07', src: '10.0.0.42', msg: 'auth.success privileged session' },
+    { ts: '12:04:11', src: 'geo.ip', msg: 'impossible travel signal' },
+    { ts: '12:04:13', src: 'engine', msg: 'correlating evidence indices' },
+    { ts: '12:04:16', src: 'ai.score', msg: 'true-positive probability 0.94' },
   ]
 
   return (
     <Card variant="elevated" padding="none" className="hero-motion-panel mt-16 mx-auto max-w-5xl text-left">
       <div className="hero-motion-topbar">
         <div className="hero-terminal-title">
-          <span className="hero-terminal-path">noctra.engine</span>
           <span className="hero-terminal-mode">live log scan</span>
         </div>
         <StatusPill tone={healthMeta.tone} dot={healthMeta.dot} pulse={healthMeta.pulse}>
@@ -90,13 +89,20 @@ function HeroMotionPanel({ healthMeta }) {
       <div className="hero-motion-grid">
         <div className="hero-live-scan">
           <div className="hero-scan-header">
-            <span>Live scan</span>
+            <span>Incoming logs</span>
             <strong>INC-A4F</strong>
           </div>
           <div className="hero-scan-window">
             <div className="hero-scan-line" aria-hidden="true" />
             {scanLogs.map((log, index) => (
-              <div className="hero-log-row" key={`${log.ts}-${log.msg}`} style={{ '--row-delay': `${index * 0.12}s` }}>
+              <div
+                className="hero-log-row"
+                key={`${log.ts}-${log.msg}`}
+                style={{
+                  '--row-delay': `${index * 0.12}s`,
+                  '--stream-delay': `${index * 0.38}s`,
+                }}
+              >
                 <span className="hero-log-time">{log.ts}</span>
                 <span className="hero-log-source">{log.src}</span>
                 <span className="hero-log-message">{log.msg}</span>
