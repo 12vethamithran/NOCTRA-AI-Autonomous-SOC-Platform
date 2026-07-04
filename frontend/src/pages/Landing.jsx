@@ -58,6 +58,68 @@ function HeroMetric({ n, fmt, l, s }) {
   )
 }
 
+function HeroMotionPanel({ healthMeta }) {
+  const motionEvents = [
+    { label: 'INGEST', value: 'CSV/JSON/SYSLOG', tone: 'neutral' },
+    { label: 'RULE HIT', value: 'R001 + R022', tone: 'danger' },
+    { label: 'AI SCORE', value: '0.94 TP', tone: 'success' },
+    { label: 'CHAIN', value: 'INC-A4F', tone: 'info' },
+  ]
+
+  return (
+    <Card variant="elevated" padding="none" className="hero-motion-panel mt-16 mx-auto max-w-5xl text-left">
+      <div className="hero-motion-topbar">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <span className="w-2.5 h-2.5 rounded-full" style={{ background: '#ef4444' }} />
+          <span className="w-2.5 h-2.5 rounded-full" style={{ background: '#f59e0b' }} />
+          <span className="w-2.5 h-2.5 rounded-full" style={{ background: '#22c55e' }} />
+          <span className="ml-3 text-xs tabular truncate" style={{ color: 'var(--text-4)' }}>
+            noctra.engine -- live telemetry
+          </span>
+        </div>
+        <StatusPill tone={healthMeta.tone} dot={healthMeta.dot} pulse={healthMeta.pulse}>
+          {healthMeta.label}
+        </StatusPill>
+      </div>
+
+      <div className="hero-motion-grid">
+        <div className="hero-radar scan-line" aria-hidden="true">
+          <div className="hero-radar-ring hero-radar-ring-1" />
+          <div className="hero-radar-ring hero-radar-ring-2" />
+          <div className="hero-radar-ring hero-radar-ring-3" />
+          <div className="hero-radar-sweep" />
+          <span className="hero-radar-node node-a" />
+          <span className="hero-radar-node node-b" />
+          <span className="hero-radar-node node-c" />
+          <span className="hero-radar-core">
+            <ShieldCheck size={22} />
+          </span>
+        </div>
+
+        <div className="hero-motion-feed">
+          <div className="hero-feed-header">
+            <span className="dot-live" />
+            <span>Detection stream</span>
+          </div>
+          {motionEvents.map((event, index) => (
+            <div className="hero-feed-row" key={event.label} style={{ '--row-delay': `${index * 0.16}s` }}>
+              <span className={`hero-feed-tone tone-${event.tone}`} />
+              <span>{event.label}</span>
+              <strong>{event.value}</strong>
+            </div>
+          ))}
+        </div>
+
+        <div className="hero-motion-metrics">
+          {HERO_METRICS.map(m => (
+            <HeroMetric key={m.k} {...m} />
+          ))}
+        </div>
+      </div>
+    </Card>
+  )
+}
+
 const CAPABILITIES = [
   {
     icon: ShieldAlert, title: 'AI-augmented triage',
@@ -283,30 +345,8 @@ export default function Landing() {
             </p>
           </Reveal>
 
-          {/* Product mock card — keeps the original metrics surface as the
-              "screenshot" inset below the hero, in the reference's rhythm. */}
           <Reveal delay={360}>
-            <Card variant="elevated" padding="lg" className="mt-16 mx-auto max-w-4xl text-left space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full" style={{ background: '#ef4444' }} />
-                  <span className="w-2.5 h-2.5 rounded-full" style={{ background: '#f59e0b' }} />
-                  <span className="w-2.5 h-2.5 rounded-full" style={{ background: '#22c55e' }} />
-                  <span className="ml-3 text-xs tabular" style={{ color: 'var(--text-4)' }}>
-                    noctra.engine — live telemetry
-                  </span>
-                </div>
-                <StatusPill tone={healthMeta.tone} dot={healthMeta.dot} pulse={healthMeta.pulse}>
-                  {healthMeta.label}
-                </StatusPill>
-              </div>
-              <div className="ent-divider" />
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-                {HERO_METRICS.map(m => (
-                  <HeroMetric key={m.k} {...m} />
-                ))}
-              </div>
-            </Card>
+            <HeroMotionPanel healthMeta={healthMeta} />
           </Reveal>
         </section>
       </GridBackdrop>
