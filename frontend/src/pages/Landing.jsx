@@ -84,27 +84,14 @@ function HeroMotionPanel({ healthMeta }) {
       </div>
 
       <div className="hero-motion-grid">
-        <div className="hero-radar scan-line" aria-hidden="true">
+        <div className="hero-radar" aria-hidden="true">
           <div className="hero-radar-caption">
-            <span>active chain</span>
+            <span>Active scan</span>
             <strong>INC-A4F</strong>
-          </div>
-          <div className="hero-radar-stat stat-a">
-            <span>src</span>
-            <strong>198.51.100.42</strong>
-          </div>
-          <div className="hero-radar-stat stat-b">
-            <span>risk</span>
-            <strong>94%</strong>
           </div>
           <div className="hero-radar-ring hero-radar-ring-1" />
           <div className="hero-radar-ring hero-radar-ring-2" />
           <div className="hero-radar-ring hero-radar-ring-3" />
-          <div className="hero-radar-ring hero-radar-ring-4" />
-          <span className="hero-trace trace-a" />
-          <span className="hero-trace trace-b" />
-          <span className="hero-trace trace-c" />
-          <div className="hero-radar-sweep" />
           <span className="hero-radar-node node-a" />
           <span className="hero-radar-node node-b" />
           <span className="hero-radar-node node-c" />
