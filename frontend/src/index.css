@@ -1325,16 +1325,6 @@ input[type="checkbox"] {
   align-items: center;
   gap: 12px;
 }
-.hero-window-controls {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-.hero-window-controls > span {
-  width: 10px;
-  height: 10px;
-  border-radius: 999px;
-}
 .hero-terminal-path {
   color: var(--text-1);
   font-size: 12px;
@@ -1355,82 +1345,92 @@ input[type="checkbox"] {
   grid-template-columns: minmax(320px, 0.94fr) minmax(360px, 1.06fr);
   gap: 0;
 }
-.hero-radar {
+.hero-live-scan {
   position: relative;
   min-height: 380px;
-  display: grid;
-  place-items: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 28px;
   border-right: 1px solid var(--border);
-  background:
-    radial-gradient(circle at center, rgba(225, 29, 72, 0.08), transparent 56%),
-    rgba(10, 10, 11, 0.34);
+  background: rgba(10, 10, 11, 0.34);
 }
-.hero-radar-caption {
-  position: absolute;
+.hero-scan-header {
   z-index: 3;
-  top: 18px;
-  left: 18px;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 10px;
-  padding: 7px 10px;
-  border: 1px solid var(--border);
-  border-radius: var(--r-sm);
-  background: rgba(17, 17, 20, 0.72);
+  margin-bottom: 12px;
 }
-.hero-radar-caption span {
+.hero-scan-header span {
   color: var(--text-4);
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.18em;
   text-transform: uppercase;
 }
-.hero-radar-caption strong {
+.hero-scan-header strong {
   color: var(--text-1);
   font-size: 12px;
   font-weight: 800;
 }
-.hero-radar-ring {
-  position: absolute;
-  border: 1px solid rgba(225, 29, 72, 0.18);
-  border-radius: 999px;
-}
-.hero-radar-ring-1 { width: 90px; height: 90px; }
-.hero-radar-ring-2 { width: 176px; height: 176px; opacity: 0.68; }
-.hero-radar-ring-3 { width: 262px; height: 262px; opacity: 0.42; }
-.hero-radar-core {
+.hero-scan-window {
   position: relative;
-  z-index: 2;
-  width: 72px;
-  height: 72px;
+  overflow: hidden;
   display: grid;
-  place-items: center;
-  color: var(--accent);
-  background: rgba(17, 17, 20, 0.94);
-  border: 1px solid rgba(225, 29, 72, 0.32);
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--border);
   border-radius: var(--r-md);
-  box-shadow: var(--elev-2);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.018), transparent),
+    rgba(17, 17, 20, 0.70);
 }
-.hero-radar-core span {
-  margin-top: -8px;
-  color: var(--text-4);
-  font-size: 8px;
-  font-weight: 900;
-  letter-spacing: 0.18em;
-}
-.hero-radar-node {
+.hero-scan-line {
   position: absolute;
-  z-index: 2;
-  width: 10px;
-  height: 10px;
-  border-radius: 999px;
-  background: var(--accent);
-  border: 2px solid var(--bg);
-  box-shadow: 0 0 0 4px rgba(225, 29, 72, 0.08);
+  inset: 14px;
+  height: 34px;
+  border: 1px solid rgba(225, 29, 72, 0.20);
+  border-radius: var(--r-sm);
+  background: rgba(225, 29, 72, 0.055);
+  animation: log-scan-pass 4.2s var(--ease) infinite;
+  pointer-events: none;
 }
-.hero-radar-node.node-a { transform: translate(-96px, -64px); }
-.hero-radar-node.node-b { transform: translate(118px, -18px); background: var(--warning); box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.08); }
-.hero-radar-node.node-c { transform: translate(54px, 104px); background: var(--info); box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.08); }
+.hero-log-row {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 48px minmax(92px, 0.72fr) minmax(160px, 1fr);
+  gap: 12px;
+  align-items: center;
+  min-height: 34px;
+  padding: 7px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.045);
+  border-radius: var(--r-sm);
+  color: var(--text-2);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  background: rgba(10, 10, 11, 0.30);
+  animation: feed-rise .55s var(--ease) both;
+  animation-delay: var(--row-delay);
+}
+.hero-log-time {
+  color: var(--text-4);
+  font-variant-numeric: tabular-nums;
+}
+.hero-log-source {
+  color: var(--text-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hero-log-message {
+  color: var(--text-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .hero-motion-feed {
   min-height: 380px;
   padding: 28px;
@@ -1466,7 +1466,7 @@ input[type="checkbox"] {
   position: relative;
   overflow: hidden;
   display: grid;
-  grid-template-columns: 10px minmax(140px, 1fr) auto;
+  grid-template-columns: 32px minmax(140px, 1fr) auto;
   align-items: center;
   gap: 14px;
   min-height: 66px;
@@ -1485,6 +1485,12 @@ input[type="checkbox"] {
 .hero-feed-row::before {
   display: none;
 }
+.hero-feed-index {
+  color: var(--text-4);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  font-weight: 800;
+}
 .hero-feed-row small {
   display: block;
   margin-top: 4px;
@@ -1499,19 +1505,6 @@ input[type="checkbox"] {
   justify-self: end;
   font-size: 13px;
   font-variant-numeric: tabular-nums;
-}
-.hero-feed-tone {
-  width: 10px;
-  height: 10px;
-  border-radius: 999px;
-  background: var(--text-4);
-  box-shadow: none;
-}
-.hero-feed-tone.tone-danger { background: var(--danger); color: var(--danger); }
-.hero-feed-tone.tone-success { background: var(--success); color: var(--success); }
-.hero-feed-tone.tone-info { background: var(--info); color: var(--info); }
-.hero-feed-progress {
-  display: none;
 }
 .hero-intel-strip {
   display: grid;
@@ -1561,6 +1554,11 @@ input[type="checkbox"] {
   from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
 }
+@keyframes log-scan-pass {
+  0%, 12% { transform: translateY(0); opacity: 0.26; }
+  42% { opacity: 0.42; }
+  88%, 100% { transform: translateY(210px); opacity: 0.12; }
+}
 @media (max-width: 760px) {
   .hero-motion-topbar {
     align-items: flex-start;
@@ -1569,17 +1567,24 @@ input[type="checkbox"] {
   .hero-motion-grid {
     grid-template-columns: 1fr;
   }
-  .hero-radar {
+  .hero-live-scan {
     min-height: 330px;
     border-right: none;
     border-bottom: 1px solid var(--border);
+    padding: 16px;
+  }
+  .hero-log-row {
+    grid-template-columns: 44px 1fr;
+  }
+  .hero-log-message {
+    grid-column: 2;
   }
   .hero-motion-feed {
     min-height: auto;
     padding: 16px;
   }
   .hero-feed-row {
-    grid-template-columns: 10px 1fr;
+    grid-template-columns: 32px 1fr;
   }
   .hero-feed-row strong {
     grid-column: 2;
@@ -2019,6 +2024,7 @@ input[type="checkbox"] {
   .brand-ai-glow,
   .aurora-text,
   .hero-bg::after,
+  .hero-scan-line,
   .hero-feed-row,
   .blink,
   .icon-float,
