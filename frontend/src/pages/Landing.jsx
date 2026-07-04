@@ -47,7 +47,7 @@ const HERO_METRICS = [
 function HeroMetric({ n, fmt, l, s }) {
   const { ref, value } = useCountUp(n, { duration: 800 })
   return (
-    <div className="space-y-1.5">
+    <div className="hero-metric-tile">
       <p className="ent-section-eyebrow">{l}</p>
       <p ref={ref} className="tabular font-semibold leading-none"
         style={{ fontSize: 'var(--fs-2xl)', color: 'var(--text-1)' }}>
@@ -60,22 +60,23 @@ function HeroMetric({ n, fmt, l, s }) {
 
 function HeroMotionPanel({ healthMeta }) {
   const motionEvents = [
-    { label: 'INGEST', value: 'CSV/JSON/SYSLOG', tone: 'neutral' },
-    { label: 'RULE HIT', value: 'R001 + R022', tone: 'danger' },
-    { label: 'AI SCORE', value: '0.94 TP', tone: 'success' },
-    { label: 'CHAIN', value: 'INC-A4F', tone: 'info' },
+    { label: 'INGEST', value: 'CSV / JSON / SYSLOG', sub: '8.4k events normalized', tone: 'neutral', progress: 88 },
+    { label: 'RULE HIT', value: 'R001 + R022', sub: 'brute force + impossible travel', tone: 'danger', progress: 74 },
+    { label: 'AI SCORE', value: '0.94 TP', sub: 'SHAP confidence converged', tone: 'success', progress: 94 },
+    { label: 'CHAIN', value: 'INC-A4F', sub: 'kill-chain assembled', tone: 'info', progress: 68 },
   ]
 
   return (
     <Card variant="elevated" padding="none" className="hero-motion-panel mt-16 mx-auto max-w-5xl text-left">
       <div className="hero-motion-topbar">
-        <div className="flex items-center gap-1.5 min-w-0">
-          <span className="w-2.5 h-2.5 rounded-full" style={{ background: '#ef4444' }} />
-          <span className="w-2.5 h-2.5 rounded-full" style={{ background: '#f59e0b' }} />
-          <span className="w-2.5 h-2.5 rounded-full" style={{ background: '#22c55e' }} />
-          <span className="ml-3 text-xs tabular truncate" style={{ color: 'var(--text-4)' }}>
-            noctra.engine -- live telemetry
+        <div className="hero-terminal-title">
+          <span className="hero-window-controls" aria-hidden="true">
+            <span style={{ background: '#ef4444' }} />
+            <span style={{ background: '#f59e0b' }} />
+            <span style={{ background: '#22c55e' }} />
           </span>
+          <span className="hero-terminal-path">noctra.engine</span>
+          <span className="hero-terminal-mode">live incident graph</span>
         </div>
         <StatusPill tone={healthMeta.tone} dot={healthMeta.dot} pulse={healthMeta.pulse}>
           {healthMeta.label}
@@ -84,30 +85,56 @@ function HeroMotionPanel({ healthMeta }) {
 
       <div className="hero-motion-grid">
         <div className="hero-radar scan-line" aria-hidden="true">
+          <div className="hero-radar-caption">
+            <span>active chain</span>
+            <strong>INC-A4F</strong>
+          </div>
+          <div className="hero-radar-stat stat-a">
+            <span>src</span>
+            <strong>198.51.100.42</strong>
+          </div>
+          <div className="hero-radar-stat stat-b">
+            <span>risk</span>
+            <strong>94%</strong>
+          </div>
           <div className="hero-radar-ring hero-radar-ring-1" />
           <div className="hero-radar-ring hero-radar-ring-2" />
           <div className="hero-radar-ring hero-radar-ring-3" />
+          <div className="hero-radar-ring hero-radar-ring-4" />
+          <span className="hero-trace trace-a" />
+          <span className="hero-trace trace-b" />
+          <span className="hero-trace trace-c" />
           <div className="hero-radar-sweep" />
           <span className="hero-radar-node node-a" />
           <span className="hero-radar-node node-b" />
           <span className="hero-radar-node node-c" />
           <span className="hero-radar-core">
             <ShieldCheck size={22} />
+            <span>NOCTRA</span>
           </span>
         </div>
 
         <div className="hero-motion-feed">
           <div className="hero-feed-header">
-            <span className="dot-live" />
-            <span>Detection stream</span>
+            <span><span className="dot-live" /> Detection stream</span>
+            <strong>LIVE</strong>
           </div>
           {motionEvents.map((event, index) => (
             <div className="hero-feed-row" key={event.label} style={{ '--row-delay': `${index * 0.16}s` }}>
               <span className={`hero-feed-tone tone-${event.tone}`} />
-              <span>{event.label}</span>
+              <div>
+                <span>{event.label}</span>
+                <small>{event.sub}</small>
+              </div>
               <strong>{event.value}</strong>
+              <span className="hero-feed-progress" style={{ '--progress': `${event.progress}%` }} />
             </div>
           ))}
+          <div className="hero-intel-strip">
+            <span>MITRE TA0006</span>
+            <span>UEBA +2.8σ</span>
+            <span>ASN flagged</span>
+          </div>
         </div>
 
         <div className="hero-motion-metrics">
