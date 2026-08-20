@@ -23,11 +23,13 @@ jobs:
         # `bash {0}` (not the default `bash -e {0}`) so a curl timeout does not
         # abort the step before the retry loop gets a second chance.
         shell: bash {0}
+        env:
+          HEALTH_URL: https://noctra-ai-autonomous-soc-platform.onrender.com/health
         run: |
           echo "Waiting for Render to spin up..."
           sleep 45
           for i in $(seq 1 8); do
-            code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 60 \n              https://noctra-ai-autonomous-soc-platform.onrender.com/health || true)
+            code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 60 "$HEALTH_URL" || true)
             code=${code:-000}
             echo "Attempt $i -> HTTP $code"
             if [ "$code" = "200" ]; then
