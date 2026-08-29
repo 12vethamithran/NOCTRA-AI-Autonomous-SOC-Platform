@@ -19,7 +19,7 @@ httpx==0.28.1
 reportlab==4.2.2              # PDF incident report generation
 
 # --- Config ---
-python-dotenv==1.0.1          # loads API keys from .env
+python-dotenv==1.2.2          # loads API keys from .env
 
 # --- Phase-2+ additions live in their own block so they're easy to spot ---
 # google-generativeai==0.8.3  # uncomment when wiring Gemini AI scoring
